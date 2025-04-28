@@ -71,11 +71,11 @@ const Booking = () => {
   
   // Filter timeSlots and appointments for this professional
   const professionalTimeSlots = timeSlots.filter(slot => 
-    slot.professionalId === professional.id
+    slot.professional_id === professional.id
   );
   
   const professionalAppointments = appointments.filter(appointment => 
-    appointment.professionalId === professional.id
+    appointment.professional_id === professional.id
   );
   
   return (

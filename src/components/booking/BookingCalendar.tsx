@@ -40,7 +40,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       
       // Check if there are available slots for this day of week
       const hasAvailableSlots = timeSlots.some(
-        slot => slot.dayOfWeek === dayOfWeek && slot.available
+        slot => slot.day_of_week === dayOfWeek && slot.available
       );
       
       if (hasAvailableSlots) {
@@ -64,7 +64,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     
     // Get all time slots for this day
     const daySlots = timeSlots.filter(
-      slot => slot.dayOfWeek === dayOfWeek && slot.available
+      slot => slot.day_of_week === dayOfWeek && slot.available
     );
     
     // For each time slot, check if it's already booked
@@ -74,16 +74,16 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         return (
           app.status === 'scheduled' &&
           isSameDay(appDate, selectedDate) &&
-          app.startTime === slot.startTime &&
-          app.endTime === slot.endTime
+          app.start_time === slot.start_time &&
+          app.end_time === slot.end_time
         );
       });
       
       if (!isBooked) {
         slots.push({
           date: selectedDate,
-          startTime: slot.startTime,
-          endTime: slot.endTime
+          startTime: slot.start_time,
+          endTime: slot.end_time
         });
       }
     });

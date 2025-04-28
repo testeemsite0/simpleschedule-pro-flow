@@ -32,9 +32,9 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
   const { addTimeSlot, updateTimeSlot } = useAppointments();
   const { toast } = useToast();
   
-  const [dayOfWeek, setDayOfWeek] = useState(initialData?.dayOfWeek.toString() || '');
-  const [startTime, setStartTime] = useState(initialData?.startTime || '');
-  const [endTime, setEndTime] = useState(initialData?.endTime || '');
+  const [dayOfWeek, setDayOfWeek] = useState(initialData?.day_of_week.toString() || '');
+  const [startTime, setStartTime] = useState(initialData?.start_time || '');
+  const [endTime, setEndTime] = useState(initialData?.end_time || '');
   const [available, setAvailable] = useState(initialData?.available ?? true);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -63,10 +63,10 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
     
     try {
       const timeSlotData = {
-        professionalId: user.id,
-        dayOfWeek: parseInt(dayOfWeek),
-        startTime,
-        endTime,
+        professional_id: user.id,
+        day_of_week: parseInt(dayOfWeek),
+        start_time: startTime,
+        end_time: endTime,
         available,
       };
       
