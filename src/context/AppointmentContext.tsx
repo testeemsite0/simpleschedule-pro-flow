@@ -1,15 +1,15 @@
 
-import React, { createContext, useState, useContext, ReactNode } from "react";
-import { Appointment, TimeSlot } from "../types";
-import { appointments as mockAppointments, timeSlots as mockTimeSlots } from "../data/mockData";
+import React, { createContext, useContext, ReactNode } from "react";
+import { Appointment, TimeSlot } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AppointmentContextType {
   appointments: Appointment[];
   timeSlots: TimeSlot[];
   addAppointment: (appointment: Omit<Appointment, 'id'>) => Promise<boolean>;
   cancelAppointment: (id: string) => Promise<boolean>;
-  getAppointmentsByProfessional: (professionalId: string) => Appointment[];
-  getTimeSlotsByProfessional: (professionalId: string) => TimeSlot[];
+  getAppointmentsByProfessional: (professionalId: string) => Promise<Appointment[]>;
+  getTimeSlotsByProfessional: (professionalId: string) => Promise<TimeSlot[]>;
   updateTimeSlot: (timeSlot: TimeSlot) => Promise<boolean>;
   addTimeSlot: (timeSlot: Omit<TimeSlot, 'id'>) => Promise<boolean>;
   deleteTimeSlot: (id: string) => Promise<boolean>;
@@ -18,66 +18,74 @@ interface AppointmentContextType {
 const AppointmentContext = createContext<AppointmentContextType | undefined>(undefined);
 
 export const AppointmentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(mockTimeSlots);
-  
   const addAppointment = async (newAppointment: Omit<Appointment, 'id'>): Promise<boolean> => {
-    const appointment: Appointment = {
-      ...newAppointment,
-      id: `${appointments.length + 1}`,
-    };
+    const { error } = await supabase
+      .from('appointments')
+      .insert([newAppointment]);
     
-    setAppointments([...appointments, appointment]);
-    return true;
+    return !error;
   };
   
   const cancelAppointment = async (id: string): Promise<boolean> => {
-    setAppointments(
-      appointments.map(appointment => 
-        appointment.id === id 
-          ? { ...appointment, status: "canceled" } 
-          : appointment
-      )
-    );
-    return true;
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'canceled' })
+      .eq('id', id);
+    
+    return !error;
   };
   
-  const getAppointmentsByProfessional = (professionalId: string): Appointment[] => {
-    return appointments.filter(appointment => appointment.professionalId === professionalId);
+  const getAppointmentsByProfessional = async (professionalId: string): Promise<Appointment[]> => {
+    const { data } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .order('date', { ascending: true });
+    
+    return data || [];
   };
   
-  const getTimeSlotsByProfessional = (professionalId: string): TimeSlot[] => {
-    return timeSlots.filter(slot => slot.professionalId === professionalId);
+  const getTimeSlotsByProfessional = async (professionalId: string): Promise<TimeSlot[]> => {
+    const { data } = await supabase
+      .from('time_slots')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
+    
+    return data || [];
   };
   
-  const updateTimeSlot = async (updatedSlot: TimeSlot): Promise<boolean> => {
-    setTimeSlots(
-      timeSlots.map(slot => 
-        slot.id === updatedSlot.id ? updatedSlot : slot
-      )
-    );
-    return true;
+  const updateTimeSlot = async (timeSlot: TimeSlot): Promise<boolean> => {
+    const { error } = await supabase
+      .from('time_slots')
+      .update(timeSlot)
+      .eq('id', timeSlot.id);
+    
+    return !error;
   };
   
   const addTimeSlot = async (newSlot: Omit<TimeSlot, 'id'>): Promise<boolean> => {
-    const timeSlot: TimeSlot = {
-      ...newSlot,
-      id: `${timeSlots.length + 1}`,
-    };
+    const { error } = await supabase
+      .from('time_slots')
+      .insert([newSlot]);
     
-    setTimeSlots([...timeSlots, timeSlot]);
-    return true;
+    return !error;
   };
   
   const deleteTimeSlot = async (id: string): Promise<boolean> => {
-    setTimeSlots(timeSlots.filter(slot => slot.id !== id));
-    return true;
+    const { error } = await supabase
+      .from('time_slots')
+      .delete()
+      .eq('id', id);
+    
+    return !error;
   };
   
   return (
     <AppointmentContext.Provider value={{
-      appointments,
-      timeSlots,
+      appointments: [], // Now using async functions instead
+      timeSlots: [], // Now using async functions instead
       addAppointment,
       cancelAppointment,
       getAppointmentsByProfessional,

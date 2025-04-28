@@ -1,7 +1,7 @@
 
-import React, { createContext, useState, useContext, ReactNode } from "react";
-import { Professional } from "../types";
-import { professionals } from "../data/mockData";
+import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import { Professional } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthContextType {
   user: Professional | null;
@@ -16,17 +16,52 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Professional | null>(null);
   
-  // In a real app, these would communicate with a backend
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          // Fetch user profile from profiles table
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          setUser(profile);
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // Fetch user profile
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            setUser(profile);
+          });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+  
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Mock login - find user with matching email
-    const foundUser = professionals.find(p => p.email === email);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     
-    if (foundUser) {
-      setUser(foundUser);
-      return true;
-    }
-    
-    return false;
+    return !error;
   };
   
   const register = async (
@@ -35,21 +70,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     password: string, 
     profession: string
   ): Promise<boolean> => {
-    // Mock registration
-    // In a real app, this would create a new user in the database
-    const newUser: Professional = {
-      id: `${professionals.length + 1}`,
-      name,
+    const { error } = await supabase.auth.signUp({
       email,
-      profession,
-      slug: name.toLowerCase().replace(/\s+/g, '-'),
-    };
+      password,
+      options: {
+        data: {
+          name,
+          profession,
+          slug: name.toLowerCase().replace(/\s+/g, '-'),
+        },
+      },
+    });
     
-    setUser(newUser);
-    return true;
+    return !error;
   };
   
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
   
