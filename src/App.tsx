@@ -16,6 +16,12 @@ import Dashboard from "./pages/Dashboard";
 import DashboardSchedules from "./pages/DashboardSchedules";
 import DashboardBookingLink from "./pages/DashboardBookingLink";
 import Booking from "./pages/Booking";
+import Features from "./pages/Features";
+import Pricing from "./pages/Pricing";
+import About from "./pages/About";
+import Profile from "./pages/Profile";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +40,13 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/schedules" element={<DashboardSchedules />} />
               <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
+              <Route path="/dashboard/profile" element={<Profile />} />
               <Route path="/booking/:slug" element={<Booking />} />
+              <Route path="/features" element={<Features />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
