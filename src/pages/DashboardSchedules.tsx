@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import TimeSlotForm from '@/components/dashboard/TimeSlotForm';
 import TimeSlotsList from '@/components/dashboard/TimeSlotsList';
@@ -15,14 +15,35 @@ const DashboardSchedules = () => {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | undefined>(undefined);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchTimeSlots = async () => {
+      if (user) {
+        try {
+          const data = await getTimeSlotsByProfessional(user.id);
+          setTimeSlots(data);
+        } catch (error) {
+          console.error("Failed to fetch time slots:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchTimeSlots();
+  }, [user, getTimeSlotsByProfessional]);
   
   if (!user) {
     return null;
   }
   
-  const timeSlots = getTimeSlotsByProfessional(user.id);
-  
   const handleAddSuccess = () => {
+    // Refresh time slots
+    getTimeSlotsByProfessional(user.id).then(data => {
+      setTimeSlots(data);
+    });
     setIsDialogOpen(false);
   };
   
@@ -59,10 +80,14 @@ const DashboardSchedules = () => {
           </Dialog>
         </div>
         
-        <TimeSlotsList 
-          timeSlots={timeSlots}
-          onEdit={handleEditTimeSlot}
-        />
+        {loading ? (
+          <p>Carregando horários...</p>
+        ) : (
+          <TimeSlotsList 
+            timeSlots={timeSlots}
+            onEdit={handleEditTimeSlot}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

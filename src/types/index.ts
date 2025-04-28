@@ -11,22 +11,22 @@ export interface Professional {
 
 export interface TimeSlot {
   id: string;
-  professionalId: string;
-  dayOfWeek: number; // 0-6 for Sunday-Saturday
-  startTime: string; // Format: "HH:MM"
-  endTime: string; // Format: "HH:MM"
+  professional_id: string; // Changed from professionalId to match database
+  day_of_week: number; // Changed from dayOfWeek to match database
+  start_time: string; // Changed from startTime to match database
+  end_time: string; // Changed from endTime to match database
   available: boolean;
 }
 
 export interface Appointment {
   id: string;
-  professionalId: string;
-  clientName: string;
-  clientEmail: string;
-  clientPhone?: string;
-  date: string; // ISO date string
-  startTime: string; // Format: "HH:MM"
-  endTime: string; // Format: "HH:MM"
+  professional_id: string; // Changed from professionalId to match database
+  client_name: string; // Changed from clientName to match database
+  client_email: string; // Changed from clientEmail to match database
+  client_phone?: string; // Changed from clientPhone to match database
+  date: string;
+  start_time: string; // Changed from startTime to match database
+  end_time: string; // Changed from endTime to match database
   notes?: string;
   status: "scheduled" | "completed" | "canceled";
 }

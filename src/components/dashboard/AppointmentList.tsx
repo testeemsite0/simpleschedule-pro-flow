@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Appointment } from '@/types';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAppointments } from '@/context/AppointmentContext';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 interface AppointmentListProps {
   appointments: Appointment[];
@@ -14,6 +15,25 @@ interface AppointmentListProps {
 
 const AppointmentList: React.FC<AppointmentListProps> = ({ appointments }) => {
   const { cancelAppointment } = useAppointments();
+  const { toast } = useToast();
+  
+  const handleCancel = useCallback(async (id: string) => {
+    if (window.confirm('Deseja realmente cancelar este agendamento?')) {
+      const success = await cancelAppointment(id);
+      if (success) {
+        toast({
+          title: "Agendamento cancelado",
+          description: "O agendamento foi cancelado com sucesso."
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível cancelar o agendamento.",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [cancelAppointment, toast]);
   
   if (appointments.length === 0) {
     return (
@@ -49,12 +69,6 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments }) => {
     }
   };
   
-  const handleCancel = async (id: string) => {
-    if (window.confirm('Deseja realmente cancelar este agendamento?')) {
-      await cancelAppointment(id);
-    }
-  };
-  
   return (
     <div className="space-y-4">
       {appointments.map((appointment) => {
@@ -66,17 +80,17 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments }) => {
             <div className="flex flex-col sm:flex-row justify-between">
               <div>
                 <div className="flex items-center mb-2">
-                  <h3 className="font-medium mr-3">{appointment.clientName}</h3>
+                  <h3 className="font-medium mr-3">{appointment.client_name}</h3>
                   <Badge variant="outline" className={getStatusColor(appointment.status)}>
                     {getStatusText(appointment.status)}
                   </Badge>
                 </div>
                 <p className="text-sm text-gray-600">
-                  {formattedDate} • {appointment.startTime} - {appointment.endTime}
+                  {formattedDate} • {appointment.start_time} - {appointment.end_time}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">{appointment.clientEmail}</p>
-                {appointment.clientPhone && (
-                  <p className="text-sm text-gray-600">{appointment.clientPhone}</p>
+                <p className="text-sm text-gray-600 mt-1">{appointment.client_email}</p>
+                {appointment.client_phone && (
+                  <p className="text-sm text-gray-600">{appointment.client_phone}</p>
                 )}
               </div>
               

@@ -55,13 +55,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
     
     try {
       const success = await addAppointment({
-        professionalId: professional.id,
-        clientName: name,
-        clientEmail: email,
-        clientPhone: phone,
+        professional_id: professional.id,
+        client_name: name,
+        client_email: email,
+        client_phone: phone,
         date: format(selectedDate, 'yyyy-MM-dd'),
-        startTime,
-        endTime,
+        start_time: startTime,
+        end_time: endTime,
         notes,
         status: 'scheduled',
       });

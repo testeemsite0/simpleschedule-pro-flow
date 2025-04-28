@@ -42,7 +42,7 @@ export const AppointmentProvider: React.FC<{ children: ReactNode }> = ({ childre
       .eq('professional_id', professionalId)
       .order('date', { ascending: true });
     
-    return data || [];
+    return data as Appointment[] || [];
   };
   
   const getTimeSlotsByProfessional = async (professionalId: string): Promise<TimeSlot[]> => {
@@ -53,7 +53,7 @@ export const AppointmentProvider: React.FC<{ children: ReactNode }> = ({ childre
       .order('day_of_week', { ascending: true })
       .order('start_time', { ascending: true });
     
-    return data || [];
+    return data as TimeSlot[] || [];
   };
   
   const updateTimeSlot = async (timeSlot: TimeSlot): Promise<boolean> => {

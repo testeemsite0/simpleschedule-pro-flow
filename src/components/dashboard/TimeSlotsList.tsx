@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { TimeSlot } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAppointments } from '@/context/AppointmentContext';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 interface TimeSlotsListProps {
   timeSlots: TimeSlot[];
@@ -13,6 +14,25 @@ interface TimeSlotsListProps {
 
 const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, onEdit }) => {
   const { deleteTimeSlot } = useAppointments();
+  const { toast } = useToast();
+  
+  const handleDelete = useCallback(async (id: string) => {
+    if (window.confirm('Deseja realmente excluir este horário?')) {
+      const success = await deleteTimeSlot(id);
+      if (success) {
+        toast({
+          title: "Horário excluído",
+          description: "O horário foi excluído com sucesso."
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível excluir o horário.",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [deleteTimeSlot, toast]);
   
   if (timeSlots.length === 0) {
     return (
@@ -37,18 +57,12 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, onEdit }) => {
   
   // Group time slots by day of week
   const slotsByDay = timeSlots.reduce<Record<number, TimeSlot[]>>((acc, slot) => {
-    if (!acc[slot.dayOfWeek]) {
-      acc[slot.dayOfWeek] = [];
+    if (!acc[slot.day_of_week]) {
+      acc[slot.day_of_week] = [];
     }
-    acc[slot.dayOfWeek].push(slot);
+    acc[slot.day_of_week].push(slot);
     return acc;
   }, {});
-  
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Deseja realmente excluir este horário?')) {
-      await deleteTimeSlot(id);
-    }
-  };
   
   return (
     <div className="space-y-6">
@@ -62,7 +76,7 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, onEdit }) => {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium">
-                      {slot.startTime} - {slot.endTime}
+                      {slot.start_time} - {slot.end_time}
                     </p>
                     
                     <div className="mt-1">
