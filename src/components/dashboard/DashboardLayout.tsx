@@ -1,137 +1,111 @@
 
 import React, { ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import Logo from '@/components/ui/Logo';
-import { 
-  Calendar, 
-  Clock, 
-  User, 
-  Settings, 
-  Link as LinkIcon
-} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { cn } from '@/lib/utils';
+import {
+  CalendarIcon,
+  LinkIcon,
+  UserIcon,
+  HomeIcon,
+  LogOutIcon,
+  SettingsIcon
+} from 'lucide-react';
 
-interface DashboardLayoutProps {
+type DashboardLayoutProps = {
   children: ReactNode;
-  title: string;
-}
+};
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  const { user, logout, isAuthenticated } = useAuth();
+  const location = useLocation();
   
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
   
-  const menuItems = [
-    {
-      icon: Calendar,
-      label: 'Agendamentos',
-      href: '/dashboard',
-    },
-    {
-      icon: Clock,
-      label: 'Horários',
-      href: '/dashboard/schedules',
-    },
-    {
-      icon: User,
-      label: 'Perfil',
-      href: '/dashboard/profile',
-    },
-    {
-      icon: LinkIcon,
-      label: 'Link de Agendamento',
-      href: '/dashboard/booking-link',
-    },
-    {
-      icon: Settings,
-      label: 'Configurações',
-      href: '/dashboard/settings',
-    },
+  const navItems = [
+    { path: '/dashboard', label: 'Dashboard', icon: <HomeIcon size={18} /> },
+    { path: '/dashboard/schedules', label: 'Horários', icon: <CalendarIcon size={18} /> },
+    { path: '/dashboard/booking-link', label: 'Link de Agendamento', icon: <LinkIcon size={18} /> },
+    { path: '/dashboard/profile', label: 'Perfil', icon: <UserIcon size={18} /> },
+    { path: '/dashboard/settings', label: 'Configurações', icon: <SettingsIcon size={18} /> },
   ];
   
+  const isActive = (path: string) => location.pathname === path;
+  
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-sm hidden md:flex flex-col">
-        <div className="p-4 border-b">
-          <Logo />
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="bg-white border-b py-4 px-6">
+        <div className="container mx-auto flex justify-between items-center">
+          <Link to="/" className="text-xl font-bold text-primary">SimpleSchedule</Link>
+          <div className="flex items-center gap-4">
+            {user && (
+              <span className="text-sm text-gray-600">
+                Olá, {user.name.split(' ')[0]}
+              </span>
+            )}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={logout}
+              className="flex items-center gap-2"
+            >
+              <LogOutIcon size={16} />
+              Sair
+            </Button>
+          </div>
         </div>
-        
-        <div className="p-4 flex-1">
-          <nav className="space-y-1">
-            {menuItems.map((item, index) => (
+      </header>
+      
+      <div className="flex flex-1">
+        {/* Sidebar */}
+        <aside className="w-64 bg-gray-50 border-r p-4 hidden md:block">
+          <nav className="space-y-2">
+            {navItems.map((item) => (
               <Link
-                key={index}
-                to={item.href}
-                className={cn(
-                  "flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                  window.location.pathname === item.href
-                    ? "bg-primary text-primary-foreground"
-                    : "text-gray-900 hover:bg-gray-100"
-                )}
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                  isActive(item.path)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 hover:bg-gray-200'
+                }`}
               >
-                <item.icon className="mr-3 h-5 w-5" />
+                {item.icon}
                 {item.label}
               </Link>
             ))}
           </nav>
+        </aside>
+        
+        {/* Mobile navigation */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-10">
+          <div className="flex justify-between px-2">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex flex-col items-center py-2 px-3 ${
+                  isActive(item.path)
+                    ? 'text-primary'
+                    : 'text-gray-600'
+                }`}
+              >
+                {item.icon}
+                <span className="text-xs mt-1">{item.label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
         
-        <div className="p-4 border-t">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-              <span className="text-sm font-medium">
-                {user?.name[0]}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.name}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.profession}
-              </p>
-            </div>
-          </div>
-          <Button 
-            variant="outline"
-            className="w-full mt-4"
-            onClick={handleLogout}
-          >
-            Sair
-          </Button>
-        </div>
-      </aside>
-      
-      {/* Mobile Header */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <header className="bg-white shadow-sm md:hidden">
-          <div className="px-4 py-3 flex items-center justify-between">
-            <Logo />
-            <button className="text-gray-500 focus:outline-none">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </header>
-        
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto bg-gray-50 p-4 md:p-6">
-          <div className="max-w-7xl mx-auto">
-            <h1 className="text-2xl font-semibold mb-6">{title}</h1>
-            {children}
-          </div>
+        {/* Main content */}
+        <main className="flex-1 bg-gray-50">
+          {children}
         </main>
       </div>
     </div>
   );
 };
-
-export default DashboardLayout;

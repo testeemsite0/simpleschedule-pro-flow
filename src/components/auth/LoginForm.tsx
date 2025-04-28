@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,6 +23,7 @@ const LoginForm: React.FC = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting to login with:", email);
       const success = await login(email, password);
       
       if (success) {
@@ -29,21 +31,38 @@ const LoginForm: React.FC = () => {
           title: 'Login realizado com sucesso',
           description: 'Você será redirecionado para o dashboard',
         });
-        navigate('/dashboard');
+        
+        // Verificar se o usuário está realmente autenticado
+        const { data: session } = await supabase.auth.getSession();
+        
+        if (session?.session) {
+          console.log("User authenticated, redirecting to dashboard");
+          navigate('/dashboard');
+        } else {
+          console.error("Session not found after successful login");
+          toast({
+            title: 'Erro de autenticação',
+            description: 'Falha ao iniciar sessão. Por favor, tente novamente.',
+            variant: 'destructive',
+          });
+          setIsLoading(false);
+        }
       } else {
+        console.error("Login failed");
         toast({
           title: 'Erro ao fazer login',
           description: 'Email ou senha incorretos',
           variant: 'destructive',
         });
+        setIsLoading(false);
       }
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: 'Erro ao fazer login',
         description: 'Ocorreu um erro ao processar sua solicitação',
         variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   };

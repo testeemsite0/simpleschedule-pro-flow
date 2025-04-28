@@ -22,6 +22,7 @@ import About from "./pages/About";
 import Profile from "./pages/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/dashboard/schedules" element={<DashboardSchedules />} />
               <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
               <Route path="/dashboard/profile" element={<Profile />} />
+              <Route path="/dashboard/settings" element={<Settings />} />
               <Route path="/booking/:slug" element={<Booking />} />
               <Route path="/features" element={<Features />} />
               <Route path="/pricing" element={<Pricing />} />

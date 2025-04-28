@@ -20,6 +20,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.id);
         if (session) {
           // Fetch user profile from profiles table
           const { data: profile } = await supabase
@@ -29,14 +30,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .single();
             
           setUser(profile);
+          console.log("User profile fetched:", profile);
         } else {
           setUser(null);
+          console.log("No session, user set to null");
         }
       }
     );
 
     // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session?.user?.id);
       if (session) {
         // Fetch user profile
         supabase
@@ -46,6 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .single()
           .then(({ data: profile }) => {
             setUser(profile);
+            console.log("Initial user profile:", profile);
           });
       }
     });
@@ -56,12 +61,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
   
   const login = async (email: string, password: string): Promise<boolean> => {
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log("Login attempt:", email);
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
-    return !error;
+    console.log("Login response:", data?.user?.id, error);
+    return !error && !!data.user;
   };
   
   const register = async (
@@ -86,6 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   
   const logout = async () => {
+    console.log("Logout called");
     await supabase.auth.signOut();
     setUser(null);
   };
