@@ -1,5 +1,5 @@
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -17,9 +17,34 @@ type DashboardLayoutProps = {
   title?: string;  // Make the title prop optional
 };
 
+// List of admin emails
+const ADMIN_EMAILS = ['admin@azulschedule.com'];
+
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    // Check if current user is an admin
+    if (user && user.email && ADMIN_EMAILS.includes(user.email)) {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
+  
+  // Show loading indicator while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
   
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
@@ -34,6 +59,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
     { path: '/dashboard/settings', label: 'Configurações', icon: <SettingsIcon size={18} /> },
   ];
   
+  // Add admin panel link for admin users
+  if (isAdmin) {
+    navItems.push({ 
+      path: '/admin', 
+      label: 'Painel Admin', 
+      icon: <SettingsIcon size={18} /> 
+    });
+  }
+  
   const isActive = (path: string) => location.pathname === path;
   
   return (
@@ -46,6 +80,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
             {user && (
               <span className="text-sm text-gray-600">
                 Olá, {user.name.split(' ')[0]}
+                {isAdmin && <span className="ml-1 text-xs font-semibold text-primary">(Admin)</span>}
               </span>
             )}
             <Button 
