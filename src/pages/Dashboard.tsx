@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, addDays, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import AppointmentList from '@/components/dashboard/AppointmentList';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

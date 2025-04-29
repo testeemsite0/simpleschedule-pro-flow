@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import TimeSlotForm from '@/components/dashboard/TimeSlotForm';
 import TimeSlotsList from '@/components/dashboard/TimeSlotsList';
 import { Button } from '@/components/ui/button';
