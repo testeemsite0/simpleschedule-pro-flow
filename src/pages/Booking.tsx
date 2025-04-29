@@ -50,12 +50,27 @@ const Booking = () => {
             .eq('professional_id', foundProfessional.id)
             .order('day_of_week', { ascending: true })
             .order('start_time', { ascending: true });
+           
+          // Convert the data and make sure the status is correctly typed
+          // We ensure that the status is one of the expected values
+          if (appointmentsData) {
+            const typedAppointments: Appointment[] = appointmentsData.map(app => {
+              // Validate and ensure the status is one of the allowed values
+              let status: "scheduled" | "completed" | "canceled" = "scheduled";
+              if (app.status === "completed") status = "completed";
+              else if (app.status === "canceled") status = "canceled";
+              
+              return {
+                ...app,
+                status
+              } as Appointment;
+            });
             
-          // Cast the status type to match the Appointment interface
-          setAppointments((appointmentsData || []).map(app => ({
-            ...app,
-            status: app.status as "scheduled" | "completed" | "canceled"
-          })));
+            setAppointments(typedAppointments);
+          } else {
+            setAppointments([]);
+          }
+          
           setTimeSlots(timeSlotsData as TimeSlot[] || []);
         }
       } catch (error) {
@@ -87,7 +102,21 @@ const Booking = () => {
         .select('*')
         .eq('professional_id', professional.id)
         .then(({ data }) => {
-          if (data) setAppointments(data);
+          if (data) {
+            // Same casting as above to ensure type safety
+            const typedAppointments: Appointment[] = data.map(app => {
+              let status: "scheduled" | "completed" | "canceled" = "scheduled";
+              if (app.status === "completed") status = "completed";
+              else if (app.status === "canceled") status = "canceled";
+              
+              return {
+                ...app,
+                status
+              } as Appointment;
+            });
+            
+            setAppointments(typedAppointments);
+          }
         });
     }
   };
