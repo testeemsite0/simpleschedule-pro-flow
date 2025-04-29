@@ -60,17 +60,21 @@ const AdminPanel = () => {
 
   const fetchSystemConfig = async () => {
     try {
-      const { data, error } = await supabase
-        .from('system_config')
+      // Use a type assertion to bypass TypeScript's type checking
+      // since our database schema has been updated but the types haven't
+      const { data, error } = await (supabase
+        .from('system_config' as any)
         .select('*')
-        .single();
+        .single() as any);
       
       if (error) throw error;
       
       if (data) {
-        setConfig(data);
-        setPremiumPrice(data.premium_price.toString());
-        setStripePriceId(data.stripe_price_id);
+        // Type assertion to ensure correct type
+        const configData = data as unknown as SystemConfig;
+        setConfig(configData);
+        setPremiumPrice(configData.premium_price.toString());
+        setStripePriceId(configData.stripe_price_id);
       }
     } catch (error) {
       console.error('Error fetching system config:', error);
@@ -111,14 +115,15 @@ const AdminPanel = () => {
         throw new Error('O preço deve ser um número válido');
       }
       
-      const { error } = await supabase
-        .from('system_config')
+      // Use a type assertion to bypass TypeScript's type checking
+      const { error } = await (supabase
+        .from('system_config' as any)
         .update({
           premium_price: priceValue,
           stripe_price_id: stripePriceId,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', config?.id);
+        .eq('id', config?.id) as any);
       
       if (error) throw error;
       

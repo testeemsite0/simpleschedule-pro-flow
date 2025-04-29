@@ -98,6 +98,30 @@ export type Database = {
         }
         Relationships: []
       }
+      system_config: {
+        Row: {
+          created_at: string
+          id: string
+          premium_price: number
+          stripe_price_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          premium_price?: number
+          stripe_price_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          premium_price?: number
+          stripe_price_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_slots: {
         Row: {
           available: boolean | null
