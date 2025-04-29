@@ -9,7 +9,8 @@ import BookingForm from '@/components/booking/BookingForm';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
 import { useAppointments } from '@/context/AppointmentContext';
 import { professionals } from '@/data/mockData';
-import { Professional } from '@/types';
+import { Professional, Appointment, TimeSlot } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 type BookingStep = 'calendar' | 'form' | 'confirmation';
 
@@ -21,14 +22,100 @@ const Booking = () => {
   const [selectedStartTime, setSelectedStartTime] = useState<string>('');
   const [selectedEndTime, setSelectedEndTime] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
-  
-  const { appointments, timeSlots } = useAppointments();
+  const [appointmentId, setAppointmentId] = useState<string>('');
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Find the professional by slug
   useEffect(() => {
-    const foundProfessional = professionals.find(p => p.slug === slug);
-    setProfessional(foundProfessional || null);
+    const fetchProfessionalData = async () => {
+      setLoading(true);
+      try {
+        // Find professional from mock data for now
+        // In a real app, this would fetch from Supabase
+        const foundProfessional = professionals.find(p => p.slug === slug);
+        
+        if (foundProfessional) {
+          setProfessional(foundProfessional);
+          
+          // Fetch professional's appointments and time slots
+          const { data: appointmentsData } = await supabase
+            .from('appointments')
+            .select('*')
+            .eq('professional_id', foundProfessional.id);
+            
+          const { data: timeSlotsData } = await supabase
+            .from('time_slots')
+            .select('*')
+            .eq('professional_id', foundProfessional.id)
+            .order('day_of_week', { ascending: true })
+            .order('start_time', { ascending: true });
+            
+          setAppointments(appointmentsData as Appointment[] || []);
+          setTimeSlots(timeSlotsData as TimeSlot[] || []);
+        }
+      } catch (error) {
+        console.error("Error fetching professional data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProfessionalData();
   }, [slug]);
+  
+  const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string) => {
+    setSelectedDate(date);
+    setSelectedStartTime(startTime);
+    setSelectedEndTime(endTime);
+    setCurrentStep('form');
+  };
+  
+  const handleBookingSuccess = (name: string, id: string) => {
+    setClientName(name);
+    setAppointmentId(id);
+    setCurrentStep('confirmation');
+    
+    // Refresh appointments after booking
+    if (professional) {
+      supabase
+        .from('appointments')
+        .select('*')
+        .eq('professional_id', professional.id)
+        .then(({ data }) => {
+          if (data) setAppointments(data);
+        });
+    }
+  };
+  
+  const handleBookingFormCancel = () => {
+    setCurrentStep('calendar');
+  };
+  
+  const handleConfirmationClose = () => {
+    setCurrentStep('calendar');
+    setSelectedDate(null);
+    setSelectedStartTime('');
+    setSelectedEndTime('');
+    setAppointmentId('');
+  };
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <p className="text-center">Carregando...</p>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   
   if (!professional) {
     return (
@@ -46,38 +133,6 @@ const Booking = () => {
     );
   }
   
-  const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string) => {
-    setSelectedDate(date);
-    setSelectedStartTime(startTime);
-    setSelectedEndTime(endTime);
-    setCurrentStep('form');
-  };
-  
-  const handleBookingSuccess = (name: string) => {
-    setClientName(name);
-    setCurrentStep('confirmation');
-  };
-  
-  const handleBookingFormCancel = () => {
-    setCurrentStep('calendar');
-  };
-  
-  const handleConfirmationClose = () => {
-    setCurrentStep('calendar');
-    setSelectedDate(null);
-    setSelectedStartTime('');
-    setSelectedEndTime('');
-  };
-  
-  // Filter timeSlots and appointments for this professional
-  const professionalTimeSlots = timeSlots.filter(slot => 
-    slot.professional_id === professional.id
-  );
-  
-  const professionalAppointments = appointments.filter(appointment => 
-    appointment.professional_id === professional.id
-  );
-  
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -92,8 +147,8 @@ const Booking = () => {
               {currentStep === 'calendar' && (
                 <BookingCalendar 
                   professional={professional}
-                  timeSlots={professionalTimeSlots}
-                  appointments={professionalAppointments}
+                  timeSlots={timeSlots}
+                  appointments={appointments}
                   onSelectSlot={handleSelectTimeSlot}
                 />
               )}
@@ -104,7 +159,7 @@ const Booking = () => {
                   selectedDate={selectedDate}
                   startTime={selectedStartTime}
                   endTime={selectedEndTime}
-                  onSuccess={() => handleBookingSuccess(clientName)}
+                  onSuccess={handleBookingSuccess}
                   onCancel={handleBookingFormCancel}
                 />
               )}
@@ -116,6 +171,7 @@ const Booking = () => {
                   date={selectedDate}
                   startTime={selectedStartTime}
                   endTime={selectedEndTime}
+                  appointmentId={appointmentId}
                   onClose={handleConfirmationClose}
                 />
               )}

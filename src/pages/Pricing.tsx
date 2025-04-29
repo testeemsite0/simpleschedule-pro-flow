@@ -1,10 +1,85 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SystemConfig {
+  id: string;
+  premium_price: number;
+  stripe_price_id: string;
+}
 
 const Pricing = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  useEffect(() => {
+    const fetchSystemConfig = async () => {
+      try {
+        const { data, error } = await (supabase
+          .from('system_config' as any)
+          .select('*')
+          .single() as any);
+          
+        if (error) throw error;
+        setConfig(data as SystemConfig);
+      } catch (error) {
+        console.error('Error fetching system config:', error);
+      }
+    };
+    
+    fetchSystemConfig();
+  }, []);
+  
+  const handleCheckout = async (plan: string) => {
+    if (!user) {
+      toast({
+        title: "Login necessário",
+        description: "Faça login para assinar um plano",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      toast({
+        title: "Processando",
+        description: "Estamos preparando sua compra..."
+      });
+      
+      // Here we'd redirect to a Stripe checkout session
+      // This would be implemented via a Supabase Edge Function
+      toast({
+        title: "Sistema em implementação",
+        description: "O sistema de pagamento está sendo implementado"
+      });
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast({
+        title: "Erro no checkout",
+        description: "Ocorreu um erro ao processar seu pedido",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2
+    }).format(price);
+  };
+
   return (
     <>
       <Header />
@@ -18,12 +93,12 @@ const Pricing = () => {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Plano Básico */}
+            {/* Plano Gratuito */}
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
               <div className="p-6 border-b">
-                <h3 className="text-xl font-semibold">Plano Básico</h3>
+                <h3 className="text-xl font-semibold">Plano Gratuito</h3>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold">R$49</span>
+                  <span className="text-4xl font-extrabold">R$0</span>
                   <span className="ml-1 text-gray-500">/mês</span>
                 </div>
               </div>
@@ -33,7 +108,7 @@ const Pricing = () => {
                     <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    <span>Até 50 agendamentos/mês</span>
+                    <span>Até 5 agendamentos/mês</span>
                   </li>
                   <li className="flex items-start">
                     <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,7 +135,7 @@ const Pricing = () => {
                     <span>Suporte prioritário</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6">Começar agora</Button>
+                <Button className="w-full mt-6" disabled>Atual</Button>
               </div>
             </div>
             
@@ -70,7 +145,7 @@ const Pricing = () => {
               <div className="p-6 border-b">
                 <h3 className="text-xl font-semibold">Plano Profissional</h3>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold">R$99</span>
+                  <span className="text-4xl font-extrabold">{config ? formatPrice(config.premium_price) : 'R$99'}</span>
                   <span className="ml-1 text-gray-500">/mês</span>
                 </div>
               </div>
@@ -107,7 +182,13 @@ const Pricing = () => {
                     <span>Suporte prioritário</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6">Começar agora</Button>
+                <Button 
+                  className="w-full mt-6" 
+                  onClick={() => handleCheckout('professional')}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Processando...' : 'Começar agora'}
+                </Button>
               </div>
             </div>
             
@@ -153,7 +234,13 @@ const Pricing = () => {
                     <span>Suporte prioritário</span>
                   </li>
                 </ul>
-                <Button className="w-full mt-6">Começar agora</Button>
+                <Button 
+                  className="w-full mt-6" 
+                  onClick={() => handleCheckout('enterprise')}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Processando...' : 'Começar agora'}
+                </Button>
               </div>
             </div>
           </div>

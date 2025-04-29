@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TimeSlot, Appointment, Professional } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BookingCalendarProps {
   professional: Professional;
@@ -28,9 +29,46 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [isOverLimit, setIsOverLimit] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  // Check if professional has reached the free plan limit
+  useEffect(() => {
+    const checkAppointmentLimit = async () => {
+      setLoading(true);
+      try {
+        // Count current month's scheduled appointments
+        const today = new Date();
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        const { count, error } = await supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: false })
+          .eq('professional_id', professional.id)
+          .eq('status', 'scheduled')
+          .gte('date', firstDayOfMonth.toISOString().split('T')[0])
+          .lte('date', lastDayOfMonth.toISOString().split('T')[0]);
+          
+        if (error) throw error;
+        setIsOverLimit(count !== null && count >= 5);
+      } catch (error) {
+        console.error("Error checking appointment limit:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkAppointmentLimit();
+  }, [professional.id]);
   
   // Generate next 14 days for selection
   useEffect(() => {
+    if (isOverLimit) {
+      setAvailableDates([]);
+      return;
+    }
+    
     const dates: Date[] = [];
     const now = startOfDay(new Date());
     
@@ -53,11 +91,14 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     if (dates.length > 0) {
       setSelectedDate(dates[0]);
     }
-  }, [timeSlots]);
+  }, [timeSlots, isOverLimit]);
   
   // When a date is selected, find available time slots
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!selectedDate || isOverLimit) {
+      setAvailableSlots([]);
+      return;
+    }
     
     const dayOfWeek = selectedDate.getDay();
     const slots: AvailableSlot[] = [];
@@ -89,7 +130,25 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     });
     
     setAvailableSlots(slots);
-  }, [selectedDate, timeSlots, appointments]);
+  }, [selectedDate, timeSlots, appointments, isOverLimit]);
+  
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <p>Carregando horários disponíveis...</p>
+      </div>
+    );
+  }
+  
+  if (isOverLimit) {
+    return (
+      <Card className="p-6 text-center">
+        <p className="text-muted-foreground">
+          Nenhuma vaga disponível para agendamento.
+        </p>
+      </Card>
+    );
+  }
   
   return (
     <div className="space-y-6">

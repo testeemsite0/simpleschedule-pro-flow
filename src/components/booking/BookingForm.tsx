@@ -16,7 +16,7 @@ interface BookingFormProps {
   selectedDate: Date;
   startTime: string;
   endTime: string;
-  onSuccess: () => void;
+  onSuccess: (name: string, appointmentId: string) => void;
   onCancel: () => void;
 }
 
@@ -34,7 +34,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { addAppointment } = useAppointments();
+  const { addAppointment, isWithinFreeLimit } = useAppointments();
   const { toast } = useToast();
   
   const formattedDate = format(selectedDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
@@ -54,7 +54,21 @@ const BookingForm: React.FC<BookingFormProps> = ({
     setIsLoading(true);
     
     try {
-      const success = await addAppointment({
+      // First check if the professional is within free plan limits
+      const withinLimit = await isWithinFreeLimit(professional.id);
+      
+      if (!withinLimit) {
+        toast({
+          title: 'Não disponível',
+          description: 'Não há vagas disponíveis para agendamento no momento.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Prepare appointment data
+      const appointmentData = {
         professional_id: professional.id,
         client_name: name,
         client_email: email,
@@ -64,15 +78,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
         end_time: endTime,
         notes,
         status: 'scheduled',
-      });
+      };
       
-      if (success) {
+      // Create appointment and get its ID
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert([appointmentData])
+        .select();
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
         toast({
           title: 'Agendamento realizado',
           description: 'Seu agendamento foi confirmado com sucesso',
         });
         
-        onSuccess();
+        onSuccess(name, data[0].id);
       }
     } catch (error) {
       toast({

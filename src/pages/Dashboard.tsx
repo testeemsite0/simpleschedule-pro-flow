@@ -6,16 +6,24 @@ import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import AppointmentList from '@/components/dashboard/AppointmentList';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useAppointments } from '@/context/AppointmentContext';
 import { Appointment } from '@/types';
+import { Link } from 'react-router-dom';
+import { AlertCircle } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { getAppointmentsByProfessional } = useAppointments();
+  const { getAppointmentsByProfessional, countMonthlyAppointments, isWithinFreeLimit } = useAppointments();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('upcoming');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [monthlyCount, setMonthlyCount] = useState(0);
+  const [isOverLimit, setIsOverLimit] = useState(false);
   
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -23,8 +31,18 @@ const Dashboard = () => {
         try {
           const data = await getAppointmentsByProfessional(user.id);
           setAppointments(data);
+          
+          // Check appointment count for limit warning
+          const count = await countMonthlyAppointments(user.id);
+          setMonthlyCount(count);
+          setIsOverLimit(count >= 5);
         } catch (error) {
           console.error("Failed to fetch appointments:", error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar seus agendamentos",
+            variant: "destructive"
+          });
         } finally {
           setLoading(false);
         }
@@ -32,7 +50,7 @@ const Dashboard = () => {
     };
     
     fetchAppointments();
-  }, [user, getAppointmentsByProfessional]);
+  }, [user, getAppointmentsByProfessional, countMonthlyAppointments, toast]);
   
   if (!user) {
     return null;
@@ -53,9 +71,13 @@ const Dashboard = () => {
     return isAfter(appointmentDate, today) && appointment.status === 'scheduled';
   });
   
-  const pastAppointments = appointments.filter(appointment => {
+  const canceledAppointments = appointments.filter(appointment => 
+    appointment.status === 'canceled'
+  );
+  
+  const completedAppointments = appointments.filter(appointment => {
     const appointmentDate = new Date(appointment.date);
-    return !isAfter(appointmentDate, today) || appointment.status !== 'scheduled';
+    return !isAfter(appointmentDate, today) && appointment.status === 'scheduled';
   });
   
   // Get appointments for today
@@ -77,10 +99,29 @@ const Dashboard = () => {
     );
   });
   
+  const totalCanceledThisMonth = canceledAppointments.filter(appointment => {
+    const appointmentDate = new Date(appointment.date);
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return isAfter(appointmentDate, firstDayOfMonth);
+  }).length;
+  
   return (
     <DashboardLayout title="Dashboard">
       <div className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {isOverLimit && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Limite de agendamentos atingido</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div>Você atingiu o limite de agendamentos do plano gratuito. Atualize para o plano Premium para continuar recebendo novos agendamentos.</div>
+              <Button asChild className="mt-2 sm:mt-0 whitespace-nowrap">
+                <Link to="/pricing">Atualizar Plano</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="p-6">
             <h3 className="text-lg font-medium mb-1">Agendamentos hoje</h3>
             <p className="text-3xl font-bold">{todayAppointments.length}</p>
@@ -98,9 +139,17 @@ const Dashboard = () => {
           </Card>
           
           <Card className="p-6">
-            <h3 className="text-lg font-medium mb-1">Total de agendamentos</h3>
+            <h3 className="text-lg font-medium mb-1">Agendamentos confirmados</h3>
             <p className="text-3xl font-bold">{upcomingAppointments.length}</p>
             <p className="text-sm text-muted-foreground mt-2">Próximos dias</p>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-medium mb-1">Cancelados este mês</h3>
+            <p className="text-3xl font-bold">{totalCanceledThisMonth}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {format(today, "MMMM", { locale: ptBR })}
+            </p>
           </Card>
         </div>
         
@@ -109,16 +158,21 @@ const Dashboard = () => {
           
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
-              <TabsTrigger value="upcoming">Próximos</TabsTrigger>
-              <TabsTrigger value="past">Anteriores</TabsTrigger>
+              <TabsTrigger value="upcoming">Confirmados</TabsTrigger>
+              <TabsTrigger value="canceled">Cancelados</TabsTrigger>
+              <TabsTrigger value="completed">Concluídos</TabsTrigger>
             </TabsList>
             
             <TabsContent value="upcoming">
               <AppointmentList appointments={upcomingAppointments} />
             </TabsContent>
             
-            <TabsContent value="past">
-              <AppointmentList appointments={pastAppointments} />
+            <TabsContent value="canceled">
+              <AppointmentList appointments={canceledAppointments} />
+            </TabsContent>
+
+            <TabsContent value="completed">
+              <AppointmentList appointments={completedAppointments} />
             </TabsContent>
           </Tabs>
         </div>

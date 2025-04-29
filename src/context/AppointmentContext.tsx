@@ -13,6 +13,8 @@ interface AppointmentContextType {
   updateTimeSlot: (timeSlot: TimeSlot) => Promise<boolean>;
   addTimeSlot: (timeSlot: Omit<TimeSlot, 'id'>) => Promise<boolean>;
   deleteTimeSlot: (id: string) => Promise<boolean>;
+  countMonthlyAppointments: (professionalId: string) => Promise<number>;
+  isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
 }
 
 const AppointmentContext = createContext<AppointmentContextType | undefined>(undefined);
@@ -81,6 +83,34 @@ export const AppointmentProvider: React.FC<{ children: ReactNode }> = ({ childre
     
     return !error;
   };
+
+  // Count active appointments for the current month for a professional
+  const countMonthlyAppointments = async (professionalId: string): Promise<number> => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const { count, error } = await supabase
+      .from('appointments')
+      .select('*', { count: 'exact', head: false })
+      .eq('professional_id', professionalId)
+      .eq('status', 'scheduled')
+      .gte('date', firstDayOfMonth.toISOString().split('T')[0])
+      .lte('date', lastDayOfMonth.toISOString().split('T')[0]);
+
+    if (error) {
+      console.error("Error counting monthly appointments:", error);
+      return 0;
+    }
+
+    return count || 0;
+  };
+
+  // Check if professional is within free plan limits (5 appointments/month)
+  const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
+    const count = await countMonthlyAppointments(professionalId);
+    return count < 5; // Free plan allows up to 5 appointments per month
+  };
   
   return (
     <AppointmentContext.Provider value={{
@@ -93,6 +123,8 @@ export const AppointmentProvider: React.FC<{ children: ReactNode }> = ({ childre
       updateTimeSlot,
       addTimeSlot,
       deleteTimeSlot,
+      countMonthlyAppointments,
+      isWithinFreeLimit,
     }}>
       {children}
     </AppointmentContext.Provider>
