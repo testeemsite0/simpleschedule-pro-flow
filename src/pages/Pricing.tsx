@@ -54,12 +54,17 @@ const Pricing = () => {
         description: "Estamos preparando sua compra..."
       });
       
-      // Here we'd redirect to a Stripe checkout session
-      // This would be implemented via a Supabase Edge Function
-      toast({
-        title: "Sistema em implementação",
-        description: "O sistema de pagamento está sendo implementado"
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { plan }
       });
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
     } catch (error) {
       console.error("Checkout error:", error);
       toast({

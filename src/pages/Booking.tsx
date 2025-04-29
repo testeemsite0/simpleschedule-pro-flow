@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +51,11 @@ const Booking = () => {
             .order('day_of_week', { ascending: true })
             .order('start_time', { ascending: true });
             
-          setAppointments(appointmentsData as Appointment[] || []);
+          // Cast the status type to match the Appointment interface
+          setAppointments((appointmentsData || []).map(app => ({
+            ...app,
+            status: app.status as "scheduled" | "completed" | "canceled"
+          })));
           setTimeSlots(timeSlotsData as TimeSlot[] || []);
         }
       } catch (error) {
