@@ -14,9 +14,10 @@ import {
 
 type DashboardLayoutProps = {
   children: ReactNode;
+  title?: string;  // Make the title prop optional
 };
 
-export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const location = useLocation();
   
@@ -103,7 +104,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         
         {/* Main content */}
         <main className="flex-1 bg-gray-50">
-          {children}
+          <div className="container mx-auto p-6">
+            {title && <h1 className="text-2xl font-bold mb-6">{title}</h1>}
+            {children}
+          </div>
         </main>
       </div>
     </div>
