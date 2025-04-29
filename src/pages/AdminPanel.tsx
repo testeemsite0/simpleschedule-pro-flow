@@ -88,15 +88,40 @@ const AdminPanel = () => {
 
   const fetchSystemStats = async () => {
     try {
-      // In a real implementation, this would be a database query
-      // For now, we'll simulate the stats
-      setStats({
-        total_users: 150,
-        free_users: 120,
-        premium_users: 30,
-        active_subscriptions: 28,
-        cancelled_subscriptions: 12,
-      });
+      // Fetch real data from the database
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id');
+      
+      if (profilesError) throw profilesError;
+      
+      // Fetch subscribers to determine premium users
+      const { data: subscribers, error: subscribersError } = await supabase
+        .from('subscribers')
+        .select('*');
+      
+      if (subscribersError) {
+        // If table doesn't exist yet, use simulated data
+        setStats({
+          total_users: profiles?.length || 0,
+          free_users: profiles?.length || 0,
+          premium_users: 0,
+          active_subscriptions: 0,
+          cancelled_subscriptions: 0,
+        });
+      } else {
+        // Calculate actual stats
+        const premiumUsers = subscribers?.filter(s => s.subscribed) || [];
+        const cancelledSubs = subscribers?.filter(s => !s.subscribed && s.subscription_end) || [];
+        
+        setStats({
+          total_users: profiles?.length || 0,
+          free_users: (profiles?.length || 0) - premiumUsers.length,
+          premium_users: premiumUsers.length,
+          active_subscriptions: premiumUsers.length,
+          cancelled_subscriptions: cancelledSubs.length,
+        });
+      }
     } catch (error) {
       console.error('Error fetching system stats:', error);
       toast({

@@ -9,7 +9,8 @@ import {
   UserIcon,
   HomeIcon,
   LogOutIcon,
-  SettingsIcon
+  SettingsIcon,
+  BarChart2Icon
 } from 'lucide-react';
 
 type DashboardLayoutProps = {
@@ -54,6 +55,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <HomeIcon size={18} /> },
     { path: '/dashboard/schedules', label: 'Horários', icon: <CalendarIcon size={18} /> },
+    { path: '/dashboard/reports', label: 'Relatórios', icon: <BarChart2Icon size={18} /> },
     { path: '/dashboard/booking-link', label: 'Link de Agendamento', icon: <LinkIcon size={18} /> },
     { path: '/dashboard/profile', label: 'Perfil', icon: <UserIcon size={18} /> },
     { path: '/dashboard/settings', label: 'Configurações', icon: <SettingsIcon size={18} /> },
