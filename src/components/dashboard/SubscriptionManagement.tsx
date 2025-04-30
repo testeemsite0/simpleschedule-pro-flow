@@ -208,7 +208,7 @@ const SubscriptionManagement = () => {
             )}
             
             {subscription.subscribed && subscription.future_appointments > 0 && (
-              <Alert variant="warning" className="mt-4">
+              <Alert className="mt-4">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Agendamentos futuros</AlertTitle>
                 <AlertDescription>

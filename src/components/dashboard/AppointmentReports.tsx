@@ -1,298 +1,343 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { useAppointments } from '@/context/AppointmentContext';
-import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarIcon, DownloadIcon, FilterIcon, SearchIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { CalendarIcon, FileDown } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
+import { Separator } from '@/components/ui/separator';
+import { toast } from '@/components/ui/use-toast';
 
 const AppointmentReports = () => {
-  const { getAppointmentsByProfessional } = useAppointments();
   const { user } = useAuth();
-  
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Filter states
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('');
-  const [monthYearFilter, setMonthYearFilter] = useState('');
-  
-  // References for CSV export
-  const tableRef = useRef<HTMLTableElement>(null);
-  
+  const [loading, setLoading] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [filterMonth, setFilterMonth] = useState<Date>(new Date());
+
   useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      try {
-        const data = await getAppointmentsByProfessional(user.id);
-        setAppointments(data);
-        setFilteredAppointments(data);
-      } catch (error) {
-        console.error('Error fetching appointments:', error);
-      } finally {
-        setLoading(false);
+    if (user) {
+      fetchAppointments();
+    }
+  }, [user, filterStatus, filterDate, filterMonth]);
+
+  const fetchAppointments = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    
+    try {
+      let query = supabase
+        .from('appointments')
+        .select('*')
+        .eq('professional_id', user.id);
+        
+      // Apply status filter if not 'all'
+      if (filterStatus !== 'all') {
+        query = query.eq('status', filterStatus);
       }
-    };
-    
-    fetchAppointments();
-  }, [user, getAppointmentsByProfessional]);
-  
-  // Apply filters whenever filter values change
-  useEffect(() => {
-    if (appointments.length === 0) return;
-    
-    let filtered = [...appointments];
-    
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(appointment => appointment.status === statusFilter);
-    }
-    
-    // Apply specific date filter
-    if (dateFilter) {
-      filtered = filtered.filter(appointment => 
-        appointment.date === dateFilter
-      );
-    }
-    
-    // Apply month and year filter
-    if (monthYearFilter) {
-      const [year, month] = monthYearFilter.split('-');
-      filtered = filtered.filter(appointment => {
-        const appointmentDate = new Date(appointment.date);
-        return (
-          appointmentDate.getFullYear() === parseInt(year) && 
-          appointmentDate.getMonth() === parseInt(month) - 1
-        );
+      
+      // Apply date filter if specified
+      if (filterDate) {
+        const dateString = format(filterDate, 'yyyy-MM-dd');
+        query = query.eq('date', dateString);
+      } 
+      // Apply month filter if date is not specified
+      else if (filterMonth) {
+        const startDate = format(startOfMonth(filterMonth), 'yyyy-MM-dd');
+        const endDate = format(endOfMonth(filterMonth), 'yyyy-MM-dd');
+        query = query
+          .gte('date', startDate)
+          .lte('date', endDate);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Cast the appointment status to the expected union type
+        const typedAppointments = data.map(appointment => ({
+          ...appointment,
+          status: appointment.status as "scheduled" | "completed" | "canceled"
+        }));
+        
+        setAppointments(typedAppointments);
+      }
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os agendamentos.',
+        variant: 'destructive',
       });
-    }
-    
-    setFilteredAppointments(filtered);
-  }, [statusFilter, dateFilter, monthYearFilter, appointments]);
-  
-  const handleStatusFilterChange = (value: string) => {
-    setStatusFilter(value);
-  };
-  
-  const handleDateFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setDateFilter(event.target.value);
-    // Clear month/year filter when a specific date is selected
-    if (event.target.value) {
-      setMonthYearFilter('');
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const handleMonthYearFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setMonthYearFilter(event.target.value);
-    // Clear specific date filter when a month/year is selected
-    if (event.target.value) {
-      setDateFilter('');
-    }
-  };
-  
-  const resetFilters = () => {
-    setStatusFilter('all');
-    setDateFilter('');
-    setMonthYearFilter('');
-  };
-  
+
   const exportToCSV = () => {
-    if (!tableRef.current) return;
+    if (appointments.length === 0) {
+      toast({
+        title: 'Aviso',
+        description: 'Não há dados para exportar.',
+      });
+      return;
+    }
     
-    // Convert table data to CSV
-    const rows = Array.from(tableRef.current.querySelectorAll('tr'));
-    const csvContent = rows.map(row => {
-      const cells = Array.from(row.querySelectorAll('th,td'));
-      return cells.map(cell => `"${cell.textContent?.replace(/"/g, '""')}"`).join(',');
-    }).join('\n');
+    // Format data for CSV
+    const csvRows = [];
     
-    // Create download link
-    const encodedUri = encodeURI(`data:text/csv;charset=utf-8,${csvContent}`);
+    // Add header row
+    const header = ['Data', 'Hora Início', 'Hora Fim', 'Cliente', 'Email', 'Telefone', 'Status', 'Notas'];
+    csvRows.push(header.join(','));
+    
+    // Add data rows
+    for (const appointment of appointments) {
+      const row = [
+        format(parseISO(appointment.date), 'dd/MM/yyyy'),
+        appointment.start_time,
+        appointment.end_time,
+        appointment.client_name,
+        appointment.client_email,
+        appointment.client_phone || 'N/A',
+        appointment.status === 'scheduled' ? 'Agendado' : 
+          appointment.status === 'completed' ? 'Concluído' : 'Cancelado',
+        appointment.notes ? `"${appointment.notes.replace(/"/g, '""')}"` : 'N/A'
+      ];
+      csvRows.push(row.join(','));
+    }
+    
+    // Create CSV content
+    const csvContent = csvRows.join('\n');
+    
+    // Create a blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `relatorio-agendamentos-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `agendamentos_${format(new Date(), 'dd-MM-yyyy')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
-  
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'scheduled':
-        return <Badge className="bg-blue-100 text-blue-800">Agendado</Badge>;
-      case 'completed':
-        return <Badge className="bg-green-100 text-green-800">Concluído</Badge>;
-      case 'canceled':
-        return <Badge className="bg-red-100 text-red-800">Cancelado</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+
+  const getStatusText = (status: 'scheduled' | 'completed' | 'canceled') => {
+    return {
+      scheduled: 'Agendado',
+      completed: 'Concluído',
+      canceled: 'Cancelado'
+    }[status] || 'Desconhecido';
   };
-  
-  // Count totals for summary
-  const countByStatus = {
-    scheduled: filteredAppointments.filter(a => a.status === 'scheduled').length,
-    completed: filteredAppointments.filter(a => a.status === 'completed').length,
-    canceled: filteredAppointments.filter(a => a.status === 'canceled').length,
-    total: filteredAppointments.length
+
+  const getStatusColor = (status: 'scheduled' | 'completed' | 'canceled') => {
+    return {
+      scheduled: 'bg-blue-100 text-blue-800',
+      completed: 'bg-green-100 text-green-800',
+      canceled: 'bg-red-100 text-red-800'
+    }[status] || 'bg-gray-100 text-gray-800';
   };
-  
-  if (loading) {
-    return <Card><CardContent className="p-6">Carregando relatórios...</CardContent></Card>;
-  }
-  
+
+  // Calculate totals
+  const totalAppointments = appointments.length;
+  const completedAppointments = appointments.filter(a => a.status === 'completed').length;
+  const canceledAppointments = appointments.filter(a => a.status === 'canceled').length;
+  const scheduledAppointments = appointments.filter(a => a.status === 'scheduled').length;
+
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <FilterIcon className="h-5 w-5" /> Filtros
-          </CardTitle>
+        <CardHeader>
+          <CardTitle>Relatório de Agendamentos</CardTitle>
+          <CardDescription>
+            Visualize e filtre seus agendamentos para análise.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="status-filter">Status</Label>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">Status</label>
               <Select 
-                value={statusFilter} 
-                onValueChange={handleStatusFilterChange}
+                value={filterStatus} 
+                onValueChange={setFilterStatus}
               >
-                <SelectTrigger id="status-filter" className="w-full">
+                <SelectTrigger>
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="scheduled">Agendado</SelectItem>
-                  <SelectItem value="completed">Concluído</SelectItem>
-                  <SelectItem value="canceled">Cancelado</SelectItem>
+                  <SelectItem value="scheduled">Agendados</SelectItem>
+                  <SelectItem value="completed">Concluídos</SelectItem>
+                  <SelectItem value="canceled">Cancelados</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <div>
-              <Label htmlFor="date-filter">Data Específica</Label>
-              <div className="relative">
-                <Input
-                  id="date-filter"
-                  type="date"
-                  value={dateFilter}
-                  onChange={handleDateFilterChange}
-                  className="w-full"
-                />
-                <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none h-4 w-4" />
-              </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">Dia específico</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left"
+                    disabled={!!filterMonth && filterMonth.getDate() !== new Date().getDate()}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {filterDate ? (
+                      format(filterDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                    ) : (
+                      <span>Selecione uma data</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={filterDate}
+                    onSelect={setFilterDate}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
-            <div>
-              <Label htmlFor="month-year-filter">Mês e Ano</Label>
-              <Input
-                id="month-year-filter"
-                type="month"
-                value={monthYearFilter}
-                onChange={handleMonthYearFilterChange}
-                className="w-full"
-              />
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">Mês</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left"
+                    disabled={!!filterDate}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {filterMonth ? (
+                      format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })
+                    ) : (
+                      <span>Selecione um mês</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={filterMonth}
+                    onSelect={setFilterMonth}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="flex-none self-end">
+              <Button variant="outline" onClick={() => exportToCSV()} disabled={appointments.length === 0}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Exportar CSV
+              </Button>
             </div>
           </div>
           
-          <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={resetFilters}>
-              Limpar Filtros
-            </Button>
-            
-            <Button onClick={exportToCSV} className="flex items-center gap-2">
-              <DownloadIcon className="h-4 w-4" />
-              Exportar CSV
-            </Button>
+          <Separator className="my-4" />
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-slate-50">
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{totalAppointments}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-blue-50">
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">Agendados</p>
+                <p className="text-2xl font-bold text-blue-600">{scheduledAppointments}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-green-50">
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">Concluídos</p>
+                <p className="text-2xl font-bold text-green-600">{completedAppointments}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-red-50">
+              <CardContent className="pt-6">
+                <p className="text-sm text-muted-foreground">Cancelados</p>
+                <p className="text-2xl font-bold text-red-600">{canceledAppointments}</p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl">Resumo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium">Agendados</p>
-              <p className="text-3xl font-bold">{countByStatus.scheduled}</p>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-800 font-medium">Concluídos</p>
-              <p className="text-3xl font-bold">{countByStatus.completed}</p>
-            </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <p className="text-sm text-red-800 font-medium">Cancelados</p>
-              <p className="text-3xl font-bold">{countByStatus.canceled}</p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-800 font-medium">Total</p>
-              <p className="text-3xl font-bold">{countByStatus.total}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl flex justify-between items-center">
-            <span className="flex items-center gap-2">
-              <SearchIcon className="h-5 w-5" /> Resultado da Pesquisa
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {filteredAppointments.length} agendamentos encontrados
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {filteredAppointments.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table ref={tableRef}>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Horário</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAppointments.map(appointment => (
-                    <TableRow key={appointment.id}>
-                      <TableCell>
-                        {format(parseISO(appointment.date), 'dd/MM/yyyy', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        {appointment.start_time} - {appointment.end_time}
-                      </TableCell>
-                      <TableCell>{appointment.client_name}</TableCell>
-                      <TableCell>{appointment.client_email}</TableCell>
-                      <TableCell>
-                        {getStatusBadge(appointment.status)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          
+          {loading ? (
+            <div className="text-center py-8">Carregando agendamentos...</div>
+          ) : appointments.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum agendamento encontrado com os filtros selecionados.
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Nenhum agendamento encontrado com os filtros aplicados.</p>
-            </div>
+            <Table>
+              <TableCaption>Lista de agendamentos filtrados.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Horário</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Contato</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {appointments.map((appointment) => (
+                  <TableRow key={appointment.id}>
+                    <TableCell>
+                      {format(parseISO(appointment.date), 'dd/MM/yyyy', { locale: ptBR })}
+                    </TableCell>
+                    <TableCell>
+                      {appointment.start_time} - {appointment.end_time}
+                    </TableCell>
+                    <TableCell>{appointment.client_name}</TableCell>
+                    <TableCell>{appointment.client_email}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(appointment.status)}`}>
+                        {getStatusText(appointment.status)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

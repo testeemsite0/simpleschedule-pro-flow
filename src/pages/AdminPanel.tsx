@@ -37,6 +37,15 @@ interface SystemStats {
   cancelled_subscriptions: number;
 }
 
+// Define interface for subscribers data
+interface Subscriber {
+  id: string;
+  user_id: string;
+  email: string;
+  subscribed: boolean;
+  subscription_end?: string;
+}
+
 const ADMIN_EMAILS = ['admin@azulschedule.com']; // List of admin emails
 
 const AdminPanel = () => {
@@ -95,13 +104,29 @@ const AdminPanel = () => {
       
       if (profilesError) throw profilesError;
       
-      // Fetch subscribers to determine premium users
-      const { data: subscribers, error: subscribersError } = await supabase
-        .from('subscribers')
-        .select('*');
+      // Fetch subscribers information in a safer way
+      // Since the subscribers table might not exist in the types yet
+      let subscribersData: Subscriber[] = [];
+      let subscribeError = null;
       
-      if (subscribersError) {
-        // If table doesn't exist yet, use simulated data
+      try {
+        // Try to fetch from subscribers table with type assertion
+        const { data, error } = await (supabase as any)
+          .from('subscribers')
+          .select('*');
+        
+        if (!error && data) {
+          subscribersData = data as Subscriber[];
+        } else {
+          subscribeError = error;
+        }
+      } catch (e) {
+        subscribeError = e;
+        console.error("Error fetching subscribers:", e);
+      }
+      
+      if (subscribeError) {
+        // If table doesn't exist yet or there's an error, use simulated data
         setStats({
           total_users: profiles?.length || 0,
           free_users: profiles?.length || 0,
@@ -110,9 +135,9 @@ const AdminPanel = () => {
           cancelled_subscriptions: 0,
         });
       } else {
-        // Calculate actual stats
-        const premiumUsers = subscribers?.filter(s => s.subscribed) || [];
-        const cancelledSubs = subscribers?.filter(s => !s.subscribed && s.subscription_end) || [];
+        // Calculate actual stats using the safely fetched subscribers data
+        const premiumUsers = subscribersData.filter(s => s.subscribed) || [];
+        const cancelledSubs = subscribersData.filter(s => !s.subscribed && s.subscription_end) || [];
         
         setStats({
           total_users: profiles?.length || 0,
