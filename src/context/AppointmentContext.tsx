@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 import { Appointment, TimeSlot } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,12 @@ interface AppointmentContextProps {
   getTimeSlotsByProfessional: (professionalId: string) => Promise<TimeSlot[]>;
   countMonthlyAppointments: (professionalId: string) => Promise<number>;
   isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
+  // Add the missing methods
+  addAppointment: (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
+  cancelAppointment: (appointmentId: string) => Promise<boolean>;
+  addTimeSlot: (timeSlotData: Omit<TimeSlot, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
+  updateTimeSlot: (timeSlotData: TimeSlot) => Promise<boolean>;
+  deleteTimeSlot: (timeSlotId: string) => Promise<boolean>;
 }
 
 const AppointmentContext = createContext<AppointmentContextProps | undefined>(undefined);
@@ -97,6 +104,102 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
     return count < 5;
   };
   
+  // Implementation for the missing methods
+  const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .insert([appointmentData]);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error adding appointment:', error);
+      return false;
+    }
+  };
+  
+  const cancelAppointment = async (appointmentId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'canceled' })
+        .eq('id', appointmentId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setAppointments(prev => 
+        prev.map(app => 
+          app.id === appointmentId 
+            ? { ...app, status: 'canceled' } 
+            : app
+        )
+      );
+      
+      return true;
+    } catch (error) {
+      console.error('Error canceling appointment:', error);
+      return false;
+    }
+  };
+  
+  const addTimeSlot = async (timeSlotData: Omit<TimeSlot, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .insert([timeSlotData]);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error adding time slot:', error);
+      return false;
+    }
+  };
+  
+  const updateTimeSlot = async (timeSlotData: TimeSlot): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .update({
+          day_of_week: timeSlotData.day_of_week,
+          start_time: timeSlotData.start_time,
+          end_time: timeSlotData.end_time,
+          available: timeSlotData.available,
+          appointment_duration_minutes: timeSlotData.appointment_duration_minutes,
+          lunch_break_start: timeSlotData.lunch_break_start,
+          lunch_break_end: timeSlotData.lunch_break_end
+        })
+        .eq('id', timeSlotData.id);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating time slot:', error);
+      return false;
+    }
+  };
+  
+  const deleteTimeSlot = async (timeSlotId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .delete()
+        .eq('id', timeSlotId);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting time slot:', error);
+      return false;
+    }
+  };
+  
   return (
     <AppointmentContext.Provider 
       value={{ 
@@ -104,7 +207,12 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
         getAppointmentsByProfessional, 
         getTimeSlotsByProfessional,
         countMonthlyAppointments,
-        isWithinFreeLimit
+        isWithinFreeLimit,
+        addAppointment,
+        cancelAppointment,
+        addTimeSlot,
+        updateTimeSlot,
+        deleteTimeSlot
       }}
     >
       {children}
