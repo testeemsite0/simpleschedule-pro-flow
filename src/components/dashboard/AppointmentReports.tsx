@@ -1,343 +1,373 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, FileDown } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
-import { Separator } from '@/components/ui/separator';
-import { toast } from '@/components/ui/use-toast';
 
 const AppointmentReports = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
-  const [filterMonth, setFilterMonth] = useState<Date>(new Date());
-
+  const [loading, setLoading] = useState(true);
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('');
+  const [monthYearFilter, setMonthYearFilter] = useState<string>('');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  
+  // Statistics
+  const [stats, setStats] = useState({
+    total: 0,
+    scheduled: 0,
+    canceled: 0,
+    completed: 0,
+    manual: 0,
+    client: 0
+  });
+  
   useEffect(() => {
     if (user) {
       fetchAppointments();
     }
-  }, [user, filterStatus, filterDate, filterMonth]);
-
+  }, [user]);
+  
   const fetchAppointments = async () => {
     if (!user) return;
     
     setLoading(true);
-    
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('appointments')
         .select('*')
-        .eq('professional_id', user.id);
+        .eq('professional_id', user.id)
+        .order('date', { ascending: false });
         
-      // Apply status filter if not 'all'
-      if (filterStatus !== 'all') {
-        query = query.eq('status', filterStatus);
-      }
-      
-      // Apply date filter if specified
-      if (filterDate) {
-        const dateString = format(filterDate, 'yyyy-MM-dd');
-        query = query.eq('date', dateString);
-      } 
-      // Apply month filter if date is not specified
-      else if (filterMonth) {
-        const startDate = format(startOfMonth(filterMonth), 'yyyy-MM-dd');
-        const endDate = format(endOfMonth(filterMonth), 'yyyy-MM-dd');
-        query = query
-          .gte('date', startDate)
-          .lte('date', endDate);
-      }
-      
-      const { data, error } = await query;
-      
       if (error) throw error;
       
       if (data) {
-        // Cast the appointment status to the expected union type
-        const typedAppointments = data.map(appointment => ({
-          ...appointment,
-          status: appointment.status as "scheduled" | "completed" | "canceled"
-        }));
+        const typedAppointments = data.map(app => ({
+          ...app,
+          source: app.source || 'client' // Default for older records
+        })) as Appointment[];
         
         setAppointments(typedAppointments);
+        
+        // Calculate statistics
+        const stats = {
+          total: typedAppointments.length,
+          scheduled: typedAppointments.filter(a => a.status === 'scheduled').length,
+          canceled: typedAppointments.filter(a => a.status === 'canceled').length,
+          completed: typedAppointments.filter(a => a.status === 'completed').length,
+          manual: typedAppointments.filter(a => a.source === 'manual').length,
+          client: typedAppointments.filter(a => a.source === 'client').length
+        };
+        
+        setStats(stats);
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível carregar os agendamentos.',
-        variant: 'destructive',
+        description: 'Não foi possível carregar seus agendamentos',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
     }
   };
-
-  const exportToCSV = () => {
-    if (appointments.length === 0) {
+  
+  const getFilteredAppointments = () => {
+    return appointments.filter(appointment => {
+      // Filter by status
+      if (statusFilter !== 'all' && appointment.status !== statusFilter) {
+        return false;
+      }
+      
+      // Filter by source (manual/client)
+      if (sourceFilter !== 'all' && appointment.source !== sourceFilter) {
+        return false;
+      }
+      
+      // Filter by specific date
+      if (dateFilter) {
+        if (appointment.date !== dateFilter) {
+          return false;
+        }
+      }
+      
+      // Filter by month and year
+      if (monthYearFilter) {
+        const [year, month] = monthYearFilter.split('-');
+        const appointmentDate = new Date(appointment.date);
+        
+        if (
+          appointmentDate.getFullYear() !== parseInt(year) || 
+          appointmentDate.getMonth() + 1 !== parseInt(month)
+        ) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  };
+  
+  const handleExportCSV = () => {
+    const filteredAppointments = getFilteredAppointments();
+    
+    if (filteredAppointments.length === 0) {
       toast({
-        title: 'Aviso',
-        description: 'Não há dados para exportar.',
+        title: 'Sem dados',
+        description: 'Não há agendamentos para exportar com os filtros atuais',
+        variant: 'default'
       });
       return;
     }
     
-    // Format data for CSV
-    const csvRows = [];
-    
-    // Add header row
-    const header = ['Data', 'Hora Início', 'Hora Fim', 'Cliente', 'Email', 'Telefone', 'Status', 'Notas'];
-    csvRows.push(header.join(','));
-    
-    // Add data rows
-    for (const appointment of appointments) {
-      const row = [
-        format(parseISO(appointment.date), 'dd/MM/yyyy'),
-        appointment.start_time,
-        appointment.end_time,
-        appointment.client_name,
-        appointment.client_email,
-        appointment.client_phone || 'N/A',
-        appointment.status === 'scheduled' ? 'Agendado' : 
-          appointment.status === 'completed' ? 'Concluído' : 'Cancelado',
-        appointment.notes ? `"${appointment.notes.replace(/"/g, '""')}"` : 'N/A'
-      ];
-      csvRows.push(row.join(','));
-    }
-    
     // Create CSV content
-    const csvContent = csvRows.join('\n');
+    const headers = [
+      'Nome', 'Email', 'Telefone', 'Data', 'Horário', 
+      'Status', 'Origem', 'Notas'
+    ];
     
-    // Create a blob and download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvRows = [
+      headers.join(','),
+      ...filteredAppointments.map(a => {
+        const formattedDate = format(new Date(a.date), 'dd/MM/yyyy');
+        
+        // Escape any commas in text fields
+        const escapeCsvValue = (value: string) => 
+          value ? `"${value.replace(/"/g, '""')}"` : '';
+          
+        return [
+          escapeCsvValue(a.client_name),
+          escapeCsvValue(a.client_email),
+          escapeCsvValue(a.client_phone || ''),
+          formattedDate,
+          `${a.start_time} - ${a.end_time}`,
+          a.status === 'scheduled' ? 'Agendado' : 
+            a.status === 'canceled' ? 'Cancelado' : 'Concluído',
+          a.source === 'manual' ? 'Manual' : 'Cliente',
+          escapeCsvValue(a.notes || '')
+        ].join(',');
+      })
+    ].join('\n');
+    
+    // Create and download the CSV file
+    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `agendamentos_${format(new Date(), 'dd-MM-yyyy')}.csv`);
+    link.setAttribute('download', `agendamentos-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
-
-  const getStatusText = (status: 'scheduled' | 'completed' | 'canceled') => {
-    return {
-      scheduled: 'Agendado',
-      completed: 'Concluído',
-      canceled: 'Cancelado'
-    }[status] || 'Desconhecido';
+  
+  const filteredAppointments = getFilteredAppointments();
+  
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setSourceFilter('all');
+    setDateFilter('');
+    setMonthYearFilter('');
   };
-
-  const getStatusColor = (status: 'scheduled' | 'completed' | 'canceled') => {
-    return {
-      scheduled: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800',
-      canceled: 'bg-red-100 text-red-800'
-    }[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  // Calculate totals
-  const totalAppointments = appointments.length;
-  const completedAppointments = appointments.filter(a => a.status === 'completed').length;
-  const canceledAppointments = appointments.filter(a => a.status === 'canceled').length;
-  const scheduledAppointments = appointments.filter(a => a.status === 'scheduled').length;
-
+  
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Relatório de Agendamentos</CardTitle>
+          <CardTitle>Estatísticas de Agendamentos</CardTitle>
+          <CardDescription>Visão geral dos seus agendamentos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-background rounded-md border">
+              <p className="text-sm text-muted-foreground">Total</p>
+              <p className="text-2xl font-semibold">{stats.total}</p>
+            </div>
+            <div className="p-4 bg-background rounded-md border">
+              <p className="text-sm text-muted-foreground">Agendados</p>
+              <p className="text-2xl font-semibold">{stats.scheduled}</p>
+            </div>
+            <div className="p-4 bg-background rounded-md border">
+              <p className="text-sm text-muted-foreground">Concluídos</p>
+              <p className="text-2xl font-semibold">{stats.completed}</p>
+            </div>
+            <div className="p-4 bg-background rounded-md border">
+              <p className="text-sm text-muted-foreground">Cancelados</p>
+              <p className="text-2xl font-semibold">{stats.canceled}</p>
+            </div>
+            <div className="p-4 bg-background rounded-md border">
+              <p className="text-sm text-muted-foreground">Agendados pelo Cliente</p>
+              <p className="text-2xl font-semibold">{stats.client}</p>
+            </div>
+            <div className="p-4 bg-background rounded-md border">
+              <p className="text-sm text-muted-foreground">Agendados Manualmente</p>
+              <p className="text-2xl font-semibold">{stats.manual}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros</CardTitle>
           <CardDescription>
-            Visualize e filtre seus agendamentos para análise.
+            Filtre seus agendamentos para visualização e exportação
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-1 block">Status</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div className="space-y-2">
               <Select 
-                value={filterStatus} 
-                onValueChange={setFilterStatus}
+                value={statusFilter} 
+                onValueChange={setStatusFilter}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="scheduled">Agendados</SelectItem>
-                  <SelectItem value="completed">Concluídos</SelectItem>
-                  <SelectItem value="canceled">Cancelados</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="scheduled">Agendado</SelectItem>
+                  <SelectItem value="canceled">Cancelado</SelectItem>
+                  <SelectItem value="completed">Concluído</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-1 block">Dia específico</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left"
-                    disabled={!!filterMonth && filterMonth.getDate() !== new Date().getDate()}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {filterDate ? (
-                      format(filterDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                    ) : (
-                      <span>Selecione uma data</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={filterDate}
-                    onSelect={setFilterDate}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+            <div className="space-y-2">
+              <Select 
+                value={sourceFilter} 
+                onValueChange={setSourceFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as origens</SelectItem>
+                  <SelectItem value="client">Cliente</SelectItem>
+                  <SelectItem value="manual">Manual</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-1 block">Mês</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left"
-                    disabled={!!filterDate}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {filterMonth ? (
-                      format(filterMonth, "MMMM 'de' yyyy", { locale: ptBR })
-                    ) : (
-                      <span>Selecione um mês</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={filterMonth}
-                    onSelect={setFilterMonth}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+            <div className="space-y-2">
+              <Input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => {
+                  setDateFilter(e.target.value);
+                  if (e.target.value) setMonthYearFilter('');
+                }}
+                placeholder="Data específica"
+              />
             </div>
             
-            <div className="flex-none self-end">
-              <Button variant="outline" onClick={() => exportToCSV()} disabled={appointments.length === 0}>
-                <FileDown className="mr-2 h-4 w-4" />
-                Exportar CSV
-              </Button>
+            <div className="space-y-2">
+              <Input
+                type="month"
+                value={monthYearFilter}
+                onChange={(e) => {
+                  setMonthYearFilter(e.target.value);
+                  if (e.target.value) setDateFilter('');
+                }}
+                placeholder="Mês e Ano"
+              />
             </div>
           </div>
           
-          <Separator className="my-4" />
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-slate-50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{totalAppointments}</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-blue-50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Agendados</p>
-                <p className="text-2xl font-bold text-blue-600">{scheduledAppointments}</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-green-50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Concluídos</p>
-                <p className="text-2xl font-bold text-green-600">{completedAppointments}</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-red-50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Cancelados</p>
-                <p className="text-2xl font-bold text-red-600">{canceledAppointments}</p>
-              </CardContent>
-            </Card>
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={clearFilters}>
+              Limpar Filtros
+            </Button>
+            <Button onClick={handleExportCSV}>
+              Exportar CSV
+            </Button>
           </div>
-          
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Agendamentos</CardTitle>
+          <CardDescription>
+            {filteredAppointments.length} agendamentos encontrados
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           {loading ? (
-            <div className="text-center py-8">Carregando agendamentos...</div>
-          ) : appointments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum agendamento encontrado com os filtros selecionados.
-            </div>
+            <p>Carregando agendamentos...</p>
+          ) : filteredAppointments.length === 0 ? (
+            <p className="text-center py-4 text-muted-foreground">
+              Nenhum agendamento encontrado com os filtros atuais.
+            </p>
           ) : (
-            <Table>
-              <TableCaption>Lista de agendamentos filtrados.</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Horário</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {appointments.map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell>
-                      {format(parseISO(appointment.date), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      {appointment.start_time} - {appointment.end_time}
-                    </TableCell>
-                    <TableCell>{appointment.client_name}</TableCell>
-                    <TableCell>{appointment.client_email}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(appointment.status)}`}>
-                        {getStatusText(appointment.status)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="space-y-4">
+              {filteredAppointments.map((appointment) => {
+                const appointmentDate = new Date(appointment.date);
+                const formattedDate = format(appointmentDate, "dd 'de' MMMM, yyyy", {
+                  locale: ptBR,
+                });
+                
+                return (
+                  <div key={appointment.id} className="border rounded-md p-4">
+                    <div className="flex flex-col sm:flex-row justify-between">
+                      <div>
+                        <div className="flex items-center mb-2 flex-wrap gap-2">
+                          <h3 className="font-medium mr-2">{appointment.client_name}</h3>
+                          <Badge variant="outline" className={
+                            appointment.status === 'scheduled' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : appointment.status === 'completed'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                          }>
+                            {appointment.status === 'scheduled' 
+                              ? 'Agendado' 
+                              : appointment.status === 'completed' 
+                                ? 'Concluído' 
+                                : 'Cancelado'
+                            }
+                          </Badge>
+                          <Badge variant="outline" className={
+                            appointment.source === 'client' 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : 'bg-orange-100 text-orange-800'
+                          }>
+                            {appointment.source === 'client' ? 'Cliente' : 'Manual'}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {formattedDate} • {appointment.start_time} - {appointment.end_time}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">{appointment.client_email}</p>
+                        {appointment.client_phone && (
+                          <p className="text-sm text-gray-600">{appointment.client_phone}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {appointment.notes && (
+                      <div className="mt-3 text-sm border-t pt-2">
+                        <span className="font-medium">Notas: </span>
+                        {appointment.notes}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>

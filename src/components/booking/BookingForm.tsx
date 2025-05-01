@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -78,6 +79,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         end_time: endTime,
         notes,
         status: 'scheduled',
+        source: 'client', // Mark as client booking
       };
       
       // Create appointment and get its ID

@@ -1,64 +1,71 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { AppointmentProvider } from "./context/AppointmentContext";
+
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from '@/components/ui/toaster';
+import { AppointmentProvider } from './context/AppointmentContext';
 
 // Pages
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import DashboardSchedules from "./pages/DashboardSchedules";
-import DashboardBookingLink from "./pages/DashboardBookingLink";
-import Booking from "./pages/Booking";
-import Features from "./pages/Features";
-import Pricing from "./pages/Pricing";
-import About from "./pages/About";
-import Profile from "./pages/Profile";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Settings from "./pages/Settings";
-import AdminPanel from "./pages/AdminPanel";
-import DashboardReports from '@/pages/DashboardReports';
+import Index from './pages/Index';
+import Features from './pages/Features';
+import About from './pages/About';
+import Pricing from './pages/Pricing';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import NotFound from './pages/NotFound';
+import Dashboard from './pages/Dashboard';
+import DashboardSchedules from './pages/DashboardSchedules';
+import DashboardReports from './pages/DashboardReports';
+import DashboardBookingLink from './pages/DashboardBookingLink';
+import Settings from './pages/Settings';
+import Profile from './pages/Profile';
+import AdminPanel from './pages/AdminPanel';
+import Booking from './pages/Booking';
+import DashboardAppointments from './pages/DashboardAppointments';
+import { AuthProvider } from './context/AuthContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const queryClient = new QueryClient();
+function App() {
+  // Initialize QueryClient
+  const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+  return (
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AppointmentProvider>
-          <Toaster />
-          <Sonner />
           <BrowserRouter>
             <Routes>
+              {/* Public Routes */}
               <Route path="/" element={<Index />} />
+              <Route path="/features" element={<Features />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/schedules" element={<DashboardSchedules />} />
-              <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
-              <Route path="/dashboard/profile" element={<Profile />} />
-              <Route path="/dashboard/settings" element={<Settings />} />
-              <Route path="/admin" element={<AdminPanel />} />
-              <Route path="/dashboard/reports" element={<DashboardReports />} />
-              <Route path="/booking/:slug" element={<Booking />} />
-              <Route path="/features" element={<Features />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/about" element={<About />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/booking/:slug" element={<Booking />} />
+              
+              {/* Protected Routes */}
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/schedules" element={<DashboardSchedules />} />
+              <Route path="/dashboard/appointments" element={<DashboardAppointments />} />
+              <Route path="/dashboard/reports" element={<DashboardReports />} />
+              <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/admin" element={<AdminPanel />} />
+              
+              {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <Toaster />
           </BrowserRouter>
         </AppointmentProvider>
       </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+}
 
 export default App;

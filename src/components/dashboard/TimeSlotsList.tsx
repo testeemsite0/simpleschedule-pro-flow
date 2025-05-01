@@ -63,6 +63,17 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, onEdit }) => {
     acc[slot.day_of_week].push(slot);
     return acc;
   }, {});
+
+  // Function to format minutes as hours and minutes
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes} min`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -73,16 +84,26 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, onEdit }) => {
           <div className="space-y-2">
             {slots.map((slot) => (
               <Card key={slot.id} className="p-4">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap gap-4">
                   <div>
                     <p className="font-medium">
                       {slot.start_time} - {slot.end_time}
                     </p>
                     
-                    <div className="mt-1">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Badge variant={slot.available ? "outline" : "secondary"}>
                         {slot.available ? 'Disponível' : 'Indisponível'}
                       </Badge>
+                      
+                      <Badge variant="outline" className="bg-blue-50">
+                        Duração: {formatDuration(slot.appointment_duration_minutes || 60)}
+                      </Badge>
+                      
+                      {slot.lunch_break_start && slot.lunch_break_end && (
+                        <Badge variant="outline" className="bg-amber-50">
+                          Almoço: {slot.lunch_break_start} - {slot.lunch_break_end}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   

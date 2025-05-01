@@ -26,6 +26,15 @@ const dayOptions = [
   { value: '6', label: 'Sábado' },
 ];
 
+const durationOptions = [
+  { value: '15', label: '15 minutos' },
+  { value: '30', label: '30 minutos' },
+  { value: '45', label: '45 minutos' },
+  { value: '60', label: '1 hora' },
+  { value: '90', label: '1 hora e 30 minutos' },
+  { value: '120', label: '2 horas' },
+];
+
 const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) => {
   const isEditing = !!initialData;
   const { user } = useAuth();
@@ -36,6 +45,10 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
   const [startTime, setStartTime] = useState(initialData?.start_time || '');
   const [endTime, setEndTime] = useState(initialData?.end_time || '');
   const [available, setAvailable] = useState(initialData?.available ?? true);
+  const [appointmentDuration, setAppointmentDuration] = useState(initialData?.appointment_duration_minutes?.toString() || '60');
+  const [hasLunchBreak, setHasLunchBreak] = useState(!!initialData?.lunch_break_start && !!initialData?.lunch_break_end);
+  const [lunchBreakStart, setLunchBreakStart] = useState(initialData?.lunch_break_start || '12:00');
+  const [lunchBreakEnd, setLunchBreakEnd] = useState(initialData?.lunch_break_end || '13:00');
   const [isLoading, setIsLoading] = useState(false);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,13 +63,54 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
       return;
     }
     
-    if (!dayOfWeek || !startTime || !endTime) {
+    if (!dayOfWeek || !startTime || !endTime || !appointmentDuration) {
       toast({
         title: 'Erro',
-        description: 'Preencha todos os campos',
+        description: 'Preencha todos os campos obrigatórios',
         variant: 'destructive',
       });
       return;
+    }
+    
+    // Validate that lunch break is within work hours
+    if (hasLunchBreak) {
+      if (!lunchBreakStart || !lunchBreakEnd) {
+        toast({
+          title: 'Erro',
+          description: 'Horários de almoço inválidos',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Convert to minutes for easy comparison
+      const getMinutes = (timeString: string) => {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      
+      const startMinutes = getMinutes(startTime);
+      const endMinutes = getMinutes(endTime);
+      const lunchStartMinutes = getMinutes(lunchBreakStart);
+      const lunchEndMinutes = getMinutes(lunchBreakEnd);
+      
+      if (lunchStartMinutes < startMinutes || lunchEndMinutes > endMinutes) {
+        toast({
+          title: 'Erro',
+          description: 'O intervalo de almoço deve estar dentro do horário de trabalho',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      if (lunchStartMinutes >= lunchEndMinutes) {
+        toast({
+          title: 'Erro',
+          description: 'O horário de início do almoço deve ser anterior ao horário de término',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     
     setIsLoading(true);
@@ -68,6 +122,9 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
         start_time: startTime,
         end_time: endTime,
         available,
+        appointment_duration_minutes: parseInt(appointmentDuration),
+        lunch_break_start: hasLunchBreak ? lunchBreakStart : null,
+        lunch_break_end: hasLunchBreak ? lunchBreakEnd : null,
       };
       
       let success;
@@ -98,6 +155,10 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
           setStartTime('');
           setEndTime('');
           setAvailable(true);
+          setAppointmentDuration('60');
+          setHasLunchBreak(false);
+          setLunchBreakStart('12:00');
+          setLunchBreakEnd('13:00');
         }
       }
     } catch (error) {
@@ -159,6 +220,60 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
                 onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="appointmentDuration">Duração da consulta</Label>
+            <Select
+              value={appointmentDuration}
+              onValueChange={setAppointmentDuration}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Duração" />
+              </SelectTrigger>
+              <SelectContent>
+                {durationOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2 pt-4 border-t">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="hasLunchBreak"
+                checked={hasLunchBreak}
+                onCheckedChange={setHasLunchBreak}
+              />
+              <Label htmlFor="hasLunchBreak">Incluir intervalo de almoço</Label>
+            </div>
+            
+            {hasLunchBreak && (
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="lunchBreakStart">Início do almoço</Label>
+                  <Input
+                    id="lunchBreakStart"
+                    type="time"
+                    value={lunchBreakStart}
+                    onChange={(e) => setLunchBreakStart(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="lunchBreakEnd">Fim do almoço</Label>
+                  <Input
+                    id="lunchBreakEnd"
+                    type="time"
+                    value={lunchBreakEnd}
+                    onChange={(e) => setLunchBreakEnd(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center space-x-2">

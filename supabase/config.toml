@@ -25,9 +25,16 @@ enabled = true
 [functions]
 [functions.verify-subscription]
 verify_jwt = true
+search_path = ["public", "extensions"]
 
 [functions.create-checkout]
 verify_jwt = true
+search_path = ["public", "extensions"]
 
 [functions.customer-portal]
 verify_jwt = true
+search_path = ["public", "extensions"]
+
+[functions.check-subscription]
+verify_jwt = true
+search_path = ["public", "extensions"]

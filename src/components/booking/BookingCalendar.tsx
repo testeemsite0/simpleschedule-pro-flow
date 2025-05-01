@@ -93,6 +93,19 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     }
   }, [timeSlots, isOverLimit]);
   
+  // Convert string time (like "14:30") to minutes since midnight
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+  
+  // Convert minutes since midnight back to string time format (HH:MM)
+  const minutesToTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+  
   // When a date is selected, find available time slots
   useEffect(() => {
     if (!selectedDate || isOverLimit) {
@@ -108,26 +121,67 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       slot => slot.day_of_week === dayOfWeek && slot.available
     );
     
-    // For each time slot, check if it's already booked
+    // For each time slot, generate appointment time slots based on duration
     daySlots.forEach(slot => {
-      const isBooked = appointments.some(app => {
-        const appDate = new Date(app.date);
-        return (
-          app.status === 'scheduled' &&
-          isSameDay(appDate, selectedDate) &&
-          app.start_time === slot.start_time &&
-          app.end_time === slot.end_time
-        );
-      });
+      // Get start and end times in minutes
+      const startMinutes = timeToMinutes(slot.start_time);
+      const endMinutes = timeToMinutes(slot.end_time);
       
-      if (!isBooked) {
-        slots.push({
-          date: selectedDate,
-          startTime: slot.start_time,
-          endTime: slot.end_time
-        });
+      // Get lunch break times in minutes (if applicable)
+      const lunchStartMinutes = slot.lunch_break_start ? timeToMinutes(slot.lunch_break_start) : null;
+      const lunchEndMinutes = slot.lunch_break_end ? timeToMinutes(slot.lunch_break_end) : null;
+      
+      // Get appointment duration (default to 60 minutes if not specified)
+      const duration = slot.appointment_duration_minutes || 60;
+      
+      // Generate possible appointment start times
+      const possibleTimes: { start: number, end: number }[] = [];
+      for (let time = startMinutes; time <= endMinutes - duration; time += duration) {
+        const endTime = time + duration;
+        
+        // Skip if appointment overlaps with lunch break
+        if (
+          lunchStartMinutes !== null && 
+          lunchEndMinutes !== null && 
+          ((time < lunchEndMinutes && time + duration > lunchStartMinutes) || 
+           (time >= lunchStartMinutes && time < lunchEndMinutes))
+        ) {
+          continue;
+        }
+        
+        possibleTimes.push({ start: time, end: endTime });
       }
+      
+      // Check each possible time against existing appointments
+      possibleTimes.forEach(({ start, end }) => {
+        const startTimeStr = minutesToTime(start);
+        const endTimeStr = minutesToTime(end);
+        
+        // Check if this time slot is already booked
+        const isBooked = appointments.some(app => {
+          const appDate = new Date(app.date);
+          return (
+            app.status === 'scheduled' &&
+            isSameDay(appDate, selectedDate) &&
+            app.start_time === startTimeStr &&
+            app.end_time === endTimeStr
+          );
+        });
+        
+        if (!isBooked) {
+          slots.push({
+            date: selectedDate,
+            startTime: startTimeStr,
+            endTime: endTimeStr
+          });
+        }
+      });
     });
+    
+    // Sort by start time
+    slots.sort((a, b) => 
+      timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+    );
     
     setAvailableSlots(slots);
   }, [selectedDate, timeSlots, appointments, isOverLimit]);

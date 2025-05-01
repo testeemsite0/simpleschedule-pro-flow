@@ -22,6 +22,7 @@ import {
   AlertTitle,
 } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SubscriptionData {
   subscribed: boolean;
@@ -40,12 +41,26 @@ interface PaymentRecord {
   status: 'paid' | 'pending';
 }
 
+interface SubscriptionHistoryRecord {
+  id: string;
+  stripe_subscription_id: string;
+  subscription_tier: string;
+  amount: number;
+  period_start: string;
+  period_end: string;
+  cancellation_date: string | null;
+  status: 'active' | 'canceled' | 'expired';
+  created_at: string;
+}
+
 const SubscriptionManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [cancellationInProgress, setCancellationInProgress] = useState(false);
+  const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryRecord[]>([]);
+  const [activeTab, setActiveTab] = useState('current');
   
   useEffect(() => {
     fetchSubscriptionData();
@@ -98,6 +113,17 @@ const SubscriptionManagement = () => {
         payment_history: mockPaymentHistory,
         future_appointments: futureAppointments,
       });
+      
+      // Fetch subscription history
+      const { data: historyData } = await supabase
+        .from('subscription_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+        
+      if (historyData) {
+        setSubscriptionHistory(historyData as SubscriptionHistoryRecord[]);
+      }
       
     } catch (error) {
       console.error('Error fetching subscription data:', error);
@@ -165,104 +191,172 @@ const SubscriptionManagement = () => {
   
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Status da Assinatura</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Plano atual</p>
-                <p className="text-lg font-medium">
-                  {subscription.subscribed ? 'Premium' : 'Gratuito'}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="current">Assinatura Atual</TabsTrigger>
+          <TabsTrigger value="history">Histórico de Assinaturas</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="current">
+          <Card>
+            <CardHeader>
+              <CardTitle>Status da Assinatura</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Plano atual</p>
+                    <p className="text-lg font-medium">
+                      {subscription.subscribed ? 'Premium' : 'Gratuito'}
+                      {subscription.subscribed && (
+                        <span className="ml-2 text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
+                          Ativo
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  
                   {subscription.subscribed && (
-                    <span className="ml-2 text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-                      Ativo
-                    </span>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleCancelSubscription}
+                      disabled={cancellationInProgress}
+                      className="text-destructive border-destructive hover:bg-destructive/10"
+                    >
+                      {cancellationInProgress ? 'Processando...' : 'Cancelar Assinatura'}
+                    </Button>
                   )}
-                </p>
+                </div>
+                
+                {subscription.subscribed && subscription.subscription_end && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Válido até</p>
+                    <p>
+                      {format(parseISO(subscription.subscription_end), "dd 'de' MMMM 'de' yyyy", {
+                        locale: ptBR,
+                      })}
+                    </p>
+                  </div>
+                )}
+                
+                {subscription.subscribed && subscription.future_appointments > 0 && (
+                  <Alert className="mt-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Agendamentos futuros</AlertTitle>
+                    <AlertDescription>
+                      Você tem {subscription.future_appointments} agendamento(s) para datas após o término atual da sua assinatura. 
+                      Se você não renovar sua assinatura, esses agendamentos serão automaticamente cancelados.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
-              
-              {subscription.subscribed && (
-                <Button 
-                  variant="outline" 
-                  onClick={handleCancelSubscription}
-                  disabled={cancellationInProgress}
-                  className="text-destructive border-destructive hover:bg-destructive/10"
-                >
-                  {cancellationInProgress ? 'Processando...' : 'Cancelar Assinatura'}
-                </Button>
+            </CardContent>
+          </Card>
+          
+          {subscription.subscribed && subscription.payment_history && subscription.payment_history.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Histórico de Pagamentos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subscription.payment_history.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell>
+                          {format(parseISO(payment.date), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>{formatCurrency(payment.amount)}</TableCell>
+                        <TableCell>
+                          {format(parseISO(payment.period_start), 'dd/MM/yyyy', { locale: ptBR })} a{' '}
+                          {format(parseISO(payment.period_end), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            payment.status === 'paid' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {payment.status === 'paid' ? 'Pago' : 'Pendente'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Assinaturas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {subscriptionHistory.length === 0 ? (
+                <p className="text-center py-4 text-muted-foreground">
+                  Nenhum registro de assinatura encontrado.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Plano</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Cancelado em</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subscriptionHistory.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell>{record.subscription_tier}</TableCell>
+                        <TableCell>
+                          {format(parseISO(record.period_start), 'dd/MM/yyyy', { locale: ptBR })} a{' '}
+                          {format(parseISO(record.period_end), 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>{formatCurrency(record.amount)}</TableCell>
+                        <TableCell>
+                          {record.cancellation_date 
+                            ? format(parseISO(record.cancellation_date), 'dd/MM/yyyy', { locale: ptBR })
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            record.status === 'active' 
+                              ? 'bg-green-100 text-green-800' 
+                              : record.status === 'canceled'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {record.status === 'active' 
+                              ? 'Ativo' 
+                              : record.status === 'canceled' 
+                                ? 'Cancelado' 
+                                : 'Expirado'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
-            </div>
-            
-            {subscription.subscribed && subscription.subscription_end && (
-              <div>
-                <p className="text-sm text-muted-foreground">Válido até</p>
-                <p>
-                  {format(parseISO(subscription.subscription_end), "dd 'de' MMMM 'de' yyyy", {
-                    locale: ptBR,
-                  })}
-                </p>
-              </div>
-            )}
-            
-            {subscription.subscribed && subscription.future_appointments > 0 && (
-              <Alert className="mt-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Agendamentos futuros</AlertTitle>
-                <AlertDescription>
-                  Você tem {subscription.future_appointments} agendamento(s) para datas após o término atual da sua assinatura. 
-                  Se você não renovar sua assinatura, esses agendamentos serão automaticamente cancelados.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      
-      {subscription.subscribed && subscription.payment_history && subscription.payment_history.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Histórico de Pagamentos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Período</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {subscription.payment_history.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      {format(parseISO(payment.date), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>{formatCurrency(payment.amount)}</TableCell>
-                    <TableCell>
-                      {format(parseISO(payment.period_start), 'dd/MM/yyyy', { locale: ptBR })} a{' '}
-                      {format(parseISO(payment.period_end), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        payment.status === 'paid' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {payment.status === 'paid' ? 'Pago' : 'Pendente'}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -1,32 +1,76 @@
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  slug?: string;
+}
+
 export interface Professional {
   id: string;
   name: string;
   email: string;
   profession: string;
-  slug: string;
   bio?: string;
-  avatar?: string;
+  slug: string;
+  address?: string;
 }
 
 export interface TimeSlot {
   id: string;
-  professional_id: string; // Changed from professionalId to match database
-  day_of_week: number; // Changed from dayOfWeek to match database
-  start_time: string; // Changed from startTime to match database
-  end_time: string; // Changed from endTime to match database
+  professional_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
   available: boolean;
+  created_at?: string;
+  updated_at?: string;
+  appointment_duration_minutes?: number;
+  lunch_break_start?: string;
+  lunch_break_end?: string;
 }
 
 export interface Appointment {
   id: string;
-  professional_id: string; // Changed from professionalId to match database
-  client_name: string; // Changed from clientName to match database
-  client_email: string; // Changed from clientEmail to match database
-  client_phone?: string; // Changed from clientPhone to match database
+  professional_id: string;
+  client_name: string;
+  client_email: string;
+  client_phone?: string;
   date: string;
-  start_time: string; // Changed from startTime to match database
-  end_time: string; // Changed from endTime to match database
+  start_time: string;
+  end_time: string;
   notes?: string;
-  status: "scheduled" | "completed" | "canceled";
+  status: 'scheduled' | 'completed' | 'canceled';
+  created_at?: string;
+  updated_at?: string;
+  source?: 'client' | 'manual';
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  features: string[];
+}
+
+export interface SystemConfig {
+  id: string;
+  premium_price: number;
+  stripe_price_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubscriptionHistory {
+  id: string;
+  user_id: string;
+  stripe_subscription_id: string;
+  subscription_tier: string;
+  amount: number;
+  period_start: string;
+  period_end: string;
+  cancellation_date?: string;
+  status: 'active' | 'canceled' | 'expired';
+  created_at: string;
 }
