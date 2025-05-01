@@ -7,7 +7,6 @@ import BookingCalendar from '@/components/booking/BookingCalendar';
 import BookingForm from '@/components/booking/BookingForm';
 import BookingConfirmation from '@/components/booking/BookingConfirmation';
 import { useAppointments } from '@/context/AppointmentContext';
-import { professionals } from '@/data/mockData';
 import { Professional, Appointment, TimeSlot } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -26,53 +25,83 @@ const Booking = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Find the professional by slug
+  // Fetch professional data directly from Supabase
   useEffect(() => {
     const fetchProfessionalData = async () => {
       setLoading(true);
       try {
-        // Find professional from mock data for now
-        // In a real app, this would fetch from Supabase
-        const foundProfessional = professionals.find(p => p.slug === slug);
-        
-        if (foundProfessional) {
-          setProfessional(foundProfessional);
-          
-          // Fetch professional's appointments and time slots
-          const { data: appointmentsData } = await supabase
-            .from('appointments')
-            .select('*')
-            .eq('professional_id', foundProfessional.id);
-            
-          const { data: timeSlotsData } = await supabase
-            .from('time_slots')
-            .select('*')
-            .eq('professional_id', foundProfessional.id)
-            .order('day_of_week', { ascending: true })
-            .order('start_time', { ascending: true });
-           
-          // Convert the data and make sure the status is correctly typed
-          // We ensure that the status is one of the expected values
-          if (appointmentsData) {
-            const typedAppointments: Appointment[] = appointmentsData.map(app => {
-              // Validate and ensure the status is one of the allowed values
-              let status: "scheduled" | "completed" | "canceled" = "scheduled";
-              if (app.status === "completed") status = "completed";
-              else if (app.status === "canceled") status = "canceled";
-              
-              return {
-                ...app,
-                status
-              } as Appointment;
-            });
-            
-            setAppointments(typedAppointments);
-          } else {
-            setAppointments([]);
-          }
-          
-          setTimeSlots(timeSlotsData as TimeSlot[] || []);
+        if (!slug) {
+          console.error("No slug provided");
+          setLoading(false);
+          return;
         }
+
+        // Fetch the professional by slug from the profiles table
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('slug', slug)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching professional by slug:", profileError);
+          setLoading(false);
+          return;
+        }
+
+        if (!profileData) {
+          console.error("No professional found with slug:", slug);
+          setLoading(false);
+          return;
+        }
+
+        const professionalData: Professional = {
+          id: profileData.id,
+          name: profileData.name,
+          email: profileData.email,
+          profession: profileData.profession,
+          bio: profileData.bio || undefined,
+          slug: profileData.slug,
+          address: undefined,
+          avatar: profileData.avatar || undefined
+        };
+        
+        setProfessional(professionalData);
+        
+        // Fetch professional's appointments and time slots
+        const { data: appointmentsData } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('professional_id', professionalData.id);
+          
+        const { data: timeSlotsData } = await supabase
+          .from('time_slots')
+          .select('*')
+          .eq('professional_id', professionalData.id)
+          .order('day_of_week', { ascending: true })
+          .order('start_time', { ascending: true });
+         
+        // Convert the data and make sure the status is correctly typed
+        // We ensure that the status is one of the expected values
+        if (appointmentsData) {
+          const typedAppointments: Appointment[] = appointmentsData.map(app => {
+            // Validate and ensure the status is one of the allowed values
+            let status: "scheduled" | "completed" | "canceled" = "scheduled";
+            if (app.status === "completed") status = "completed";
+            else if (app.status === "canceled") status = "canceled";
+            
+            return {
+              ...app,
+              status
+            } as Appointment;
+          });
+          
+          setAppointments(typedAppointments);
+        } else {
+          setAppointments([]);
+        }
+        
+        setTimeSlots(timeSlotsData as TimeSlot[] || []);
       } catch (error) {
         console.error("Error fetching professional data:", error);
       } finally {
