@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +56,8 @@ const Booking = () => {
           return;
         }
 
+        console.log("Found professional:", profileData);
+        
         const professionalData: Professional = {
           id: profileData.id,
           name: profileData.name,
@@ -81,6 +84,9 @@ const Booking = () => {
           .order('day_of_week', { ascending: true })
           .order('start_time', { ascending: true });
          
+        console.log("Appointments data:", appointmentsData);
+        console.log("Time slots data:", timeSlotsData);
+        
         // Convert the data and make sure the status is correctly typed
         // We ensure that the status is one of the expected values
         if (appointmentsData) {

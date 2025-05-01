@@ -83,25 +83,15 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
   const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
     const count = await countMonthlyAppointments(professionalId);
     
-    // Check if user has an active subscription
-    const { data: subscriptionData, error } = await supabase.functions.invoke('check-subscription', {
-      method: 'POST',
-      body: {},
-    });
-    
-    if (error) {
+    try {
+      // Free tier limit is 5 appointments per month
+      // For public bookings, we'll allow up to 5 appointments per month
+      return count < 5;
+    } catch (error) {
       console.error('Error checking subscription:', error);
       // Default to allowing if we can't check subscription (fail-open)
       return true;
     }
-    
-    // If user has an active subscription, they're not limited
-    if (subscriptionData.subscribed) {
-      return true;
-    }
-    
-    // Free tier limit is 5 appointments per month
-    return count < 5;
   };
   
   // Implementation for the missing methods

@@ -40,17 +40,20 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         // Count current month's scheduled appointments
         const today = new Date();
         const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         
         const { count, error } = await supabase
           .from('appointments')
           .select('*', { count: 'exact', head: false })
           .eq('professional_id', professional.id)
           .eq('status', 'scheduled')
-          .gte('date', firstDayOfMonth.toISOString().split('T')[0])
-          .lte('date', lastDayOfMonth.toISOString().split('T')[0]);
+          .gte('date', firstDayOfMonth.toISOString().split('T')[0]);
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error checking appointment limit:", error);
+          throw error;
+        }
+
+        console.log("Monthly appointment count:", count);
         setIsOverLimit(count !== null && count >= 5);
       } catch (error) {
         console.error("Error checking appointment limit:", error);
@@ -121,6 +124,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       slot => slot.day_of_week === dayOfWeek && slot.available
     );
     
+    console.log("Available day slots:", daySlots);
+    
     // For each time slot, generate appointment time slots based on duration
     daySlots.forEach(slot => {
       // Get start and end times in minutes
@@ -184,6 +189,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     );
     
     setAvailableSlots(slots);
+    console.log("Available slots for selected date:", slots);
   }, [selectedDate, timeSlots, appointments, isOverLimit]);
   
   if (loading) {

@@ -35,7 +35,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { addAppointment, isWithinFreeLimit } = useAppointments();
   const { toast } = useToast();
   
   const formattedDate = format(selectedDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
@@ -55,19 +54,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
     setIsLoading(true);
     
     try {
-      // First check if the professional is within free plan limits
-      const withinLimit = await isWithinFreeLimit(professional.id);
-      
-      if (!withinLimit) {
-        toast({
-          title: 'Não disponível',
-          description: 'Não há vagas disponíveis para agendamento no momento.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
-      
       // Prepare appointment data
       const appointmentData = {
         professional_id: professional.id,
@@ -99,6 +85,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         onSuccess(name, data[0].id);
       }
     } catch (error) {
+      console.error("Erro ao agendar:", error);
       toast({
         title: 'Erro ao agendar',
         description: 'Ocorreu um erro ao processar seu agendamento',
