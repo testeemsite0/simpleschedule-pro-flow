@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Professional } from '@/types';
-import { useAppointments } from '@/context/AppointmentContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -54,13 +53,40 @@ const BookingForm: React.FC<BookingFormProps> = ({
     setIsLoading(true);
     
     try {
+      // Format the date as YYYY-MM-DD for storage
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      
+      // Check if an appointment with the same date and start_time already exists
+      const { data: existingAppointment, error: checkError } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('professional_id', professional.id)
+        .eq('date', formattedDate)
+        .eq('start_time', startTime)
+        .eq('status', 'scheduled');
+      
+      if (checkError) {
+        throw checkError;
+      }
+      
+      // If an appointment already exists, show an error
+      if (existingAppointment && existingAppointment.length > 0) {
+        toast({
+          title: 'Horário indisponível',
+          description: 'Este horário já foi reservado. Por favor, selecione outro horário.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       // Prepare appointment data
       const appointmentData = {
         professional_id: professional.id,
         client_name: name,
         client_email: email,
         client_phone: phone,
-        date: format(selectedDate, 'yyyy-MM-dd'),
+        date: formattedDate,
         start_time: startTime,
         end_time: endTime,
         notes,

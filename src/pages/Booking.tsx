@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,43 +70,7 @@ const Booking = () => {
         
         setProfessional(professionalData);
         
-        // Fetch professional's appointments and time slots
-        const { data: appointmentsData } = await supabase
-          .from('appointments')
-          .select('*')
-          .eq('professional_id', professionalData.id);
-          
-        const { data: timeSlotsData } = await supabase
-          .from('time_slots')
-          .select('*')
-          .eq('professional_id', professionalData.id)
-          .order('day_of_week', { ascending: true })
-          .order('start_time', { ascending: true });
-         
-        console.log("Appointments data:", appointmentsData);
-        console.log("Time slots data:", timeSlotsData);
-        
-        // Convert the data and make sure the status is correctly typed
-        // We ensure that the status is one of the expected values
-        if (appointmentsData) {
-          const typedAppointments: Appointment[] = appointmentsData.map(app => {
-            // Validate and ensure the status is one of the allowed values
-            let status: "scheduled" | "completed" | "canceled" = "scheduled";
-            if (app.status === "completed") status = "completed";
-            else if (app.status === "canceled") status = "canceled";
-            
-            return {
-              ...app,
-              status
-            } as Appointment;
-          });
-          
-          setAppointments(typedAppointments);
-        } else {
-          setAppointments([]);
-        }
-        
-        setTimeSlots(timeSlotsData as TimeSlot[] || []);
+        await fetchAppointmentsAndTimeSlots(professionalData.id);
       } catch (error) {
         console.error("Error fetching professional data:", error);
       } finally {
@@ -118,6 +81,50 @@ const Booking = () => {
     fetchProfessionalData();
   }, [slug]);
   
+  const fetchAppointmentsAndTimeSlots = async (professionalId: string) => {
+    try {
+      // Fetch professional's appointments
+      const { data: appointmentsData } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('professional_id', professionalId);
+        
+      // Fetch professional's time slots
+      const { data: timeSlotsData } = await supabase
+        .from('time_slots')
+        .select('*')
+        .eq('professional_id', professionalId)
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
+       
+      console.log("Appointments data:", appointmentsData);
+      console.log("Time slots data:", timeSlotsData);
+      
+      // Convert the data and make sure the status is correctly typed
+      if (appointmentsData) {
+        const typedAppointments: Appointment[] = appointmentsData.map(app => {
+          // Validate and ensure the status is one of the allowed values
+          let status: "scheduled" | "completed" | "canceled" = "scheduled";
+          if (app.status === "completed") status = "completed";
+          else if (app.status === "canceled") status = "canceled";
+          
+          return {
+            ...app,
+            status
+          } as Appointment;
+        });
+        
+        setAppointments(typedAppointments);
+      } else {
+        setAppointments([]);
+      }
+      
+      setTimeSlots(timeSlotsData as TimeSlot[] || []);
+    } catch (error) {
+      console.error("Error fetching appointments and time slots:", error);
+    }
+  };
+  
   const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string) => {
     setSelectedDate(date);
     setSelectedStartTime(startTime);
@@ -125,34 +132,14 @@ const Booking = () => {
     setCurrentStep('form');
   };
   
-  const handleBookingSuccess = (name: string, id: string) => {
+  const handleBookingSuccess = async (name: string, id: string) => {
     setClientName(name);
     setAppointmentId(id);
     setCurrentStep('confirmation');
     
     // Refresh appointments after booking
     if (professional) {
-      supabase
-        .from('appointments')
-        .select('*')
-        .eq('professional_id', professional.id)
-        .then(({ data }) => {
-          if (data) {
-            // Same casting as above to ensure type safety
-            const typedAppointments: Appointment[] = data.map(app => {
-              let status: "scheduled" | "completed" | "canceled" = "scheduled";
-              if (app.status === "completed") status = "completed";
-              else if (app.status === "canceled") status = "canceled";
-              
-              return {
-                ...app,
-                status
-              } as Appointment;
-            });
-            
-            setAppointments(typedAppointments);
-          }
-        });
+      await fetchAppointmentsAndTimeSlots(professional.id);
     }
   };
   

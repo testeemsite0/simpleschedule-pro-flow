@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -25,6 +24,9 @@ import Booking from './pages/Booking';
 import DashboardAppointments from './pages/DashboardAppointments';
 import { AuthProvider } from './context/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Import the Sidebar component
+import Sidebar from './components/layout/Sidebar';
 
 function App() {
   // Initialize QueryClient with proper configuration

@@ -157,6 +157,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         possibleTimes.push({ start: time, end: endTime });
       }
       
+      // Format selected date for comparison with appointment dates
+      const formattedSelectedDate = selectedDate.toISOString().split('T')[0];
+      
       // Check each possible time against existing appointments
       possibleTimes.forEach(({ start, end }) => {
         const startTimeStr = minutesToTime(start);
@@ -164,12 +167,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         
         // Check if this time slot is already booked
         const isBooked = appointments.some(app => {
-          const appDate = new Date(app.date);
           return (
             app.status === 'scheduled' &&
-            isSameDay(appDate, selectedDate) &&
-            app.start_time === startTimeStr &&
-            app.end_time === endTimeStr
+            app.date === formattedSelectedDate &&
+            app.start_time === startTimeStr
           );
         });
         
