@@ -27,8 +27,15 @@ import { AuthProvider } from './context/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 function App() {
-  // Initialize QueryClient
-  const queryClient = new QueryClient();
+  // Initialize QueryClient with proper configuration
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+      },
+    },
+  });
 
   return (
     <QueryClientProvider client={queryClient}>

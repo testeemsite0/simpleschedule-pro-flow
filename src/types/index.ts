@@ -14,6 +14,7 @@ export interface Professional {
   bio?: string;
   slug: string;
   address?: string;
+  avatar?: string; // Adding avatar property
 }
 
 export interface TimeSlot {
@@ -72,5 +73,17 @@ export interface SubscriptionHistory {
   period_end: string;
   cancellation_date?: string;
   status: 'active' | 'canceled' | 'expired';
+  created_at: string;
+}
+
+export interface Subscriber {
+  id: string;
+  user_id: string;
+  email: string;
+  stripe_customer_id?: string;
+  subscribed: boolean;
+  subscription_tier?: string;
+  subscription_end?: string;
+  updated_at: string;
   created_at: string;
 }

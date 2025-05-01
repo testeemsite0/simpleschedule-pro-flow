@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -54,11 +53,7 @@ const AppointmentReports = () => {
       if (error) throw error;
       
       if (data) {
-        const typedAppointments = data.map(app => ({
-          ...app,
-          source: app.source || 'client' // Default for older records
-        })) as Appointment[];
-        
+        const typedAppointments = data as Appointment[];
         setAppointments(typedAppointments);
         
         // Calculate statistics

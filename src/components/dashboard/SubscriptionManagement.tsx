@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -23,6 +22,7 @@ import {
 } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SubscriptionHistory, Subscriber } from '@/types';
 
 interface SubscriptionData {
   subscribed: boolean;
@@ -41,25 +41,13 @@ interface PaymentRecord {
   status: 'paid' | 'pending';
 }
 
-interface SubscriptionHistoryRecord {
-  id: string;
-  stripe_subscription_id: string;
-  subscription_tier: string;
-  amount: number;
-  period_start: string;
-  period_end: string;
-  cancellation_date: string | null;
-  status: 'active' | 'canceled' | 'expired';
-  created_at: string;
-}
-
 const SubscriptionManagement = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [cancellationInProgress, setCancellationInProgress] = useState(false);
-  const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryRecord[]>([]);
+  const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistory[]>([]);
   const [activeTab, setActiveTab] = useState('current');
   
   useEffect(() => {
@@ -115,14 +103,14 @@ const SubscriptionManagement = () => {
       });
       
       // Fetch subscription history
-      const { data: historyData } = await supabase
+      const { data: historyData, error: historyError } = await supabase
         .from('subscription_history')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
         
       if (historyData) {
-        setSubscriptionHistory(historyData as SubscriptionHistoryRecord[]);
+        setSubscriptionHistory(historyData as SubscriptionHistory[]);
       }
       
     } catch (error) {

@@ -20,6 +20,7 @@ export type Database = {
           id: string
           notes: string | null
           professional_id: string
+          source: string | null
           start_time: string
           status: string
           updated_at: string | null
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           notes?: string | null
           professional_id: string
+          source?: string | null
           start_time: string
           status: string
           updated_at?: string | null
@@ -48,6 +50,7 @@ export type Database = {
           id?: string
           notes?: string | null
           professional_id?: string
+          source?: string | null
           start_time?: string
           status?: string
           updated_at?: string | null
@@ -98,6 +101,81 @@ export type Database = {
         }
         Relationships: []
       }
+      subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          stripe_customer_id: string | null
+          subscribed: boolean
+          subscription_end: string | null
+          subscription_tier: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscribed?: boolean
+          subscription_end?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscribed?: boolean
+          subscription_end?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      subscription_history: {
+        Row: {
+          amount: number | null
+          cancellation_date: string | null
+          created_at: string
+          id: string
+          period_end: string | null
+          period_start: string | null
+          status: string | null
+          stripe_subscription_id: string | null
+          subscription_tier: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          cancellation_date?: string | null
+          created_at?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          status?: string | null
+          stripe_subscription_id?: string | null
+          subscription_tier?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          cancellation_date?: string | null
+          created_at?: string
+          id?: string
+          period_end?: string | null
+          period_start?: string | null
+          status?: string | null
+          stripe_subscription_id?: string | null
+          subscription_tier?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       system_config: {
         Row: {
           created_at: string
@@ -124,31 +202,40 @@ export type Database = {
       }
       time_slots: {
         Row: {
+          appointment_duration_minutes: number | null
           available: boolean | null
           created_at: string | null
           day_of_week: number
           end_time: string
           id: string
+          lunch_break_end: string | null
+          lunch_break_start: string | null
           professional_id: string
           start_time: string
           updated_at: string | null
         }
         Insert: {
+          appointment_duration_minutes?: number | null
           available?: boolean | null
           created_at?: string | null
           day_of_week: number
           end_time: string
           id?: string
+          lunch_break_end?: string | null
+          lunch_break_start?: string | null
           professional_id: string
           start_time: string
           updated_at?: string | null
         }
         Update: {
+          appointment_duration_minutes?: number | null
           available?: boolean | null
           created_at?: string | null
           day_of_week?: number
           end_time?: string
           id?: string
+          lunch_break_end?: string | null
+          lunch_break_start?: string | null
           professional_id?: string
           start_time?: string
           updated_at?: string | null
