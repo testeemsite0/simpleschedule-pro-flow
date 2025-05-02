@@ -103,13 +103,24 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       return;
     }
     
+    // Important: JavaScript uses 0-6 for day of week (0 = Sunday)
     const dayOfWeek = selectedDate.getDay();
+    console.log("Selected day of week:", dayOfWeek);
+    
     const slots: AvailableSlot[] = [];
     
     // Get all time slots for this day
     const daySlots = timeSlots.filter(
       slot => slot.day_of_week === dayOfWeek && slot.available
     );
+    
+    console.log("Available time slots for day:", daySlots);
+    
+    if (daySlots.length === 0) {
+      console.log("No time slots configured for this day");
+      setAvailableSlots([]);
+      return;
+    }
     
     // Format selected date for database comparison
     const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -118,6 +129,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     const bookedAppointments = appointments.filter(app => 
       app.date === formattedSelectedDate && app.status === 'scheduled'
     );
+    
+    console.log("Booked appointments for date:", bookedAppointments);
     
     // Create a set of booked time slots for faster lookup
     const bookedTimeSlots = new Set(
@@ -140,26 +153,37 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       // Generate possible appointment start times
       for (let time = startMinutes; time <= endMinutes - duration; time += duration) {
         const endTime = time + duration;
+        const startTimeStr = minutesToTime(time);
+        const endTimeStr = minutesToTime(endTime);
         
         // Skip if appointment overlaps with lunch break
         if (
           lunchStartMinutes !== null && 
           lunchEndMinutes !== null && 
-          ((time < lunchEndMinutes && time + duration > lunchStartMinutes) || 
+          ((time < lunchEndMinutes && endTime > lunchStartMinutes) || 
            (time >= lunchStartMinutes && time < lunchEndMinutes))
         ) {
           continue;
         }
         
-        const startTimeStr = minutesToTime(time);
-        
         // Check if this time slot is already booked
         if (!bookedTimeSlots.has(startTimeStr)) {
-          slots.push({
-            date: selectedDate,
-            startTime: startTimeStr,
-            endTime: minutesToTime(endTime)
+          // Check if this slot overlaps with any booked appointment
+          const isOverlapping = bookedAppointments.some(app => {
+            const appStartMinutes = timeToMinutes(app.start_time);
+            const appEndMinutes = timeToMinutes(app.end_time);
+            
+            // Check for overlap
+            return (time < appEndMinutes && endTime > appStartMinutes);
           });
+          
+          if (!isOverlapping) {
+            slots.push({
+              date: selectedDate,
+              startTime: startTimeStr,
+              endTime: endTimeStr
+            });
+          }
         }
       }
     });
@@ -169,6 +193,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
     );
     
+    console.log("Final available slots:", slots);
     setAvailableSlots(slots);
   }, [selectedDate, timeSlots, appointments, isOverLimit]);
   
