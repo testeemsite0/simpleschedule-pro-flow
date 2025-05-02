@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { format, addDays, isSameDay, startOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
+import { format, addDays, startOfDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { TimeSlot, Appointment, Professional } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import DateSelector from './DateSelector';
+import TimeSlotSelector from './TimeSlotSelector';
+import { timeToMinutes, minutesToTime } from './timeUtils';
 
 interface BookingCalendarProps {
   professional: Professional;
@@ -53,7 +54,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           throw error;
         }
 
-        console.log("Monthly appointment count:", count);
         setIsOverLimit(count !== null && count >= 5);
       } catch (error) {
         console.error("Error checking appointment limit:", error);
@@ -96,19 +96,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     }
   }, [timeSlots, isOverLimit]);
   
-  // Convert string time (like "14:30") to minutes since midnight
-  const timeToMinutes = (time: string): number => {
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours * 60 + minutes;
-  };
-  
-  // Convert minutes since midnight back to string time format (HH:MM)
-  const minutesToTime = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-  };
-  
   // When a date is selected, find available time slots
   useEffect(() => {
     if (!selectedDate || isOverLimit) {
@@ -124,12 +111,17 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       slot => slot.day_of_week === dayOfWeek && slot.available
     );
     
-    // Format selected date for comparison with appointment dates
+    // Format selected date for database comparison
     const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
     
     // Find all booked appointments for the selected date
     const bookedAppointments = appointments.filter(app => 
       app.date === formattedSelectedDate && app.status === 'scheduled'
+    );
+    
+    // Create a set of booked time slots for faster lookup
+    const bookedTimeSlots = new Set(
+      bookedAppointments.map(app => app.start_time)
     );
     
     // For each time slot, generate appointment time slots based on duration
@@ -162,10 +154,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         const startTimeStr = minutesToTime(time);
         
         // Check if this time slot is already booked
-        const isBooked = bookedAppointments.some(app => app.start_time === startTimeStr);
-        
-        // Only add the slot if it's not booked
-        if (!isBooked) {
+        if (!bookedTimeSlots.has(startTimeStr)) {
           slots.push({
             date: selectedDate,
             startTime: startTimeStr,
@@ -203,56 +192,16 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold mb-4">
-          Escolha uma data
-        </h2>
-        
-        <div className="flex space-x-2 overflow-x-auto pb-2">
-          {availableDates.map((date) => (
-            <Button
-              key={date.toString()}
-              variant={isSameDay(date, selectedDate || new Date()) ? "default" : "outline"}
-              className="min-w-[110px] flex-col h-auto py-2"
-              onClick={() => setSelectedDate(date)}
-            >
-              <span className="text-xs font-normal">
-                {format(date, 'EEEE', { locale: ptBR })}
-              </span>
-              <span className="font-semibold">
-                {format(date, 'dd/MM', { locale: ptBR })}
-              </span>
-            </Button>
-          ))}
-        </div>
-      </div>
+      <DateSelector 
+        availableDates={availableDates}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+      />
       
-      <div>
-        <h2 className="text-xl font-semibold mb-4">
-          Horários disponíveis
-        </h2>
-        
-        {availableSlots.length === 0 ? (
-          <Card className="p-6 text-center">
-            <p className="text-muted-foreground">
-              Não há horários disponíveis para esta data.
-            </p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {availableSlots.map((slot, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                className="h-auto py-3"
-                onClick={() => onSelectSlot(slot.date, slot.startTime, slot.endTime)}
-              >
-                {slot.startTime} - {slot.endTime}
-              </Button>
-            ))}
-          </div>
-        )}
-      </div>
+      <TimeSlotSelector 
+        availableSlots={availableSlots}
+        onSelectSlot={onSelectSlot}
+      />
     </div>
   );
 };
