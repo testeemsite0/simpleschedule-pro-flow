@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -18,6 +18,13 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
   availableSlots,
   onSelectSlot
 }) => {
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(null);
+
+  const handleSelectTimeSlot = (slot: TimeSlot, index: number) => {
+    setSelectedSlotIndex(index);
+    onSelectSlot(new Date(slot.date), slot.startTime, slot.endTime);
+  };
+
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">
@@ -34,10 +41,10 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {availableSlots.map((slot, index) => (
             <Button
-              key={index}
-              variant="outline"
+              key={`${slot.date.toISOString()}-${slot.startTime}-${slot.endTime}`}
+              variant={selectedSlotIndex === index ? "default" : "outline"}
               className="h-auto py-3"
-              onClick={() => onSelectSlot(slot.date, slot.startTime, slot.endTime)}
+              onClick={() => handleSelectTimeSlot(slot, index)}
             >
               {slot.startTime} - {slot.endTime}
             </Button>

@@ -67,7 +67,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       );
       
       if (hasAvailableSlots) {
-        dates.push(date);
+        dates.push(new Date(date));
       }
     }
     
@@ -75,7 +75,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     
     // Automatically select the first date if available
     if (dates.length > 0) {
-      setSelectedDate(dates[0]);
+      setSelectedDate(new Date(dates[0]));
     }
   }, [timeSlots]);
   
@@ -86,6 +86,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       return;
     }
     
+    // Create a fresh copy of the date to avoid reference issues
     const date = new Date(selectedDate);
     // Use getDay() to get day of week (0-6)
     const dayOfWeek = date.getDay();
@@ -149,7 +150,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         // Only add if not booked
         if (!isOverlapping) {
           slots.push({
-            date: selectedDate,
+            date: new Date(selectedDate),
             startTime: startTime,
             endTime: endTime
           });
@@ -164,6 +165,9 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     
     console.log("Available slots for manual booking:", slots);
     setAvailableSlots(slots);
+    
+    // Reset selected time slot when date changes
+    setSelectedTimeSlot(null);
   }, [selectedDate, timeSlots, appointments]);
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -185,12 +189,13 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   };
   
   const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
+    // Ensure we're working with a fresh copy of the date
+    setSelectedDate(new Date(date));
     setSelectedTimeSlot(null);
   };
   
   const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string) => {
-    setSelectedTimeSlot({ date, startTime, endTime });
+    setSelectedTimeSlot({ date: new Date(date), startTime, endTime });
   };
   
   return (
