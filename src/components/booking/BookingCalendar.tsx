@@ -124,7 +124,13 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       slot => slot.day_of_week === dayOfWeek && slot.available
     );
     
-    console.log("Available day slots:", daySlots);
+    // Format selected date for comparison with appointment dates
+    const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
+    
+    // Find all booked appointments for the selected date
+    const bookedAppointments = appointments.filter(app => 
+      app.date === formattedSelectedDate && app.status === 'scheduled'
+    );
     
     // For each time slot, generate appointment time slots based on duration
     daySlots.forEach(slot => {
@@ -140,7 +146,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       const duration = slot.appointment_duration_minutes || 60;
       
       // Generate possible appointment start times
-      const possibleTimes: { start: number, end: number }[] = [];
       for (let time = startMinutes; time <= endMinutes - duration; time += duration) {
         const endTime = time + duration;
         
@@ -154,34 +159,20 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           continue;
         }
         
-        possibleTimes.push({ start: time, end: endTime });
-      }
-      
-      // Format selected date for comparison with appointment dates
-      const formattedSelectedDate = selectedDate.toISOString().split('T')[0];
-      
-      // Check each possible time against existing appointments
-      possibleTimes.forEach(({ start, end }) => {
-        const startTimeStr = minutesToTime(start);
-        const endTimeStr = minutesToTime(end);
+        const startTimeStr = minutesToTime(time);
         
         // Check if this time slot is already booked
-        const isBooked = appointments.some(app => {
-          return (
-            app.status === 'scheduled' &&
-            app.date === formattedSelectedDate &&
-            app.start_time === startTimeStr
-          );
-        });
+        const isBooked = bookedAppointments.some(app => app.start_time === startTimeStr);
         
+        // Only add the slot if it's not booked
         if (!isBooked) {
           slots.push({
             date: selectedDate,
             startTime: startTimeStr,
-            endTime: endTimeStr
+            endTime: minutesToTime(endTime)
           });
         }
-      });
+      }
     });
     
     // Sort by start time
@@ -190,7 +181,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     );
     
     setAvailableSlots(slots);
-    console.log("Available slots for selected date:", slots);
   }, [selectedDate, timeSlots, appointments, isOverLimit]);
   
   if (loading) {
