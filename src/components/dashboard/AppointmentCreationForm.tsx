@@ -3,12 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { TimeSlot, Appointment } from '@/types';
 import { format } from 'date-fns';
 import { timeToMinutes, minutesToTime, doTimeSlotsOverlap } from '../booking/timeUtils';
 import DateSelector from '../booking/DateSelector';
+import TimeSlotSelector from '../booking/TimeSlotSelector';
 
 interface AppointmentCreationFormProps {
   professionalId: string;
@@ -27,6 +27,12 @@ interface AppointmentCreationFormProps {
   }) => void;
 }
 
+interface AvailableSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+}
+
 const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   professionalId,
   timeSlots,
@@ -35,10 +41,10 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   onCancel,
   onSubmit
 }) => {
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<AvailableSlot | null>(null);
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<{ value: string, label: string }[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
@@ -69,15 +75,14 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     
     // Automatically select the first date if available
     if (dates.length > 0) {
-      const firstDate = format(dates[0], 'yyyy-MM-dd');
-      setSelectedDate(firstDate);
+      setSelectedDate(dates[0]);
     }
   }, [timeSlots]);
   
   // Generate available time slots for the selected date
   useEffect(() => {
     if (!selectedDate) {
-      setAvailableTimeSlots([]);
+      setAvailableSlots([]);
       return;
     }
     
@@ -93,15 +98,18 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     
     console.log("Available time slots for day:", daySlotsData);
     
+    // Format selected date for database comparison
+    const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
+    
     // Get all booked slots for this date
-    const bookedSlots = appointments.filter(app => 
-      app.date === selectedDate && app.status === 'scheduled'
+    const bookedAppointments = appointments.filter(app => 
+      app.date === formattedSelectedDate && app.status === 'scheduled'
     );
     
-    console.log("Booked appointments:", bookedSlots);
+    console.log("Booked appointments:", bookedAppointments);
     
     // Convert these into appointment slots
-    const slots: { value: string, label: string }[] = [];
+    const slots: AvailableSlot[] = [];
     
     daySlotsData.forEach(slot => {
       // Convert times to minutes for easier calculation
@@ -114,22 +122,22 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       const lunchEndMinutes = slot.lunch_break_end ? timeToMinutes(slot.lunch_break_end) : null;
       
       // Generate slots
-      for (let timeMinutes = startMinutes; timeMinutes + duration <= endMinutes; timeMinutes += duration) {
+      for (let time = startMinutes; time + duration <= endMinutes; time += duration) {
         // Skip slots that overlap with lunch break
         if (
           lunchStartMinutes !== null && 
           lunchEndMinutes !== null && 
-          ((timeMinutes < lunchEndMinutes && timeMinutes + duration > lunchStartMinutes) || 
-           (timeMinutes >= lunchStartMinutes && timeMinutes < lunchEndMinutes))
+          ((time < lunchEndMinutes && time + duration > lunchStartMinutes) || 
+           (time >= lunchStartMinutes && time < lunchEndMinutes))
         ) {
           continue;
         }
         
-        const startTime = minutesToTime(timeMinutes);
-        const endTime = minutesToTime(timeMinutes + duration);
+        const startTime = minutesToTime(time);
+        const endTime = minutesToTime(time + duration);
         
         // Check if slot is already booked
-        const isBooked = bookedSlots.some(app => {
+        const isOverlapping = bookedAppointments.some(app => {
           return doTimeSlotsOverlap(
             startTime, 
             endTime, 
@@ -139,23 +147,23 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         });
         
         // Only add if not booked
-        if (!isBooked) {
-          const value = `${startTime}-${endTime}`;
-          const label = `${startTime} - ${endTime}`;
-          slots.push({ value, label });
+        if (!isOverlapping) {
+          slots.push({
+            date: selectedDate,
+            startTime: startTime,
+            endTime: endTime
+          });
         }
       }
     });
     
-    // Sort by time
-    slots.sort((a, b) => {
-      const aStart = a.value.split('-')[0];
-      const bStart = b.value.split('-')[0];
-      return timeToMinutes(aStart) - timeToMinutes(bStart);
-    });
+    // Sort by start time
+    slots.sort((a, b) => 
+      timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+    );
     
     console.log("Available slots for manual booking:", slots);
-    setAvailableTimeSlots(slots);
+    setAvailableSlots(slots);
   }, [selectedDate, timeSlots, appointments]);
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -165,13 +173,10 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       return;
     }
     
-    // Parse time slot
-    const [startTime, endTime] = selectedTimeSlot.split('-');
-    
     onSubmit({
-      selectedDate,
-      startTime,
-      endTime,
+      selectedDate: format(selectedDate, 'yyyy-MM-dd'),
+      startTime: selectedTimeSlot.startTime,
+      endTime: selectedTimeSlot.endTime,
       clientName,
       clientEmail,
       clientPhone,
@@ -180,92 +185,80 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   };
   
   const handleDateSelect = (date: Date) => {
-    setSelectedDate(format(date, 'yyyy-MM-dd'));
+    setSelectedDate(date);
+    setSelectedTimeSlot(null);
+  };
+  
+  const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string) => {
+    setSelectedTimeSlot({ date, startTime, endTime });
   };
   
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label>Data</Label>
-        <div className="mt-2">
-          <DateSelector
-            availableDates={availableDates}
-            selectedDate={selectedDate ? new Date(selectedDate) : null}
-            onSelectDate={handleDateSelect}
-          />
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <DateSelector
+        availableDates={availableDates}
+        selectedDate={selectedDate}
+        onSelectDate={handleDateSelect}
+      />
+      
+      <TimeSlotSelector
+        availableSlots={availableSlots}
+        onSelectSlot={handleTimeSlotSelect}
+      />
+      
+      {selectedTimeSlot && (
+        <div className="space-y-4 border-t pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="clientName">Nome do Cliente</Label>
+            <Input
+              id="clientName"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              required
+              placeholder="Nome completo"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="clientEmail">Email do Cliente</Label>
+            <Input
+              id="clientEmail"
+              type="email"
+              value={clientEmail}
+              onChange={(e) => setClientEmail(e.target.value)}
+              required
+              placeholder="email@exemplo.com"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="clientPhone">Telefone do Cliente</Label>
+            <Input
+              id="clientPhone"
+              value={clientPhone}
+              onChange={(e) => setClientPhone(e.target.value)}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notas</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Informações adicionais..."
+            />
+          </div>
         </div>
-      </div>
+      )}
       
-      <div className="space-y-2">
-        <Label htmlFor="timeSlot">Horário</Label>
-        <Select
-          value={selectedTimeSlot}
-          onValueChange={setSelectedTimeSlot}
-          disabled={availableTimeSlots.length === 0}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione um horário" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableTimeSlots.map((slot) => (
-              <SelectItem key={slot.value} value={slot.value}>
-                {slot.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {availableTimeSlots.length === 0 && selectedDate && (
-          <p className="text-sm text-amber-600 mt-2">
-            Não há horários disponíveis para esta data.
-          </p>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="clientName">Nome do Cliente</Label>
-        <Input
-          id="clientName"
-          value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="clientEmail">Email do Cliente</Label>
-        <Input
-          id="clientEmail"
-          type="email"
-          value={clientEmail}
-          onChange={(e) => setClientEmail(e.target.value)}
-          required
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="clientPhone">Telefone do Cliente</Label>
-        <Input
-          id="clientPhone"
-          value={clientPhone}
-          onChange={(e) => setClientPhone(e.target.value)}
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="notes">Notas</Label>
-        <Textarea
-          id="notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-        />
-      </div>
-      
-      <div className="flex justify-end gap-3">
+      <div className="flex justify-end gap-3 pt-4 border-t">
         <Button variant="outline" type="button" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSubmitting || availableTimeSlots.length === 0 || !selectedTimeSlot}>
+        <Button type="submit" disabled={isSubmitting || !selectedTimeSlot}>
           {isSubmitting ? 'Criando...' : 'Criar Agendamento'}
         </Button>
       </div>

@@ -6,7 +6,7 @@ import { TimeSlot, Appointment, Professional } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import DateSelector from './DateSelector';
 import TimeSlotSelector from './TimeSlotSelector';
-import { timeToMinutes, minutesToTime } from './timeUtils';
+import { generateAvailableTimeSlots } from './timeUtils';
 
 interface BookingCalendarProps {
   professional: Professional;
@@ -107,8 +107,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     const dayOfWeek = selectedDate.getDay();
     console.log("Selected day of week:", dayOfWeek);
     
-    const slots: AvailableSlot[] = [];
-    
     // Get all time slots for this day
     const daySlots = timeSlots.filter(
       slot => slot.day_of_week === dayOfWeek && slot.available
@@ -132,66 +130,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     
     console.log("Booked appointments for date:", bookedAppointments);
     
-    // Create a set of booked time slots for faster lookup
-    const bookedTimeSlots = new Set(
-      bookedAppointments.map(app => app.start_time)
-    );
-    
-    // For each time slot, generate appointment time slots based on duration
-    daySlots.forEach(slot => {
-      // Get start and end times in minutes
-      const startMinutes = timeToMinutes(slot.start_time);
-      const endMinutes = timeToMinutes(slot.end_time);
-      
-      // Get lunch break times in minutes (if applicable)
-      const lunchStartMinutes = slot.lunch_break_start ? timeToMinutes(slot.lunch_break_start) : null;
-      const lunchEndMinutes = slot.lunch_break_end ? timeToMinutes(slot.lunch_break_end) : null;
-      
-      // Get appointment duration (default to 60 minutes if not specified)
-      const duration = slot.appointment_duration_minutes || 60;
-      
-      // Generate possible appointment start times
-      for (let time = startMinutes; time <= endMinutes - duration; time += duration) {
-        const endTime = time + duration;
-        const startTimeStr = minutesToTime(time);
-        const endTimeStr = minutesToTime(endTime);
-        
-        // Skip if appointment overlaps with lunch break
-        if (
-          lunchStartMinutes !== null && 
-          lunchEndMinutes !== null && 
-          ((time < lunchEndMinutes && endTime > lunchStartMinutes) || 
-           (time >= lunchStartMinutes && time < lunchEndMinutes))
-        ) {
-          continue;
-        }
-        
-        // Check if this time slot is already booked
-        if (!bookedTimeSlots.has(startTimeStr)) {
-          // Check if this slot overlaps with any booked appointment
-          const isOverlapping = bookedAppointments.some(app => {
-            const appStartMinutes = timeToMinutes(app.start_time);
-            const appEndMinutes = timeToMinutes(app.end_time);
-            
-            // Check for overlap
-            return (time < appEndMinutes && endTime > appStartMinutes);
-          });
-          
-          if (!isOverlapping) {
-            slots.push({
-              date: selectedDate,
-              startTime: startTimeStr,
-              endTime: endTimeStr
-            });
-          }
-        }
-      }
-    });
+    // Generate available slots based on day slots and booked appointments
+    const slots = generateAvailableTimeSlots(daySlots, bookedAppointments, selectedDate);
     
     // Sort by start time
-    slots.sort((a, b) => 
-      timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
-    );
+    slots.sort((a, b) => {
+      const timeA = a.startTime.split(':').map(Number);
+      const timeB = b.startTime.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
     
     console.log("Final available slots:", slots);
     setAvailableSlots(slots);
