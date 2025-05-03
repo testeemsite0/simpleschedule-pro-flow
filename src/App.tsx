@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -24,9 +25,6 @@ import Booking from './pages/Booking';
 import DashboardAppointments from './pages/DashboardAppointments';
 import { AuthProvider } from './context/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-// Import the Sidebar component
-import Sidebar from './components/layout/Sidebar';
 
 function App() {
   // Initialize QueryClient with proper configuration
@@ -62,8 +60,8 @@ function App() {
               <Route path="/dashboard/appointments" element={<DashboardAppointments />} />
               <Route path="/dashboard/reports" element={<DashboardReports />} />
               <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
-              <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<AdminPanel />} />
               
               {/* 404 Route */}

@@ -55,10 +55,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <HomeIcon size={18} /> },
     { path: '/dashboard/schedules', label: 'Horários', icon: <CalendarIcon size={18} /> },
+    { path: '/dashboard/appointments', label: 'Agendamentos', icon: <CalendarIcon size={18} /> },
     { path: '/dashboard/reports', label: 'Relatórios', icon: <BarChart2Icon size={18} /> },
     { path: '/dashboard/booking-link', label: 'Link de Agendamento', icon: <LinkIcon size={18} /> },
-    { path: '/dashboard/profile', label: 'Perfil', icon: <UserIcon size={18} /> },
-    { path: '/dashboard/settings', label: 'Configurações', icon: <SettingsIcon size={18} /> },
+    { path: '/profile', label: 'Perfil', icon: <UserIcon size={18} /> },
+    { path: '/settings', label: 'Configurações', icon: <SettingsIcon size={18} /> },
   ];
   
   // Add admin panel link for admin users
@@ -122,7 +123,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
         {/* Mobile navigation */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-10">
           <div className="flex justify-between px-2">
-            {navItems.map((item) => (
+            {navItems.slice(0, 5).map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
