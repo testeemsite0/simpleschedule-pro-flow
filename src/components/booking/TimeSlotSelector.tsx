@@ -2,12 +2,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableRow
-} from '@/components/ui/table';
 
 interface TimeSlot {
   date: Date;
@@ -53,33 +47,28 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
           </p>
         </Card>
       ) : (
-        <div className="border rounded-md overflow-hidden">
-          <Table>
-            <TableBody>
-              {groupedSlots().map((row, rowIndex) => (
-                <TableRow key={`row-${rowIndex}`}>
-                  {row.map((slot, colIndex) => {
-                    const index = rowIndex * 3 + colIndex;
-                    return (
-                      <TableCell key={`${slot.date.toISOString()}-${slot.startTime}-${slot.endTime}`} className="p-2">
-                        <Button
-                          variant={selectedSlotIndex === index ? "default" : "outline"}
-                          className="w-full h-auto py-3 text-center"
-                          onClick={() => handleSelectTimeSlot(slot, index)}
-                        >
-                          {slot.startTime} - {slot.endTime}
-                        </Button>
-                      </TableCell>
-                    );
-                  })}
-                  {/* Add empty cells to complete the row if needed */}
-                  {row.length < 3 && Array(3 - row.length).fill(0).map((_, i) => (
-                    <TableCell key={`empty-${rowIndex}-${i}`} className="p-2"></TableCell>
-                  ))}
-                </TableRow>
+        <div className="grid gap-4">
+          {groupedSlots().map((row, rowIndex) => (
+            <div key={`row-${rowIndex}`} className="grid grid-cols-3 gap-3">
+              {row.map((slot, colIndex) => {
+                const index = rowIndex * 3 + colIndex;
+                return (
+                  <Button
+                    key={`${slot.date.toISOString()}-${slot.startTime}-${slot.endTime}`}
+                    variant={selectedSlotIndex === index ? "default" : "outline"}
+                    className="w-full h-auto py-3 text-center"
+                    onClick={() => handleSelectTimeSlot(slot, index)}
+                  >
+                    {slot.startTime} - {slot.endTime}
+                  </Button>
+                );
+              })}
+              {/* Add empty slots to complete the row if needed */}
+              {row.length < 3 && Array(3 - row.length).fill(0).map((_, i) => (
+                <div key={`empty-${rowIndex}-${i}`} className="w-full"></div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ))}
         </div>
       )}
     </div>
