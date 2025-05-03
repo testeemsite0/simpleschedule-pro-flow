@@ -25,11 +25,11 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
     onSelectSlot(new Date(slot.date), slot.startTime, slot.endTime);
   };
 
-  // Group time slots into rows of 3 for better display
+  // Group time slots into rows of 2 for better display in the dialog
   const groupedSlots = () => {
     const grouped = [];
-    for (let i = 0; i < availableSlots.length; i += 3) {
-      grouped.push(availableSlots.slice(i, i + 3));
+    for (let i = 0; i < availableSlots.length; i += 2) {
+      grouped.push(availableSlots.slice(i, i + 2));
     }
     return grouped;
   };
@@ -47,16 +47,16 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
           </p>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {groupedSlots().map((row, rowIndex) => (
-            <div key={`row-${rowIndex}`} className="grid grid-cols-3 gap-3">
+            <div key={`row-${rowIndex}`} className="grid grid-cols-2 gap-3">
               {row.map((slot, colIndex) => {
-                const index = rowIndex * 3 + colIndex;
+                const index = rowIndex * 2 + colIndex;
                 return (
                   <Button
                     key={`${slot.date.toISOString()}-${slot.startTime}-${slot.endTime}`}
                     variant={selectedSlotIndex === index ? "default" : "outline"}
-                    className="w-full h-auto py-3 text-center"
+                    className="w-full h-auto py-2 px-2 text-sm text-center whitespace-nowrap"
                     onClick={() => handleSelectTimeSlot(slot, index)}
                   >
                     {slot.startTime} - {slot.endTime}
@@ -64,7 +64,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
                 );
               })}
               {/* Add empty slots to complete the row if needed */}
-              {row.length < 3 && Array(3 - row.length).fill(0).map((_, i) => (
+              {row.length < 2 && Array(2 - row.length).fill(0).map((_, i) => (
                 <div key={`empty-${rowIndex}-${i}`} className="w-full"></div>
               ))}
             </div>

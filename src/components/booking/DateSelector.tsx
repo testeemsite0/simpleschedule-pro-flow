@@ -27,7 +27,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
         Escolha uma data
       </h2>
       
-      <div className="flex space-x-2 overflow-x-auto pb-2">
+      <div className="grid grid-cols-3 gap-2 mb-2">
         {availableDates.map((date) => {
           // Criar uma cópia segura da data para comparação
           const dateObj = new Date(date);
@@ -37,7 +37,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
             <Button
               key={dateObj.toISOString()}
               variant={isSelected ? "default" : "outline"}
-              className="min-w-[110px] flex-col h-auto py-2"
+              className="flex-col h-auto py-2 text-sm"
               onClick={() => handleDateSelect(dateObj)}
             >
               <span className="text-xs font-normal">
