@@ -38,12 +38,12 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {availableSlots.map((slot, index) => (
             <Button
               key={`${slot.date.toISOString()}-${slot.startTime}-${slot.endTime}`}
               variant={selectedSlotIndex === index ? "default" : "outline"}
-              className="h-auto py-3"
+              className="h-auto py-3 flex justify-center items-center text-center"
               onClick={() => handleSelectTimeSlot(slot, index)}
             >
               {slot.startTime} - {slot.endTime}
