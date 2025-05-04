@@ -41,9 +41,10 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
       const updatedUpcoming = upcomingAppointments.filter(app => app.id !== id);
       setUpcomingAppointments(updatedUpcoming);
       
-      // Adicionar aos cancelados com status atualizado
-      const updatedCanceled = [
-        { ...canceledApp, status: 'canceled' },
+      // Adicionar aos cancelados com status atualizado como 'canceled'
+      // Corrigindo o problema de tipagem especificando 'canceled' como valor literal
+      const updatedCanceled: Appointment[] = [
+        { ...canceledApp, status: 'canceled' as const },
         ...canceledAppointments
       ];
       setCanceledAppointments(updatedCanceled);
