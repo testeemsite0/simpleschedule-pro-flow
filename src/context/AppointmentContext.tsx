@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Appointment, TimeSlot } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,7 +36,25 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
         
       if (error) throw error;
       
-      const fetchedAppointments = data as Appointment[];
+      // Ensure all appointments have the correct status type
+      const fetchedAppointments = (data || []).map(app => {
+        // Validate status is one of the allowed values
+        let status: "scheduled" | "completed" | "canceled" = "scheduled";
+        if (app.status === "completed") status = "completed";
+        else if (app.status === "canceled") status = "canceled";
+        
+        // Validate source is one of the allowed values
+        let source: "client" | "manual" | undefined = undefined;
+        if (app.source === "client") source = "client";
+        else if (app.source === "manual") source = "manual";
+        
+        return {
+          ...app,
+          status,
+          source
+        } as Appointment;
+      });
+      
       setAppointments(fetchedAppointments);
       return fetchedAppointments;
     } catch (error) {
@@ -100,15 +117,32 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
   
   // Nova função para adicionar um agendamento diretamente ao estado
   const addAppointment = (appointmentData: Appointment): void => {
+    // Ensure status is one of the allowed values
+    let status: "scheduled" | "completed" | "canceled" = "scheduled";
+    if (appointmentData.status === "completed") status = "completed";
+    else if (appointmentData.status === "canceled") status = "canceled";
+    
+    // Ensure source is one of the allowed values
+    let source: "client" | "manual" | undefined = undefined;
+    if (appointmentData.source === "client") source = "client";
+    else if (appointmentData.source === "manual") source = "manual";
+    
+    // Create a properly typed appointment object
+    const typedAppointment: Appointment = {
+      ...appointmentData,
+      status,
+      source
+    };
+    
     setAppointments(prev => {
       // Verificar se o agendamento já existe para evitar duplicação
-      const appointmentExists = prev.some(app => app.id === appointmentData.id);
+      const appointmentExists = prev.some(app => app.id === typedAppointment.id);
       if (appointmentExists) {
         return prev;
       }
       
       // Adicionar o novo agendamento à lista
-      return [...prev, appointmentData];
+      return [...prev, typedAppointment];
     });
   };
   

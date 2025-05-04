@@ -82,6 +82,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
         return;
       }
       
+      // Define appointment status and source as literal types
+      const appointmentStatus = 'scheduled' as const;
+      const appointmentSource = 'client' as const;
+      
       // Prepare appointment data
       const appointmentData = {
         professional_id: professional.id,
@@ -92,8 +96,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
         start_time: startTime,
         end_time: endTime,
         notes,
-        status: 'scheduled' as const, // Using 'as const' to ensure it's the literal type
-        source: 'client' as const, // Mark as client booking
+        status: appointmentStatus,
+        source: appointmentSource,
       };
       
       // Create appointment and get its ID
@@ -105,13 +109,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Ensure the returned appointment has the correct status type before adding to context
+        // Ensure the returned appointment has the correct literal types for status and source
         const appointment = {
           ...data[0],
-          status: data[0].status as "scheduled" | "completed" | "canceled"
+          status: appointmentStatus,
+          source: appointmentSource
         };
         
-        // Add the properly typed appointment to the context
+        // Add the appointment to the context with proper typing
         addAppointment(appointment);
         
         toast({
