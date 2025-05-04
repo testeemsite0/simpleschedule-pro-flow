@@ -17,10 +17,9 @@ import { AlertCircle } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { getAppointmentsByProfessional, countMonthlyAppointments, isWithinFreeLimit } = useAppointments();
+  const { getAppointmentsByProfessional, countMonthlyAppointments, appointments, setAppointments } = useAppointments();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('upcoming');
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [monthlyCount, setMonthlyCount] = useState(0);
   const [isOverLimit, setIsOverLimit] = useState(false);
@@ -50,7 +49,7 @@ const Dashboard = () => {
     };
     
     fetchAppointments();
-  }, [user, getAppointmentsByProfessional, countMonthlyAppointments, toast]);
+  }, [user, getAppointmentsByProfessional, countMonthlyAppointments, toast, setAppointments]);
   
   if (!user) {
     return null;

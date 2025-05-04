@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Appointment, TimeSlot } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +10,7 @@ interface AppointmentContextProps {
   getTimeSlotsByProfessional: (professionalId: string) => Promise<TimeSlot[]>;
   countMonthlyAppointments: (professionalId: string) => Promise<number>;
   isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
-  addAppointment: (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
+  addAppointment: (appointmentData: Appointment) => void;
   cancelAppointment: (appointmentId: string) => Promise<boolean>;
   addTimeSlot: (timeSlotData: Omit<TimeSlot, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateTimeSlot: (timeSlotData: TimeSlot) => Promise<boolean>;
@@ -97,25 +98,18 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
     }
   };
   
-  const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .insert([appointmentData])
-        .select();
-        
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        const newAppointment = data[0] as Appointment;
-        setAppointments(prev => [...prev, newAppointment]);
+  // Nova função para adicionar um agendamento diretamente ao estado
+  const addAppointment = (appointmentData: Appointment): void => {
+    setAppointments(prev => {
+      // Verificar se o agendamento já existe para evitar duplicação
+      const appointmentExists = prev.some(app => app.id === appointmentData.id);
+      if (appointmentExists) {
+        return prev;
       }
       
-      return true;
-    } catch (error) {
-      console.error('Error adding appointment:', error);
-      return false;
-    }
+      // Adicionar o novo agendamento à lista
+      return [...prev, appointmentData];
+    });
   };
   
   const cancelAppointment = async (appointmentId: string): Promise<boolean> => {

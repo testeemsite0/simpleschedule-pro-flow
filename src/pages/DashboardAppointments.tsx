@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,7 +15,7 @@ import AppointmentTabs from '@/components/dashboard/AppointmentTabs';
 const DashboardAppointments = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { getTimeSlotsByProfessional, isWithinFreeLimit } = useAppointments();
+  const { getTimeSlotsByProfessional, isWithinFreeLimit, addAppointment } = useAppointments();
   
   // States for fetching data
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -124,35 +125,40 @@ const DashboardAppointments = () => {
         return;
       }
       
+      // Prepare appointment data
+      const appointmentData = {
+        professional_id: user.id,
+        client_name: formData.clientName,
+        client_email: formData.clientEmail,
+        client_phone: formData.clientPhone,
+        date: formData.selectedDate,
+        start_time: formData.startTime,
+        end_time: formData.endTime,
+        notes: formData.notes,
+        status: 'scheduled' as const,
+        source: 'manual' as const // Mark as manually created
+      };
+      
       // Create appointment
       const { data, error } = await supabase
         .from('appointments')
-        .insert([{
-          professional_id: user.id,
-          client_name: formData.clientName,
-          client_email: formData.clientEmail,
-          client_phone: formData.clientPhone,
-          date: formData.selectedDate,
-          start_time: formData.startTime,
-          end_time: formData.endTime,
-          notes: formData.notes,
-          status: 'scheduled',
-          source: 'manual' // Mark as manually created
-        }])
+        .insert([appointmentData])
         .select();
         
       if (error) throw error;
       
-      toast({
-        title: 'Sucesso',
-        description: 'Agendamento criado com sucesso',
-      });
-      
-      // Reset form and close dialog
-      setIsDialogOpen(false);
-      
-      // Refresh appointments
-      fetchAppointments();
+      if (data && data.length > 0) {
+        // Adicionar o agendamento ao contexto para atualização em tempo real
+        addAppointment(data[0]);
+        
+        toast({
+          title: 'Sucesso',
+          description: 'Agendamento criado com sucesso',
+        });
+        
+        // Reset form and close dialog
+        setIsDialogOpen(false);
+      }
       
     } catch (error) {
       console.error('Error creating appointment:', error);

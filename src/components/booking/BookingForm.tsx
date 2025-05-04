@@ -10,6 +10,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Professional } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAppointments } from '@/context/AppointmentContext';
 
 interface BookingFormProps {
   professional: Professional;
@@ -35,6 +36,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   
   const { toast } = useToast();
+  const { addAppointment } = useAppointments();
   
   const formattedDate = format(selectedDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
   
@@ -90,8 +92,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
         start_time: startTime,
         end_time: endTime,
         notes,
-        status: 'scheduled',
-        source: 'client', // Mark as client booking
+        status: 'scheduled' as const,
+        source: 'client' as const, // Mark as client booking
       };
       
       // Create appointment and get its ID
@@ -103,6 +105,9 @@ const BookingForm: React.FC<BookingFormProps> = ({
       if (error) throw error;
       
       if (data && data.length > 0) {
+        // Adicionar o agendamento ao contexto para atualização em tempo real
+        addAppointment(data[0]);
+        
         toast({
           title: 'Agendamento realizado',
           description: 'Seu agendamento foi confirmado com sucesso',
