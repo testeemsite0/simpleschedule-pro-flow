@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Appointment } from '@/types';
 import AppointmentList from './AppointmentList';
@@ -11,16 +11,46 @@ interface AppointmentTabsProps {
   loading: boolean;
   activeTab: string;
   onTabChange: (value: string) => void;
+  onAppointmentCanceled?: (id: string) => void;
 }
 
 const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
-  upcomingAppointments,
-  pastAppointments,
-  canceledAppointments,
+  upcomingAppointments: initialUpcoming,
+  pastAppointments: initialPast,
+  canceledAppointments: initialCanceled,
   loading,
   activeTab,
-  onTabChange
+  onTabChange,
+  onAppointmentCanceled
 }) => {
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>(initialUpcoming);
+  const [canceledAppointments, setCanceledAppointments] = useState<Appointment[]>(initialCanceled);
+  
+  useEffect(() => {
+    setUpcomingAppointments(initialUpcoming);
+    setCanceledAppointments(initialCanceled);
+  }, [initialUpcoming, initialCanceled]);
+  
+  const handleAppointmentCanceled = (id: string) => {
+    // Encontrar o agendamento cancelado
+    const canceledApp = upcomingAppointments.find(app => app.id === id);
+    if (canceledApp) {
+      // Remover dos próximos
+      setUpcomingAppointments(prev => prev.filter(app => app.id !== id));
+      
+      // Adicionar aos cancelados com status atualizado
+      setCanceledAppointments(prev => [
+        { ...canceledApp, status: 'canceled' },
+        ...prev
+      ]);
+    }
+    
+    // Notificar o componente pai se necessário
+    if (onAppointmentCanceled) {
+      onAppointmentCanceled(id);
+    }
+  };
+  
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="space-y-4">
       <TabsList>
@@ -28,7 +58,7 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
           Próximos ({upcomingAppointments.length})
         </TabsTrigger>
         <TabsTrigger value="past">
-          Passados ({pastAppointments.length})
+          Passados ({initialPast.length})
         </TabsTrigger>
         <TabsTrigger value="canceled">
           Cancelados ({canceledAppointments.length})
@@ -39,7 +69,10 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
         {loading ? (
           <p>Carregando agendamentos...</p>
         ) : (
-          <AppointmentList appointments={upcomingAppointments} />
+          <AppointmentList 
+            appointments={upcomingAppointments} 
+            onAppointmentCanceled={handleAppointmentCanceled} 
+          />
         )}
       </TabsContent>
       
@@ -47,7 +80,7 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
         {loading ? (
           <p>Carregando agendamentos...</p>
         ) : (
-          <AppointmentList appointments={pastAppointments} />
+          <AppointmentList appointments={initialPast} />
         )}
       </TabsContent>
       

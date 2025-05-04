@@ -105,6 +105,17 @@ const Dashboard = () => {
     return isAfter(appointmentDate, firstDayOfMonth);
   }).length;
   
+  const handleAppointmentCanceled = (id: string) => {
+    // Atualizar o estado local dos agendamentos
+    setAppointments(prev => 
+      prev.map(app => 
+        app.id === id 
+          ? { ...app, status: 'canceled' } 
+          : app
+      )
+    );
+  };
+  
   return (
     <DashboardLayout title="Dashboard">
       <div className="space-y-8">
@@ -164,7 +175,10 @@ const Dashboard = () => {
             </TabsList>
             
             <TabsContent value="upcoming">
-              <AppointmentList appointments={upcomingAppointments} />
+              <AppointmentList 
+                appointments={upcomingAppointments} 
+                onAppointmentCanceled={handleAppointmentCanceled}
+              />
             </TabsContent>
             
             <TabsContent value="canceled">

@@ -1,15 +1,14 @@
-
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Appointment, TimeSlot } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AppointmentContextProps {
   appointments: Appointment[];
+  setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   getAppointmentsByProfessional: (professionalId: string) => Promise<Appointment[]>;
   getTimeSlotsByProfessional: (professionalId: string) => Promise<TimeSlot[]>;
   countMonthlyAppointments: (professionalId: string) => Promise<number>;
   isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
-  // Add the missing methods
   addAppointment: (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   cancelAppointment: (appointmentId: string) => Promise<boolean>;
   addTimeSlot: (timeSlotData: Omit<TimeSlot, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
@@ -31,11 +30,15 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
-        .eq('professional_id', professionalId);
+        .eq('professional_id', professionalId)
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true });
         
       if (error) throw error;
       
-      return data as Appointment[];
+      const fetchedAppointments = data as Appointment[];
+      setAppointments(fetchedAppointments);
+      return fetchedAppointments;
     } catch (error) {
       console.error('Error fetching appointments:', error);
       return [];
@@ -94,14 +97,19 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
     }
   };
   
-  // Implementation for the missing methods
   const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('appointments')
-        .insert([appointmentData]);
+        .insert([appointmentData])
+        .select();
         
       if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const newAppointment = data[0] as Appointment;
+        setAppointments(prev => [...prev, newAppointment]);
+      }
       
       return true;
     } catch (error) {
@@ -119,7 +127,7 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
         
       if (error) throw error;
       
-      // Update local state
+      // Atualizar estado local
       setAppointments(prev => 
         prev.map(app => 
           app.id === appointmentId 
@@ -194,6 +202,7 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
     <AppointmentContext.Provider 
       value={{ 
         appointments, 
+        setAppointments,
         getAppointmentsByProfessional, 
         getTimeSlotsByProfessional,
         countMonthlyAppointments,
