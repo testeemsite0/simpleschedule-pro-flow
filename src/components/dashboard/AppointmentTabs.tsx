@@ -24,25 +24,29 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
   onAppointmentCanceled
 }) => {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>(initialUpcoming);
+  const [pastAppointments, setPastAppointments] = useState<Appointment[]>(initialPast);
   const [canceledAppointments, setCanceledAppointments] = useState<Appointment[]>(initialCanceled);
   
   useEffect(() => {
     setUpcomingAppointments(initialUpcoming);
+    setPastAppointments(initialPast);
     setCanceledAppointments(initialCanceled);
-  }, [initialUpcoming, initialCanceled]);
+  }, [initialUpcoming, initialPast, initialCanceled]);
   
   const handleAppointmentCanceled = (id: string) => {
     // Encontrar o agendamento cancelado
     const canceledApp = upcomingAppointments.find(app => app.id === id);
     if (canceledApp) {
       // Remover dos próximos
-      setUpcomingAppointments(prev => prev.filter(app => app.id !== id));
+      const updatedUpcoming = upcomingAppointments.filter(app => app.id !== id);
+      setUpcomingAppointments(updatedUpcoming);
       
       // Adicionar aos cancelados com status atualizado
-      setCanceledAppointments(prev => [
+      const updatedCanceled = [
         { ...canceledApp, status: 'canceled' },
-        ...prev
-      ]);
+        ...canceledAppointments
+      ];
+      setCanceledAppointments(updatedCanceled);
     }
     
     // Notificar o componente pai se necessário
@@ -58,7 +62,7 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
           Próximos ({upcomingAppointments.length})
         </TabsTrigger>
         <TabsTrigger value="past">
-          Passados ({initialPast.length})
+          Passados ({pastAppointments.length})
         </TabsTrigger>
         <TabsTrigger value="canceled">
           Cancelados ({canceledAppointments.length})
@@ -80,7 +84,7 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
         {loading ? (
           <p>Carregando agendamentos...</p>
         ) : (
-          <AppointmentList appointments={initialPast} />
+          <AppointmentList appointments={pastAppointments} />
         )}
       </TabsContent>
       

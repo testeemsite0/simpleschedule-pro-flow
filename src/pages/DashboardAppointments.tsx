@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -167,6 +166,15 @@ const DashboardAppointments = () => {
     }
   };
   
+  const handleAppointmentCanceled = (id: string) => {
+    // Atualizar o estado local dos agendamentos para refletir o cancelamento
+    setAppointments(prevAppointments => 
+      prevAppointments.map(app => 
+        app.id === id ? { ...app, status: 'canceled' } : app
+      )
+    );
+  };
+  
   if (!user) {
     return null;
   }
@@ -239,6 +247,7 @@ const DashboardAppointments = () => {
               loading={loading}
               activeTab={activeTab}
               onTabChange={setActiveTab}
+              onAppointmentCanceled={handleAppointmentCanceled}
             />
           </CardContent>
         </Card>

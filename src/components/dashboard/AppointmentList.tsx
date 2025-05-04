@@ -24,13 +24,8 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
       const success = await cancelAppointment(id);
       if (success) {
         // Atualizar o estado local para refletir o cancelamento
-        setAppointments(prevAppointments => 
-          prevAppointments.map(app => 
-            app.id === id 
-              ? { ...app, status: 'canceled' } 
-              : app
-          )
-        );
+        const updatedAppointments = appointments.filter(app => app.id !== id);
+        setAppointments(updatedAppointments);
         
         // Notificar o componente pai sobre o cancelamento
         if (onAppointmentCanceled) {
@@ -49,7 +44,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
         });
       }
     }
-  }, [cancelAppointment, toast, onAppointmentCanceled]);
+  }, [cancelAppointment, toast, onAppointmentCanceled, appointments]);
   
   // Atualizando os appointments quando as props mudarem
   React.useEffect(() => {
@@ -92,7 +87,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
   
   return (
     <div className="space-y-4">
-      {appointments.filter(app => app.status !== 'canceled').map((appointment) => {
+      {appointments.map((appointment) => {
         const appointmentDate = new Date(appointment.date);
         const formattedDate = format(appointmentDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
         
