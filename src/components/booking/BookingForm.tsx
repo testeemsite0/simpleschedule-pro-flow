@@ -92,7 +92,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         start_time: startTime,
         end_time: endTime,
         notes,
-        status: 'scheduled' as const,
+        status: 'scheduled' as const, // Using 'as const' to ensure it's the literal type
         source: 'client' as const, // Mark as client booking
       };
       
@@ -105,8 +105,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Adicionar o agendamento ao contexto para atualização em tempo real
-        addAppointment(data[0]);
+        // Ensure the returned appointment has the correct status type before adding to context
+        const appointment = {
+          ...data[0],
+          status: data[0].status as "scheduled" | "completed" | "canceled"
+        };
+        
+        // Add the properly typed appointment to the context
+        addAppointment(appointment);
         
         toast({
           title: 'Agendamento realizado',
