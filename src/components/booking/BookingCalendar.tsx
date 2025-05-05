@@ -39,7 +39,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>("");
-  const [selectedService, setSelectedService] = useState<string>("none");
+  const [selectedService, setSelectedService] = useState<string>("");
   const [isOverLimit, setIsOverLimit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -199,7 +199,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   const handleTeamMemberChange = (value: string) => {
     setSelectedTeamMember(value);
-    setSelectedService("none");
+    setSelectedService("");
     setSelectedDate(null);
     setCurrentStep(2); // Move to service selection step
   };
@@ -332,17 +332,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           </h2>
           <div className="space-y-2">
             <div className="grid grid-cols-1 gap-4">
-              <Button
-                variant="outline"
-                className={`flex justify-between items-center p-4 h-auto ${selectedService === "none" ? "border-primary bg-primary/5" : ""}`}
-                onClick={() => handleServiceChange("none")}
-              >
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">Consulta padrão</span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </Button>
-              
               {services.map(service => (
                 <Button
                   key={service.id}
@@ -359,6 +348,12 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </Button>
               ))}
+              
+              {services.length === 0 && (
+                <div className="text-center p-4 border rounded-md">
+                  <p className="text-muted-foreground">Não há serviços disponíveis para este profissional.</p>
+                </div>
+              )}
             </div>
           </div>
           
@@ -417,11 +412,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               </span>
             </div>
             
-            {selectedService !== "none" && (
+            {selectedService && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Serviço:</span>
                 <span className="font-medium">
-                  {services.find(s => s.id === selectedService)?.name || 'Consulta padrão'}
+                  {services.find(s => s.id === selectedService)?.name || ''}
                 </span>
               </div>
             )}
