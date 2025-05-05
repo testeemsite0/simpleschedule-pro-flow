@@ -120,7 +120,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   // Generate next 14 days for selection based on filtered time slots
   useEffect(() => {
-    if (isOverLimit || !selectedTeamMember || currentStep < 2) {
+    if (isOverLimit || !selectedTeamMember || currentStep < 3) {
       setAvailableDates([]);
       return;
     }
@@ -151,7 +151,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   // When a date is selected, find available time slots
   useEffect(() => {
-    if (!selectedDate || isOverLimit || currentStep < 3) {
+    if (!selectedDate || isOverLimit || currentStep < 4) {
       setAvailableSlots([]);
       return;
     }
