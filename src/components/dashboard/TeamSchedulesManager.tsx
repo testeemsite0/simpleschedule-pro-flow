@@ -123,7 +123,7 @@ const TeamSchedulesManager: React.FC = () => {
                       {member.schedulesCount} horário{member.schedulesCount !== 1 ? 's' : ''} configurado{member.schedulesCount !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  <Badge variant={member.schedulesCount > 0 ? "success" : "secondary"}>
+                  <Badge variant={member.schedulesCount > 0 ? "secondary" : "outline"}>
                     {member.schedulesCount > 0 ? 'Configurado' : 'Não configurado'}
                   </Badge>
                 </div>
