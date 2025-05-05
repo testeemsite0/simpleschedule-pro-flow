@@ -23,3 +23,5 @@ export const Briefcase: React.FC<{ size?: number; className?: string }> = ({
     </svg>
   );
 };
+
+export default Briefcase;

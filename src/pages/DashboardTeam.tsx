@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -106,14 +105,18 @@ const DashboardTeam = () => {
     
     try {
       if (selectedMember && isEditMemberDialogOpen) {
-        // Update existing member
+        // Update existing member - ensure name is provided
+        if (!memberData.name) {
+          throw new Error("Nome é obrigatório");
+        }
+        
         const { error } = await supabase
           .from('team_members')
           .update({
             name: memberData.name,
             email: memberData.email,
             position: memberData.position,
-            active: memberData.active,
+            active: memberData.active || false, // Provide default
           })
           .eq('id', selectedMember.id);
           
@@ -124,13 +127,23 @@ const DashboardTeam = () => {
           description: 'Membro da equipe atualizado com sucesso',
         });
       } else {
-        // Create new member
+        // Create new member - ensure required fields
+        if (!memberData.name) {
+          throw new Error("Nome é obrigatório");
+        }
+        
+        // Create new team member with required fields
+        const newMember = {
+          professional_id: user.id,
+          name: memberData.name,
+          email: memberData.email,
+          position: memberData.position,
+          active: memberData.active !== undefined ? memberData.active : true,
+        };
+        
         const { error } = await supabase
           .from('team_members')
-          .insert([{
-            ...memberData,
-            professional_id: user.id,
-          }]);
+          .insert([newMember]);
           
         if (error) throw error;
         
@@ -149,7 +162,7 @@ const DashboardTeam = () => {
       console.error('Error saving team member:', error);
       toast({
         title: 'Erro',
-        description: 'Ocorreu um erro ao salvar o membro da equipe',
+        description: error instanceof Error ? error.message : 'Ocorreu um erro ao salvar o membro da equipe',
         variant: 'destructive',
       });
     }
