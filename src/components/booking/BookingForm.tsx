@@ -232,7 +232,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                   <SelectValue placeholder="Selecione um profissional (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem preferência específica</SelectItem>
+                  <SelectItem value="none">Sem preferência específica</SelectItem>
                   {teamMembers.map(member => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.name} {member.position ? `- ${member.position}` : ''}
@@ -251,7 +251,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
                   <SelectValue placeholder="Particular" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Particular</SelectItem>
+                  <SelectItem value="none">Particular</SelectItem>
                   {insurancePlans.map(plan => (
                     <SelectItem key={plan.id} value={plan.id}>
                       {plan.name}

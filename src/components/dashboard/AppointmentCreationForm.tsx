@@ -315,7 +315,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
                   <SelectValue placeholder="Selecione um profissional (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem profissional específico</SelectItem>
+                  <SelectItem value="none">Sem profissional específico</SelectItem>
                   {teamMembers.map(member => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.name} {member.position ? `- ${member.position}` : ''}
@@ -334,7 +334,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
                   <SelectValue placeholder="Particular" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Particular</SelectItem>
+                  <SelectItem value="none">Particular</SelectItem>
                   {insurancePlans.map(plan => (
                     <SelectItem key={plan.id} value={plan.id}>
                       {plan.name}
