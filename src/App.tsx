@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -129,14 +130,14 @@ const App = () => {
                         </ProtectedRoute>
                       }
                     />
-                    {
-                      path: "/dashboard/team/:memberId/schedules",
-                      element: (
+                    <Route
+                      path="/dashboard/team/:memberId/schedules"
+                      element={
                         <ProtectedRoute>
                           <TeamMemberSchedules />
                         </ProtectedRoute>
-                      ),
-                    },
+                      }
+                    />
                   </Routes>
                 </Elements>
               </Router>
