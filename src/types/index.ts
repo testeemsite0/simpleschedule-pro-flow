@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -117,6 +116,7 @@ export interface TeamMember {
   updated_at: string;
   services?: Service[]; // Relação opcional com serviços
   insurancePlans?: TeamMemberInsurancePlan[]; // Relação opcional com convênios
+  availableInsurancePlans?: InsurancePlan[]; // Convênios disponíveis para este membro
 }
 
 export interface TeamMemberService {
@@ -134,6 +134,7 @@ export interface InsurancePlan {
   updated_at: string;
   limit_per_plan: number | null;
   current_appointments: number | null;
+  availableForBooking?: boolean; // Nova propriedade para indicar disponibilidade
 }
 
 export interface TeamMemberInsurancePlan {
@@ -144,4 +145,5 @@ export interface TeamMemberInsurancePlan {
   current_appointments: number;
   created_at: string;
   insurancePlan?: InsurancePlan; // Relação opcional com o plano de saúde
+  availableForBooking?: boolean; // Nova propriedade para indicar disponibilidade
 }
