@@ -436,7 +436,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      count_appointments_by_source: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          source: string
+          count: number
+        }[]
+      }
+      count_subscribers_by_tier: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          subscription_tier: string
+          count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

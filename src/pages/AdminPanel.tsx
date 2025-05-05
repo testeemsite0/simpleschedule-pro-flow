@@ -182,29 +182,33 @@ const DashboardStats = () => {
   
   const fetchStatistics = async () => {
     try {
-      // Fetch user subscription stats - MODIFIED to use correct Supabase syntax
+      // Fetch user subscription stats using RPC function
       const { data: userData, error: userError } = await supabase.rpc('count_subscribers_by_tier');
       
       if (userError) throw userError;
       
       if (userData) {
         // Parse the data returned from the RPC function
-        const free = userData.find((item: any) => item.subscription_tier === 'free')?.count || 0;
-        const premium = userData.find((item: any) => item.subscription_tier === 'premium')?.count || 0;
+        const free = userData.find((item: { subscription_tier: string, count: number }) => 
+          item.subscription_tier === 'free')?.count || 0;
+        const premium = userData.find((item: { subscription_tier: string, count: number }) => 
+          item.subscription_tier === 'premium')?.count || 0;
         setUserStats({ free, premium });
       } else {
         setUserStats({ free: 0, premium: 0 });
       }
       
-      // Fetch appointment source stats - MODIFIED to use correct Supabase syntax
+      // Fetch appointment source stats using RPC function
       const { data: appointmentData, error: appointmentError } = await supabase.rpc('count_appointments_by_source');
       
       if (appointmentError) throw appointmentError;
       
       if (appointmentData) {
         // Parse the data returned from the RPC function
-        const client = appointmentData.find((item: any) => item.source === 'client')?.count || 0;
-        const manual = appointmentData.find((item: any) => item.source === 'manual')?.count || 0;
+        const client = appointmentData.find((item: { source: string, count: number }) => 
+          item.source === 'client')?.count || 0;
+        const manual = appointmentData.find((item: { source: string, count: number }) => 
+          item.source === 'manual')?.count || 0;
         setAppointmentStats({ client, manual });
       } else {
         setAppointmentStats({ client: 0, manual: 0 });
