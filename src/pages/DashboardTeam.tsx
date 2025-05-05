@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,28 +9,32 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { TeamMember, Service } from '@/types';
-import { Plus, Pencil, Trash2, CheckCircle, XCircle, User, Briefcase } from 'lucide-react';
+import { TeamMember, Service, InsurancePlan } from '@/types';
+import { Plus, Pencil, Trash2, CheckCircle, XCircle, User, Briefcase, Shield } from 'lucide-react';
 import TeamMemberForm from '@/components/dashboard/TeamMemberForm';
 import TeamMemberServiceForm from '@/components/dashboard/TeamMemberServiceForm';
+import TeamMemberInsurancePlanForm from '@/components/dashboard/TeamMemberInsurancePlanForm';
 
 const DashboardTeam = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Dialog states
   const [isNewMemberDialogOpen, setIsNewMemberDialogOpen] = useState(false);
   const [isEditMemberDialogOpen, setIsEditMemberDialogOpen] = useState(false);
   const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
+  const [isInsurancePlanDialogOpen, setIsInsurancePlanDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   
   useEffect(() => {
     if (user) {
       fetchTeamMembers();
       fetchServices();
+      fetchInsurancePlans();
     }
   }, [user]);
   
@@ -97,6 +102,23 @@ const DashboardTeam = () => {
       setServices(data || []);
     } catch (error) {
       console.error('Error fetching services:', error);
+    }
+  };
+  
+  const fetchInsurancePlans = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('insurance_plans')
+        .select('*')
+        .eq('professional_id', user.id)
+        .order('name');
+        
+      if (error) throw error;
+      setInsurancePlans(data || []);
+    } catch (error) {
+      console.error('Error fetching insurance plans:', error);
     }
   };
   
@@ -267,6 +289,51 @@ const DashboardTeam = () => {
     }
   };
   
+  const handleSaveInsurancePlans = async (teamMemberId: string, selectedPlans: {
+    insurancePlanId: string;
+    limitPerMember: number | null;
+  }[]) => {
+    try {
+      // First delete all existing insurance plan associations
+      const { error: deleteError } = await supabase
+        .from('team_member_insurance_plans')
+        .delete()
+        .eq('team_member_id', teamMemberId);
+        
+      if (deleteError) throw deleteError;
+      
+      // Then insert new associations
+      if (selectedPlans.length > 0) {
+        const planAssociations = selectedPlans.map(plan => ({
+          team_member_id: teamMemberId,
+          insurance_plan_id: plan.insurancePlanId,
+          limit_per_member: plan.limitPerMember,
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('team_member_insurance_plans')
+          .insert(planAssociations);
+          
+        if (insertError) throw insertError;
+      }
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Convênios atualizados com sucesso',
+      });
+      
+      setIsInsurancePlanDialogOpen(false);
+      fetchTeamMembers();
+    } catch (error) {
+      console.error('Error saving team member insurance plans:', error);
+      toast({
+        title: 'Erro',
+        description: 'Ocorreu um erro ao atualizar os convênios',
+        variant: 'destructive',
+      });
+    }
+  };
+  
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -303,7 +370,7 @@ const DashboardTeam = () => {
           <CardHeader>
             <CardTitle>Sua Equipe</CardTitle>
             <CardDescription>
-              Gerencie os membros da sua equipe e os serviços que cada um oferece
+              Gerencie os membros da sua equipe, seus serviços e convênios aceitos
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -387,6 +454,17 @@ const DashboardTeam = () => {
                           size="sm"
                           onClick={() => {
                             setSelectedMember(member);
+                            setIsInsurancePlanDialogOpen(true);
+                          }}
+                          title="Gerenciar convênios"
+                        >
+                          <Shield size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedMember(member);
                             setIsServiceDialogOpen(true);
                           }}
                           title="Gerenciar serviços"
@@ -456,6 +534,23 @@ const DashboardTeam = () => {
               availableServices={services}
               onSave={(selectedServices) => handleSaveServices(selectedMember.id, selectedServices)}
               onCancel={() => setIsServiceDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Insurance Plans Dialog */}
+      <Dialog open={isInsurancePlanDialogOpen} onOpenChange={setIsInsurancePlanDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Convênios</DialogTitle>
+          </DialogHeader>
+          {selectedMember && (
+            <TeamMemberInsurancePlanForm 
+              teamMember={selectedMember}
+              availableInsurancePlans={insurancePlans}
+              onSave={(selectedPlans) => handleSaveInsurancePlans(selectedMember.id, selectedPlans)}
+              onCancel={() => setIsInsurancePlanDialogOpen(false)}
             />
           )}
         </DialogContent>

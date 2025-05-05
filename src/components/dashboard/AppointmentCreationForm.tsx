@@ -1,16 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TimeSlot, Appointment, TeamMember, InsurancePlan } from '@/types';
+import { TimeSlot, Appointment, TeamMember, InsurancePlan, TeamMemberInsurancePlan } from '@/types';
 import { format } from 'date-fns';
 import { timeToMinutes, minutesToTime, doTimeSlotsOverlap } from '../booking/timeUtils';
 import DateSelector from '../booking/DateSelector';
 import TimeSlotSelector from '../booking/TimeSlotSelector';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface AppointmentCreationFormProps {
   professionalId: string;
@@ -58,6 +59,9 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   const [insurancePlanId, setInsurancePlanId] = useState<string | undefined>(undefined);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [teamMemberInsurancePlans, setTeamMemberInsurancePlans] = useState<TeamMemberInsurancePlan[]>([]);
+  const [insuranceLimitError, setInsuranceLimitError] = useState<string | null>(null);
+  const [eligibleTeamMembers, setEligibleTeamMembers] = useState<string[]>([]);
   
   // Buscar membros da equipe e convênios
   useEffect(() => {
@@ -90,8 +94,68 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       }
     };
     
+    const fetchTeamMemberInsurancePlans = async () => {
+      try {
+        // Get all team member IDs
+        const { data: teamMembers, error: teamError } = await supabase
+          .from('team_members')
+          .select('id')
+          .eq('professional_id', professionalId)
+          .eq('active', true);
+          
+        if (teamError) throw teamError;
+        
+        if (teamMembers && teamMembers.length > 0) {
+          const teamMemberIds = teamMembers.map(member => member.id);
+          
+          // Get team member insurance plans
+          const { data: memberInsurancePlans, error: planError } = await supabase
+            .from('team_member_insurance_plans')
+            .select(`
+              id,
+              team_member_id,
+              insurance_plan_id,
+              limit_per_member,
+              current_appointments,
+              created_at
+            `)
+            .in('team_member_id', teamMemberIds);
+            
+          if (planError) throw planError;
+          
+          // Get the actual insurance plans
+          if (memberInsurancePlans && memberInsurancePlans.length > 0) {
+            const insurancePlanIds = Array.from(new Set(
+              memberInsurancePlans.map(plan => plan.insurance_plan_id)
+            ));
+            
+            const { data: plans, error: planDataError } = await supabase
+              .from('insurance_plans')
+              .select('*')
+              .in('id', insurancePlanIds);
+              
+            if (planDataError) throw planDataError;
+            
+            // Merge the data
+            const enrichedPlans = memberInsurancePlans.map(memberPlan => {
+              const planDetails = plans?.find(plan => plan.id === memberPlan.insurance_plan_id);
+              return {
+                ...memberPlan,
+                insurancePlan: planDetails
+              };
+            });
+            
+            setTeamMemberInsurancePlans(enrichedPlans as TeamMemberInsurancePlan[]);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar convênios dos membros da equipe:", error);
+      }
+    };
+    
     fetchTeamMembers();
     fetchInsurancePlans();
+    fetchTeamMemberInsurancePlans();
   }, [professionalId]);
   
   // Generate available dates for selection based on time slots
@@ -215,10 +279,120 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     setSelectedTimeSlot(null);
   }, [selectedDate, timeSlots, appointments]);
   
+  // Filter eligible team members when insurance plan changes
+  useEffect(() => {
+    if (insurancePlanId && insurancePlanId !== "none") {
+      // Find team members who can accept this insurance plan
+      const eligibleMembers = teamMemberInsurancePlans
+        .filter(plan => 
+          plan.insurance_plan_id === insurancePlanId && 
+          (plan.limit_per_member === null || plan.current_appointments < plan.limit_per_member)
+        )
+        .map(plan => plan.team_member_id);
+      
+      setEligibleTeamMembers(eligibleMembers);
+      
+      // If the currently selected team member is not eligible, clear it
+      if (teamMemberId && !eligibleMembers.includes(teamMemberId)) {
+        setTeamMemberId(undefined);
+      }
+    } else {
+      // If no insurance selected or "none" selected, all team members are eligible
+      setEligibleTeamMembers(teamMembers.map(member => member.id));
+    }
+  }, [insurancePlanId, teamMemberInsurancePlans, teamMembers]);
+  
+  const handleTeamMemberChange = (value: string) => {
+    setTeamMemberId(value === "none" ? undefined : value);
+    setInsuranceLimitError(null);
+    
+    // If a team member is selected, check which insurance plans they can accept
+    if (value !== "none" && insurancePlanId && insurancePlanId !== "none") {
+      const memberPlan = teamMemberInsurancePlans.find(
+        plan => plan.team_member_id === value && plan.insurance_plan_id === insurancePlanId
+      );
+      
+      if (!memberPlan) {
+        setInsuranceLimitError(`Este profissional não atende o convênio selecionado. Por favor, escolha outro profissional ou convênio.`);
+        return;
+      }
+      
+      // Check if member has reached their limit for this plan
+      if (memberPlan.limit_per_member !== null && memberPlan.current_appointments >= memberPlan.limit_per_member) {
+        setInsuranceLimitError(`Este profissional atingiu o limite de atendimentos para este convênio. Por favor, escolha outro profissional.`);
+      }
+    }
+  };
+  
+  const handleInsurancePlanChange = (value: string) => {
+    setInsurancePlanId(value === "none" ? undefined : value);
+    setInsuranceLimitError(null);
+    
+    if (value !== "none") {
+      const plan = insurancePlans.find(p => p.id === value);
+      
+      // Check if the plan has reached its global limit
+      if (plan && plan.limit_per_plan !== null && plan.current_appointments >= plan.limit_per_plan) {
+        setInsuranceLimitError(`Este convênio atingiu o limite global de ${plan.limit_per_plan} agendamentos. Por favor, escolha outro convênio ou opção particular.`);
+        return;
+      }
+      
+      // If a team member is already selected, check if they can accept this plan
+      if (teamMemberId && teamMemberId !== "none") {
+        const memberPlan = teamMemberInsurancePlans.find(
+          plan => plan.team_member_id === teamMemberId && plan.insurance_plan_id === value
+        );
+        
+        if (!memberPlan) {
+          setInsuranceLimitError(`O profissional selecionado não atende este convênio. Por favor, escolha outro convênio ou profissional.`);
+          return;
+        }
+        
+        // Check member-specific limit
+        if (memberPlan.limit_per_member !== null && memberPlan.current_appointments >= memberPlan.limit_per_member) {
+          setInsuranceLimitError(`O profissional selecionado atingiu o limite de atendimentos para este convênio. Por favor, escolha outro profissional.`);
+        }
+      }
+    }
+  };
+  
+  // Filter insurance plans based on which ones have eligible team members
+  const getAvailableInsurancePlans = () => {
+    // If no team member is selected, show all plans
+    if (!teamMemberId || teamMemberId === "none") {
+      return insurancePlans;
+    }
+    
+    // Otherwise, show only plans accepted by this team member
+    const memberPlanIds = teamMemberInsurancePlans
+      .filter(plan => plan.team_member_id === teamMemberId)
+      .map(plan => plan.insurance_plan_id);
+    
+    return insurancePlans.filter(plan => memberPlanIds.includes(plan.id));
+  };
+  
+  const getEligibleTeamMembers = () => {
+    return teamMembers.filter(member => 
+      !insurancePlanId || 
+      insurancePlanId === "none" || 
+      eligibleTeamMembers.includes(member.id)
+    );
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedDate || !selectedTimeSlot || !clientName || !clientEmail) {
+      return;
+    }
+    
+    // Check insurance plan limits
+    if (insuranceLimitError) {
+      return;
+    }
+    
+    // If insurance plan selected but no team member, prevent submission
+    if (insurancePlanId && insurancePlanId !== "none" && (!teamMemberId || teamMemberId === "none")) {
       return;
     }
     
@@ -256,6 +430,9 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       setTeamMemberId(undefined);
     }
   };
+  
+  const availableInsurancePlans = getAvailableInsurancePlans();
+  const eligibleMembers = getEligibleTeamMembers();
   
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -307,41 +484,94 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
             />
           </div>
           
-          {teamMembers.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="teamMember">Profissional</Label>
-              <Select value={teamMemberId} onValueChange={setTeamMemberId}>
-                <SelectTrigger id="teamMember">
-                  <SelectValue placeholder="Selecione um profissional (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem profissional específico</SelectItem>
-                  {teamMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name} {member.position ? `- ${member.position}` : ''}
+          <div className="space-y-2">
+            <Label htmlFor="insurancePlan">Convênio</Label>
+            <Select value={insurancePlanId} onValueChange={handleInsurancePlanChange}>
+              <SelectTrigger id="insurancePlan">
+                <SelectValue placeholder="Particular" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Particular</SelectItem>
+                {availableInsurancePlans.map(plan => {
+                  const isGlobalLimitReached = plan.limit_per_plan !== null && 
+                                             plan.current_appointments >= plan.limit_per_plan;
+                                             
+                  return (
+                    <SelectItem 
+                      key={plan.id} 
+                      value={plan.id}
+                      disabled={isGlobalLimitReached}
+                    >
+                      {plan.name} 
+                      {isGlobalLimitReached 
+                        ? ' (Limite global atingido)' 
+                        : plan.limit_per_plan 
+                          ? ` (${plan.current_appointments}/${plan.limit_per_plan})` 
+                          : ''}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                  );
+                })}
+              </SelectContent>
+            </Select>
+              
+            {insuranceLimitError && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Limite de convênio</AlertTitle>
+                <AlertDescription>
+                  {insuranceLimitError}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
           
-          {insurancePlans.length > 0 && (
+          {eligibleMembers.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="insurancePlan">Convênio</Label>
-              <Select value={insurancePlanId} onValueChange={setInsurancePlanId}>
-                <SelectTrigger id="insurancePlan">
-                  <SelectValue placeholder="Particular" />
+              <Label htmlFor="teamMember">
+                Profissional
+                {insurancePlanId && insurancePlanId !== "none" ? " *" : ""}
+              </Label>
+              <Select value={teamMemberId} onValueChange={handleTeamMemberChange}>
+                <SelectTrigger id="teamMember">
+                  <SelectValue placeholder={
+                    insurancePlanId && insurancePlanId !== "none" 
+                      ? "Selecione um profissional (obrigatório)" 
+                      : "Selecione um profissional (opcional)"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Particular</SelectItem>
-                  {insurancePlans.map(plan => (
-                    <SelectItem key={plan.id} value={plan.id}>
-                      {plan.name}
-                    </SelectItem>
-                  ))}
+                  {!insurancePlanId || insurancePlanId === "none" ? (
+                    <SelectItem value="none">Sem profissional específico</SelectItem>
+                  ) : null}
+                  
+                  {eligibleMembers.map(member => {
+                    // For insurance plans, check if this member has a limit
+                    let limitInfo = "";
+                    if (insurancePlanId && insurancePlanId !== "none") {
+                      const memberPlan = teamMemberInsurancePlans.find(
+                        plan => plan.team_member_id === member.id && 
+                              plan.insurance_plan_id === insurancePlanId
+                      );
+                      
+                      if (memberPlan && memberPlan.limit_per_member !== null) {
+                        limitInfo = ` (${memberPlan.current_appointments}/${memberPlan.limit_per_member})`;
+                      }
+                    }
+                    
+                    return (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name} {member.position ? `- ${member.position}` : ''}{limitInfo}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              
+              {insurancePlanId && insurancePlanId !== "none" && !teamMemberId && (
+                <p className="text-xs text-amber-600">
+                  * Para convênios, a seleção de um profissional é obrigatória
+                </p>
+              )}
             </div>
           )}
           
@@ -362,7 +592,15 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         <Button variant="outline" type="button" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={isSubmitting || !selectedTimeSlot}>
+        <Button 
+          type="submit" 
+          disabled={
+            isSubmitting || 
+            !selectedTimeSlot || 
+            !!insuranceLimitError || 
+            (insurancePlanId && insurancePlanId !== "none" && (!teamMemberId || teamMemberId === "none"))
+          }
+        >
           {isSubmitting ? 'Criando...' : 'Criar Agendamento'}
         </Button>
       </div>

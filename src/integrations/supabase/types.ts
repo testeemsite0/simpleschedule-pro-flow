@@ -299,6 +299,48 @@ export type Database = {
         }
         Relationships: []
       }
+      team_member_insurance_plans: {
+        Row: {
+          created_at: string
+          current_appointments: number | null
+          id: string
+          insurance_plan_id: string
+          limit_per_member: number | null
+          team_member_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_appointments?: number | null
+          id?: string
+          insurance_plan_id: string
+          limit_per_member?: number | null
+          team_member_id: string
+        }
+        Update: {
+          created_at?: string
+          current_appointments?: number | null
+          id?: string
+          insurance_plan_id?: string
+          limit_per_member?: number | null
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_insurance_plans_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_insurance_plans_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_member_services: {
         Row: {
           created_at: string
@@ -436,6 +478,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_team_member_accept_insurance: {
+        Args: { member_id: string; plan_id: string }
+        Returns: boolean
+      }
       count_appointments_by_source: {
         Args: Record<PropertyKey, never>
         Returns: {
