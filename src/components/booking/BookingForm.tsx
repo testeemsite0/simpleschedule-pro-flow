@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -181,13 +180,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
         const isGlobalLimitReached = planDetails.limit_per_plan !== null && 
                                    planDetails.current_appointments >= planDetails.limit_per_plan;
         
+        // Retorna uma versão estendida do plano com informações adicionais
         return {
           ...planDetails,
           availableForBooking: isAvailable && !isGlobalLimitReached,
           memberPlanId: memberPlan.id,
           memberLimit: memberPlan.limit_per_member,
           memberCurrentAppointments: memberPlan.current_appointments
-        };
+        } as InsurancePlan;  // Explicitamente definimos como InsurancePlan
       })
       .filter((plan): plan is InsurancePlan => plan !== null);
     

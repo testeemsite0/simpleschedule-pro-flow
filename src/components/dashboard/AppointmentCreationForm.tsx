@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -322,7 +321,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           memberPlanId: memberPlan.id,
           memberLimit: memberPlan.limit_per_member,
           memberCurrentAppointments: memberPlan.current_appointments
-        };
+        } as InsurancePlan;  // Explicitamente definimos como InsurancePlan
       })
       .filter((plan): plan is InsurancePlan => plan !== null);
     
@@ -438,7 +437,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
               memberPlanId: memberPlan.id,
               memberLimit: memberPlan.limit_per_member,
               memberCurrentAppointments: memberPlan.current_appointments
-            };
+            } as InsurancePlan;  // Explicitamente definimos como InsurancePlan
           })
           .filter((plan): plan is InsurancePlan => plan !== null);
         

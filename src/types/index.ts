@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -134,7 +135,11 @@ export interface InsurancePlan {
   updated_at: string;
   limit_per_plan: number | null;
   current_appointments: number | null;
-  availableForBooking?: boolean; // Nova propriedade para indicar disponibilidade
+  availableForBooking?: boolean; // Propriedade para indicar disponibilidade
+  // Propriedades adicionais para uso no front-end
+  memberPlanId?: string;
+  memberLimit?: number | null;
+  memberCurrentAppointments?: number;
 }
 
 export interface TeamMemberInsurancePlan {
