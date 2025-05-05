@@ -284,7 +284,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
                   <SelectValue placeholder="Selecione um membro da equipe (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os membros / Geral</SelectItem>
+                  <SelectItem value="none">Todos os membros / Geral</SelectItem>
                   {teamMembers.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.name} {member.position ? `- ${member.position}` : ''}
