@@ -64,8 +64,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ title, childre
                 to={item.path}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
                   location.pathname === item.path
-                    ? 'bg-accent text-accent-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-accent/50'
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-primary/10'
                 }`}
               >
                 {item.icon}
