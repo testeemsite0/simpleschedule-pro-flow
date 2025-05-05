@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext } from 'react';
 import { Appointment, TimeSlot } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +13,11 @@ interface AppointmentContextType {
   countMonthlyAppointments: (professionalId: string) => Promise<number>;
   isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
   checkInsurancePlanLimit: (planId: string) => Promise<boolean>;
+  // Added missing methods
+  cancelAppointment: (appointmentId: string) => Promise<boolean>;
+  addTimeSlot: (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
+  updateTimeSlot: (timeSlot: TimeSlot) => Promise<boolean>;
+  deleteTimeSlot: (timeSlotId: string) => Promise<boolean>;
 }
 
 const AppointmentContext = createContext<AppointmentContextType | undefined>(undefined);
@@ -148,6 +154,73 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
     }
   };
   
+  // ADDED: Cancel an appointment
+  const cancelAppointment = async (appointmentId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'canceled' })
+        .eq('id', appointmentId);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error canceling appointment:', error);
+      return false;
+    }
+  };
+  
+  // ADDED: Add a new time slot
+  const addTimeSlot = async (timeSlot: Omit<TimeSlot, "id">): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .insert([timeSlot]);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error adding time slot:', error);
+      return false;
+    }
+  };
+  
+  // ADDED: Update an existing time slot
+  const updateTimeSlot = async (timeSlot: TimeSlot): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .update(timeSlot)
+        .eq('id', timeSlot.id);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating time slot:', error);
+      return false;
+    }
+  };
+  
+  // ADDED: Delete a time slot
+  const deleteTimeSlot = async (timeSlotId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .delete()
+        .eq('id', timeSlotId);
+        
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting time slot:', error);
+      return false;
+    }
+  };
+  
   return (
     <AppointmentContext.Provider 
       value={{
@@ -159,6 +232,11 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
         countMonthlyAppointments,
         isWithinFreeLimit,
         checkInsurancePlanLimit,
+        // Added the new methods to the provider value
+        cancelAppointment,
+        addTimeSlot,
+        updateTimeSlot,
+        deleteTimeSlot,
       }}
     >
       {children}

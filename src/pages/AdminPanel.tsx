@@ -182,29 +182,33 @@ const DashboardStats = () => {
   
   const fetchStatistics = async () => {
     try {
-      // Fetch user subscription stats
-      const { data: userData, error: userError } = await supabase
-        .from('subscribers')
-        .select('subscription_tier, count')
-        .group('subscription_tier');
+      // Fetch user subscription stats - MODIFIED to use correct Supabase syntax
+      const { data: userData, error: userError } = await supabase.rpc('count_subscribers_by_tier');
       
       if (userError) throw userError;
       
-      const free = userData?.find(item => item.subscription_tier === 'free')?.count || 0;
-      const premium = userData?.find(item => item.subscription_tier === 'premium')?.count || 0;
-      setUserStats({ free, premium });
+      if (userData) {
+        // Parse the data returned from the RPC function
+        const free = userData.find((item: any) => item.subscription_tier === 'free')?.count || 0;
+        const premium = userData.find((item: any) => item.subscription_tier === 'premium')?.count || 0;
+        setUserStats({ free, premium });
+      } else {
+        setUserStats({ free: 0, premium: 0 });
+      }
       
-      // Fetch appointment source stats
-      const { data: appointmentData, error: appointmentError } = await supabase
-        .from('appointments')
-        .select('source, count')
-        .group('source');
+      // Fetch appointment source stats - MODIFIED to use correct Supabase syntax
+      const { data: appointmentData, error: appointmentError } = await supabase.rpc('count_appointments_by_source');
       
       if (appointmentError) throw appointmentError;
       
-      const client = appointmentData?.find(item => item.source === 'client')?.count || 0;
-      const manual = appointmentData?.find(item => item.source === 'manual')?.count || 0;
-      setAppointmentStats({ client, manual });
+      if (appointmentData) {
+        // Parse the data returned from the RPC function
+        const client = appointmentData.find((item: any) => item.source === 'client')?.count || 0;
+        const manual = appointmentData.find((item: any) => item.source === 'manual')?.count || 0;
+        setAppointmentStats({ client, manual });
+      } else {
+        setAppointmentStats({ client: 0, manual: 0 });
+      }
       
     } catch (error) {
       console.error('Error fetching statistics:', error);
