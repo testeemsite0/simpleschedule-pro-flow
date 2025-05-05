@@ -13,7 +13,7 @@ interface AppointmentContextType {
   countMonthlyAppointments: (professionalId: string) => Promise<number>;
   isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
   checkInsurancePlanLimit: (planId: string) => Promise<boolean>;
-  // Added missing methods
+  // Added these methods to fix TypeScript errors
   cancelAppointment: (appointmentId: string) => Promise<boolean>;
   addTimeSlot: (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
   updateTimeSlot: (timeSlot: TimeSlot) => Promise<boolean>;
@@ -164,6 +164,13 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
         
       if (error) throw error;
       
+      // Update local state to reflect the change
+      setAppointments(prev => prev.map(appointment => 
+        appointment.id === appointmentId 
+          ? { ...appointment, status: 'canceled' as const } 
+          : appointment
+      ));
+      
       return true;
     } catch (error) {
       console.error('Error canceling appointment:', error);
@@ -232,7 +239,7 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
         countMonthlyAppointments,
         isWithinFreeLimit,
         checkInsurancePlanLimit,
-        // Added the new methods to the provider value
+        // Added these methods to the provider value
         cancelAppointment,
         addTimeSlot,
         updateTimeSlot,
