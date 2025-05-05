@@ -50,7 +50,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [memberServices, setMemberServices] = useState<{[key: string]: Service[]}>({}); // Services by team member
+  const [memberServices, setMemberServices] = useState<{[key: string]: Service[]}>({});
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [teamMemberInsurancePlans, setTeamMemberInsurancePlans] = useState<TeamMemberInsurancePlan[]>([]);
   const [selectedInsurancePlan, setSelectedInsurancePlan] = useState<InsurancePlan | null>(null);
@@ -178,7 +178,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           updateAvailableInsurancePlans(selectedTeamMember);
           
           // Update available services for this team member
-          const memberServicesList = servicesByMember[selectedTeamMember] || [];
+          const memberServicesList = memberServices[selectedTeamMember] || [];
           setAvailableServices(memberServicesList.length > 0 ? memberServicesList : servicesData || []);
         }
       } catch (error) {
