@@ -80,7 +80,7 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, teamMembers, o
               </TableCell>
               <TableCell>
                 {slot.available ? (
-                  <Badge variant="primary">Disponível</Badge>
+                  <Badge variant="default">Disponível</Badge>
                 ) : (
                   <Badge variant="destructive">Indisponível</Badge>
                 )}
