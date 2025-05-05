@@ -39,6 +39,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [selectedService, setSelectedService] = useState<string>("none");
   const [isOverLimit, setIsOverLimit] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showDateSelector, setShowDateSelector] = useState(false);
+  const [showTimeSelector, setShowTimeSelector] = useState(false);
   
   // Fetch team members and services
   useEffect(() => {
@@ -116,7 +118,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   // Generate next 14 days for selection based on filtered time slots
   useEffect(() => {
-    if (isOverLimit) {
+    if (isOverLimit || !selectedTeamMember) {
       setAvailableDates([]);
       return;
     }
@@ -143,11 +145,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     if (dates.length > 0 && !selectedDate) {
       setSelectedDate(dates[0]);
     }
-  }, [filteredTimeSlots, isOverLimit, selectedDate]);
+  }, [filteredTimeSlots, isOverLimit, selectedDate, selectedTeamMember]);
   
   // When a date is selected, find available time slots
   useEffect(() => {
-    if (!selectedDate || isOverLimit) {
+    if (!selectedDate || isOverLimit || !showTimeSelector) {
       setAvailableSlots([]);
       return;
     }
@@ -191,16 +193,23 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     
     console.log("Final available slots:", slots);
     setAvailableSlots(slots);
-  }, [selectedDate, filteredTimeSlots, appointments, isOverLimit]);
+  }, [selectedDate, filteredTimeSlots, appointments, isOverLimit, showTimeSelector]);
   
   const handleTeamMemberChange = (value: string) => {
     setSelectedTeamMember(value);
-    // Reset date selection when changing team member
+    setSelectedService("none");
+    setShowDateSelector(value !== "none");
+    setShowTimeSelector(false);
     setSelectedDate(null);
   };
   
   const handleServiceChange = (value: string) => {
     setSelectedService(value);
+  };
+  
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    setShowTimeSelector(true);
   };
   
   const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
@@ -249,7 +258,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       )}
       
       {/* Step 2: Select Service */}
-      {services.length > 0 && (
+      {services.length > 0 && selectedTeamMember !== "none" && (
         <div className="space-y-2">
           <Label htmlFor="service">Serviço</Label>
           <Select value={selectedService} onValueChange={handleServiceChange}>
@@ -269,17 +278,21 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       )}
       
       {/* Step 3: Select Date */}
-      <DateSelector 
-        availableDates={availableDates}
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-      />
+      {showDateSelector && (
+        <DateSelector 
+          availableDates={availableDates}
+          selectedDate={selectedDate}
+          onSelectDate={handleDateSelect}
+        />
+      )}
       
       {/* Step 4: Select Time */}
-      <TimeSlotSelector 
-        availableSlots={availableSlots}
-        onSelectSlot={handleSelectTimeSlot}
-      />
+      {showTimeSelector && selectedDate && (
+        <TimeSlotSelector 
+          availableSlots={availableSlots}
+          onSelectSlot={handleSelectTimeSlot}
+        />
+      )}
     </div>
   );
 };

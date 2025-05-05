@@ -18,6 +18,11 @@ import DashboardSchedules from './pages/DashboardSchedules';
 import DashboardTeam from './pages/DashboardTeam';
 import TeamMemberSchedules from './pages/TeamMemberSchedules';
 import DashboardServices from './pages/DashboardServices';
+import DashboardReports from './pages/DashboardReports';
+import DashboardClients from './pages/DashboardClients';
+import DashboardBookingLink from './pages/DashboardBookingLink';
+import DashboardPreferences from './pages/DashboardPreferences';
+import Index from './pages/Index';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
@@ -35,7 +40,7 @@ const App = () => {
       <AppointmentProvider>
         <Router>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -77,6 +82,38 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <DashboardServices />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/reports"
+              element={
+                <ProtectedRoute>
+                  <DashboardReports />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/clients"
+              element={
+                <ProtectedRoute>
+                  <DashboardClients />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/booking-link"
+              element={
+                <ProtectedRoute>
+                  <DashboardBookingLink />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/preferences"
+              element={
+                <ProtectedRoute>
+                  <DashboardPreferences />
                 </ProtectedRoute>
               }
             />

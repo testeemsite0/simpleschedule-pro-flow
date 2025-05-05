@@ -23,7 +23,7 @@ interface BookingFormProps {
   endTime: string;
   onSuccess: (name: string, appointmentId: string) => void;
   onCancel: () => void;
-  selectedTeamMember?: string; // New prop to accept pre-selected team member
+  selectedTeamMember?: string; // Pre-selected team member
 }
 
 const BookingForm: React.FC<BookingFormProps> = ({
@@ -35,13 +35,18 @@ const BookingForm: React.FC<BookingFormProps> = ({
   onCancel,
   selectedTeamMember
 }) => {
+  // Form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
+  
+  // Selection fields
   const [teamMemberId, setTeamMemberId] = useState<string | undefined>(selectedTeamMember);
   const [serviceId, setServiceId] = useState<string | undefined>(undefined);
   const [insurancePlanId, setInsurancePlanId] = useState<string | undefined>(undefined);
+  
+  // Data and state
   const [isLoading, setIsLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -445,6 +450,39 @@ const BookingForm: React.FC<BookingFormProps> = ({
             <p className="text-sm">{startTime} - {endTime}</p>
           </div>
           
+          {/* Client information */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome completo</Label>
+            <Input 
+              id="name" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email" 
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="phone">Telefone</Label>
+            <Input 
+              id="phone" 
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+          
           {/* Step 1: Select team member */}
           {teamMembers.length > 0 && (
             <div className="space-y-2">
@@ -473,7 +511,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           )}
           
           {/* Step 2: Select service */}
-          {availableServices.length > 0 && (
+          {availableServices.length > 0 && teamMemberId && teamMemberId !== "none" && (
             <div className="space-y-2">
               <Label htmlFor="service">Serviço</Label>
               <Select value={serviceId} onValueChange={setServiceId}>
@@ -551,39 +589,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
               )}
             </div>
           )}
-          
-          {/* Client information */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome completo</Label>
-            <Input 
-              id="name" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
-            <Input 
-              id="phone" 
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="(00) 00000-0000"
-            />
-          </div>
           
           <div className="space-y-2">
             <Label htmlFor="notes">Notas ou motivo da consulta</Label>
