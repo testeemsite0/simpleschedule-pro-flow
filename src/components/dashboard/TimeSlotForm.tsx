@@ -93,10 +93,10 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
       return;
     }
     
-    if (!dayOfWeek || !startTime || !endTime || !appointmentDuration) {
+    if (!dayOfWeek || !startTime || !endTime || !appointmentDuration || !selectedTeamMember) {
       toast({
         title: 'Erro',
-        description: 'Preencha todos os campos obrigatórios',
+        description: 'Preencha todos os campos obrigatórios, incluindo o profissional',
         variant: 'destructive',
       });
       return;
@@ -155,7 +155,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
         appointment_duration_minutes: parseInt(appointmentDuration),
         lunch_break_start: hasLunchBreak ? lunchBreakStart : null,
         lunch_break_end: hasLunchBreak ? lunchBreakEnd : null,
-        team_member_id: selectedTeamMember || null,
+        team_member_id: selectedTeamMember,
       };
       
       let success;
@@ -213,6 +213,33 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {teamMembers.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="teamMember">
+                Profissional <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={selectedTeamMember}
+                onValueChange={setSelectedTeamMember}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um profissional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name} {member.position ? `- ${member.position}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Selecione o profissional que irá atender neste horário.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="dayOfWeek">Dia da semana</Label>
             <Select
@@ -272,31 +299,6 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
               </SelectContent>
             </Select>
           </div>
-          
-          {teamMembers.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="teamMember">Membro da equipe</Label>
-              <Select
-                value={selectedTeamMember}
-                onValueChange={setSelectedTeamMember}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um membro da equipe (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Todos os membros / Geral</SelectItem>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name} {member.position ? `- ${member.position}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Se selecionar um membro específico, esse horário só estará disponível para ele.
-              </p>
-            </div>
-          )}
           
           <div className="space-y-2 pt-4 border-t">
             <div className="flex items-center space-x-2">

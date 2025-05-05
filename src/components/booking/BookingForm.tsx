@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppointments } from '@/context/AppointmentContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface BookingFormProps {
@@ -42,7 +42,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [notes, setNotes] = useState('');
   
   // Selection fields
-  const [teamMemberId, setTeamMemberId] = useState<string | undefined>(selectedTeamMember);
+  const [teamMemberId] = useState<string | undefined>(selectedTeamMember);
   const [serviceId, setServiceId] = useState<string | undefined>(undefined);
   const [insurancePlanId, setInsurancePlanId] = useState<string | undefined>(undefined);
   
@@ -57,6 +57,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [insuranceLimitError, setInsuranceLimitError] = useState<string | null>(null);
   const [availableInsurancePlans, setAvailableInsurancePlans] = useState<InsurancePlan[]>([]);
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [currentStep, setCurrentStep] = useState<number>(1);
   
   const { toast } = useToast();
   const { addAppointment } = useAppointments();
@@ -172,9 +173,13 @@ const BookingForm: React.FC<BookingFormProps> = ({
           }
         }
         
-        // If team member is pre-selected, trigger the change handler
+        // If team member is pre-selected, load their available insurance plans
         if (selectedTeamMember) {
-          handleTeamMemberChange(selectedTeamMember);
+          updateAvailableInsurancePlans(selectedTeamMember);
+          
+          // Update available services for this team member
+          const memberServicesList = servicesByMember[selectedTeamMember] || [];
+          setAvailableServices(memberServicesList.length > 0 ? memberServicesList : servicesData || []);
         }
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
@@ -189,25 +194,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
     fetchData();
   }, [professional.id, toast, selectedTeamMember]);
   
-  const handleTeamMemberChange = (value: string) => {
-    setTeamMemberId(value === "none" ? undefined : value);
-    setInsurancePlanId(undefined); // Limpa a seleção de convênio quando o profissional muda
-    setServiceId(undefined); // Limpa a seleção de serviço quando o profissional muda
-    setInsuranceLimitError(null);
-    
-    if (value === "none") {
-      setAvailableInsurancePlans([]);
-      setAvailableServices(services);
-      return;
-    }
-    
-    // Update available services for this team member
-    const memberServicesList = memberServices[value] || [];
-    setAvailableServices(memberServicesList.length > 0 ? memberServicesList : services);
-    
+  const updateAvailableInsurancePlans = (memberId: string) => {
     // Encontra todos os convênios disponíveis para este profissional
     const memberPlans = teamMemberInsurancePlans.filter(
-      plan => plan.team_member_id === value
+      plan => plan.team_member_id === memberId
     );
     
     if (memberPlans.length === 0) {
@@ -224,11 +214,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
         
         // Verifica se há vagas disponíveis para este profissional e convênio
         const isAvailable = memberPlan.limit_per_member === null || 
-                           memberPlan.current_appointments < memberPlan.limit_per_member;
-                     
+                          memberPlan.current_appointments < memberPlan.limit_per_member;
+                    
         // Verifica se o limite global do plano foi atingido
         const isGlobalLimitReached = planDetails.limit_per_plan !== null && 
-                                   planDetails.current_appointments >= planDetails.limit_per_plan;
+                                  planDetails.current_appointments >= planDetails.limit_per_plan;
         
         // Retorna uma versão estendida do plano com informações adicionais
         return {
@@ -253,7 +243,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
       return;
     }
     
-    if (!teamMemberId || teamMemberId === "none") {
+    if (!teamMemberId) {
       setInsuranceLimitError("Você deve selecionar um profissional primeiro");
       return;
     }
@@ -284,6 +274,36 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
   };
   
+  const validateClientInfo = () => {
+    if (!name) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Por favor, informe seu nome completo',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    if (!email) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Por favor, informe seu email',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    return true;
+  };
+  
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      if (validateClientInfo()) {
+        setCurrentStep(2);
+      }
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -301,16 +321,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
       toast({
         title: 'Limite de convênio atingido',
         description: insuranceLimitError,
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // If insurance plan selected but no team member, show error
-    if (insurancePlanId && insurancePlanId !== "none" && (!teamMemberId || teamMemberId === "none")) {
-      toast({
-        title: 'Profissional necessário',
-        description: 'Você deve selecionar um profissional para este convênio',
         variant: 'destructive',
       });
       return;
@@ -347,7 +357,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
       }
       
       // If insurance plan selected, verify team member can accept it
-      if (insurancePlanId && insurancePlanId !== "none" && teamMemberId && teamMemberId !== "none") {
+      if (insurancePlanId && insurancePlanId !== "none" && teamMemberId) {
         // Get the RPC function result
         const { data: canAccept, error: rpcError } = await supabase
           .rpc('can_team_member_accept_insurance', {
@@ -393,7 +403,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
         notes,
         status: appointmentStatus,
         source: appointmentSource,
-        team_member_id: teamMemberId === "none" ? null : teamMemberId || null,
+        team_member_id: teamMemberId || null,
         insurance_plan_id: insurancePlanId === "none" ? null : insurancePlanId || null,
         service_id: serviceId || null,
         price: price,
@@ -437,6 +447,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
   };
   
+  const getStepStatus = (step: number) => {
+    if (step < currentStep) return "completed";
+    if (step === currentStep) return "current";
+    return "upcoming";
+  };
+  
   return (
     <Card>
       <CardHeader>
@@ -444,182 +460,198 @@ const BookingForm: React.FC<BookingFormProps> = ({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {/* Steps indicator */}
+          <div className="flex justify-between mb-8">
+            <div className={`flex flex-col items-center ${getStepStatus(1) === "completed" ? "text-primary" : getStepStatus(1) === "current" ? "text-foreground" : "text-muted-foreground"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                getStepStatus(1) === "completed" ? "bg-primary text-primary-foreground" : 
+                getStepStatus(1) === "current" ? "border-2 border-primary text-primary" : 
+                "border-2 border-muted text-muted-foreground"
+              }`}>
+                {getStepStatus(1) === "completed" ? <CheckCircle className="w-5 h-5" /> : "1"}
+              </div>
+              <span className="text-xs">Dados</span>
+            </div>
+            <div className="flex-1 flex items-center mx-2">
+              <div className={`h-0.5 w-full ${currentStep > 1 ? "bg-primary" : "bg-muted"}`}></div>
+            </div>
+            <div className={`flex flex-col items-center ${getStepStatus(2) === "completed" ? "text-primary" : getStepStatus(2) === "current" ? "text-foreground" : "text-muted-foreground"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+                getStepStatus(2) === "completed" ? "bg-primary text-primary-foreground" : 
+                getStepStatus(2) === "current" ? "border-2 border-primary text-primary" : 
+                "border-2 border-muted text-muted-foreground"
+              }`}>
+                {getStepStatus(2) === "completed" ? <CheckCircle className="w-5 h-5" /> : "2"}
+              </div>
+              <span className="text-xs">Convênio</span>
+            </div>
+          </div>
+
           <div className="bg-accent/30 p-3 rounded-md">
             <p className="font-medium">{professional.name}</p>
             <p className="text-sm">{formattedDate}</p>
             <p className="text-sm">{startTime} - {endTime}</p>
+            {teamMemberId && (
+              <Badge className="mt-1">
+                Profissional: {teamMembers.find(m => m.id === teamMemberId)?.name || ''}
+              </Badge>
+            )}
           </div>
           
-          {/* Client information */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome completo</Label>
-            <Input 
-              id="name" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
-            <Input 
-              id="phone" 
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="(00) 00000-0000"
-            />
-          </div>
-          
-          {/* Step 1: Select team member */}
-          {teamMembers.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="teamMember">
-                Profissional
-              </Label>
-              <Select 
-                value={teamMemberId} 
-                onValueChange={handleTeamMemberChange}
-                disabled={!!selectedTeamMember} // Disable if pre-selected
-              >
-                <SelectTrigger id="teamMember">
-                  <SelectValue placeholder="Selecione um profissional" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem preferência específica</SelectItem>
-                  
-                  {teamMembers.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name} {member.position ? `- ${member.position}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Step 1: Client information */}
+          {currentStep === 1 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Informações do cliente</h2>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome completo <span className="text-destructive">*</span></Label>
+                <Input 
+                  id="name" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+                <Input 
+                  id="email" 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <Input 
+                  id="phone" 
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notas ou motivo da consulta</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Forneça detalhes adicionais se necessário"
+                  rows={3}
+                />
+              </div>
             </div>
           )}
           
-          {/* Step 2: Select service */}
-          {availableServices.length > 0 && teamMemberId && teamMemberId !== "none" && (
-            <div className="space-y-2">
-              <Label htmlFor="service">Serviço</Label>
-              <Select value={serviceId} onValueChange={setServiceId}>
-                <SelectTrigger id="service">
-                  <SelectValue placeholder="Selecione um serviço" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableServices.map(service => (
-                    <SelectItem key={service.id} value={service.id}>
-                      {service.name} - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(service.price))}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          
-          {/* Step 3: Select insurance plan (only if team member is selected) */}
-          {teamMemberId && teamMemberId !== "none" && (
-            <div className="space-y-2">
-              <Label htmlFor="insurancePlan">Convênio</Label>
-              <Select value={insurancePlanId} onValueChange={handleInsurancePlanChange}>
-                <SelectTrigger id="insurancePlan">
-                  <SelectValue placeholder="Particular" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Particular</SelectItem>
-                  
-                  {availableInsurancePlans.map(plan => {
-                    const isAvailable = plan.availableForBooking !== false;
-                    const limitInfo = plan.memberLimit 
-                      ? `${plan.memberCurrentAppointments}/${plan.memberLimit}`
-                      : plan.limit_per_plan
-                        ? `${plan.current_appointments}/${plan.limit_per_plan}`
-                        : '';
+          {/* Step 2: Select insurance plan (only if team member is selected) */}
+          {currentStep === 2 && teamMemberId && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Tipo de atendimento</h2>
+              
+              <div className="space-y-2">
+                <Label htmlFor="insurancePlan">Convênio</Label>
+                <Select value={insurancePlanId} onValueChange={handleInsurancePlanChange}>
+                  <SelectTrigger id="insurancePlan">
+                    <SelectValue placeholder="Particular" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Particular</SelectItem>
                     
-                    return (
-                      <SelectItem 
-                        key={plan.id} 
-                        value={plan.id}
-                        disabled={!isAvailable}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span>{plan.name}</span>
-                          {limitInfo && (
-                            <Badge 
-                              variant={isAvailable ? "secondary" : "destructive"}
-                              className="ml-2"
-                            >
-                              {limitInfo}
-                            </Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
+                    {availableInsurancePlans.map(plan => {
+                      const isAvailable = plan.availableForBooking !== false;
+                      const limitInfo = plan.memberLimit 
+                        ? `${plan.memberCurrentAppointments}/${plan.memberLimit}`
+                        : plan.limit_per_plan
+                          ? `${plan.current_appointments}/${plan.limit_per_plan}`
+                          : '';
+                      
+                      return (
+                        <SelectItem 
+                          key={plan.id} 
+                          value={plan.id}
+                          disabled={!isAvailable}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{plan.name}</span>
+                            {limitInfo && (
+                              <Badge 
+                                variant={isAvailable ? "secondary" : "destructive"}
+                                className="ml-2"
+                              >
+                                {limitInfo}
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                    
+                    {availableInsurancePlans.length === 0 && teamMemberId && (
+                      <div className="p-2 text-center text-sm text-muted-foreground">
+                        Este profissional não tem convênios disponíveis
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
                   
-                  {availableInsurancePlans.length === 0 && teamMemberId && teamMemberId !== "none" && (
-                    <div className="p-2 text-center text-sm text-muted-foreground">
-                      Este profissional não tem convênios disponíveis
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
-                
-              {insuranceLimitError && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Limite de convênio</AlertTitle>
-                  <AlertDescription>
-                    {insuranceLimitError}
-                  </AlertDescription>
-                </Alert>
-              )}
+                {insuranceLimitError && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Limite de convênio</AlertTitle>
+                    <AlertDescription>
+                      {insuranceLimitError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </div>
           )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas ou motivo da consulta</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Forneça detalhes adicionais se necessário"
-              rows={3}
-            />
-          </div>
         </CardContent>
         
         <CardFooter className="flex justify-between">
-          <Button 
-            type="button" 
-            variant="outline"
-            onClick={onCancel}
-          >
-            Voltar
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={
-              isLoading || 
-              !!insuranceLimitError || 
-              (insurancePlanId && insurancePlanId !== "none" && (!teamMemberId || teamMemberId === "none"))
-            }
-          >
-            {isLoading ? 'Enviando...' : 'Confirmar agendamento'}
-          </Button>
+          {currentStep === 1 ? (
+            <>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={onCancel}
+              >
+                Voltar
+              </Button>
+              <Button 
+                type="button" 
+                onClick={handleNextStep}
+                disabled={!name || !email}
+              >
+                Próximo
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => setCurrentStep(1)}
+              >
+                Voltar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={
+                  isLoading || 
+                  !!insuranceLimitError
+                }
+              >
+                {isLoading ? 'Enviando...' : 'Confirmar agendamento'}
+              </Button>
+            </>
+          )}
         </CardFooter>
       </form>
     </Card>

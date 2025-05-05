@@ -27,7 +27,7 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, teamMembers, o
   });
   
   const getMemberName = (timeSlot: TimeSlot) => {
-    if (!timeSlot.team_member_id) return 'Profissional principal';
+    if (!timeSlot.team_member_id) return 'Sem profissional atribuído';
     const member = teamMembers.find(m => m.id === timeSlot.team_member_id);
     return member ? member.name : 'Membro desconhecido';
   };
@@ -47,11 +47,11 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, teamMembers, o
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Profissional</TableHead>
             <TableHead>Dia da semana</TableHead>
             <TableHead>Horário</TableHead>
             <TableHead>Duração (min)</TableHead>
             <TableHead>Intervalo</TableHead>
-            <TableHead>Profissional</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
@@ -59,6 +59,9 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, teamMembers, o
         <TableBody>
           {sortedTimeSlots.map((slot) => (
             <TableRow key={slot.id}>
+              <TableCell>
+                <Badge variant="outline">{getMemberName(slot)}</Badge>
+              </TableCell>
               <TableCell>
                 {dayOfWeekNames[slot.day_of_week]}
               </TableCell>
@@ -74,9 +77,6 @@ const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, teamMembers, o
                 ) : (
                   'Sem intervalo'
                 )}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">{getMemberName(slot)}</Badge>
               </TableCell>
               <TableCell>
                 {slot.available ? (
