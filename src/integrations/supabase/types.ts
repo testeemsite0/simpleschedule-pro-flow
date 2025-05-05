@@ -101,21 +101,27 @@ export type Database = {
       insurance_plans: {
         Row: {
           created_at: string
+          current_appointments: number | null
           id: string
+          limit_per_plan: number | null
           name: string
           professional_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          current_appointments?: number | null
           id?: string
+          limit_per_plan?: number | null
           name: string
           professional_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          current_appointments?: number | null
           id?: string
+          limit_per_plan?: number | null
           name?: string
           professional_id?: string
           updated_at?: string

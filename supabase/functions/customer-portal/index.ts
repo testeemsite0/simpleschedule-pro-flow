@@ -1,6 +1,6 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,75 +8,66 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("Customer portal function called");
-    
-    // For demo purposes, we'll return a simulated customer portal URL
-    // In a real application, this would create a Stripe customer portal session
-    
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
-    
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Initialize Supabase client with the service role key
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+      apiVersion: '2023-10-16',
+    });
+
+    // Get request body
+    const { userId, returnUrl } = await req.json();
+
+    if (!userId || !returnUrl) {
+      throw new Error('Missing required parameters');
+    }
+
+    // Get subscriber info from database
+    const { data: subscribers, error: subscriberError } = await fetch(
+      `${Deno.env.get('SUPABASE_URL')}/rest/v1/subscribers?select=*&user_id=eq.${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+        },
+      }
+    ).then(res => res.json());
+
+    if (subscriberError) {
+      throw subscriberError;
+    }
+
+    if (!subscribers || subscribers.length === 0 || !subscribers[0].stripe_customer_id) {
+      throw new Error('No stripe customer found for this user');
+    }
+
+    const stripeCustomerId = subscribers[0].stripe_customer_id;
+
+    // Create customer portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: stripeCustomerId,
+      return_url: returnUrl,
+    });
+
+    // Return the URL to redirect to
+    return new Response(
+      JSON.stringify({ url: session.url }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
-    
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    const user = userData.user;
-    
-    if (!user) throw new Error("User not authenticated");
-    
-    console.log("User authenticated:", user.email);
-    
-    // For demo, update the subscriber record to simulate cancellation
-    // In real app, this would redirect to Stripe Customer Portal
-    await supabaseClient
-      .from('subscribers')
-      .upsert({
-        user_id: user.id,
-        email: user.email,
-        subscribed: false,
-        cancellation_date: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-      
-    // Record cancellation in subscription history
-    await supabaseClient
-      .from('subscription_history')
-      .insert({
-        user_id: user.id,
-        subscription_tier: 'Premium',
-        amount: 3990,
-        period_start: new Date().toISOString(),
-        period_end: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
-        cancellation_date: new Date().toISOString(),
-        status: 'canceled'
-      });
-      
-    console.log("Subscription canceled for user:", user.email);
-    
-    return new Response(JSON.stringify({ 
-      success: true,
-      message: "Assinatura cancelada com sucesso. Você continuará com acesso Premium até o fim do período atual."
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
   } catch (error) {
-    console.error("Error in customer portal:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    console.error('Customer portal error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });

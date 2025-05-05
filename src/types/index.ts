@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -127,8 +126,10 @@ export interface TeamMemberService {
 
 export interface InsurancePlan {
   id: string;
-  professional_id: string;
   name: string;
+  professional_id: string;
   created_at: string;
   updated_at: string;
+  limit_per_plan: number | null;
+  current_appointments: number | null;
 }

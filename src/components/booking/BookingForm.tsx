@@ -12,6 +12,8 @@ import { Professional, TeamMember, InsurancePlan } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppointments } from '@/context/AppointmentContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface BookingFormProps {
   professional: Professional;
@@ -39,6 +41,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [selectedInsurancePlan, setSelectedInsurancePlan] = useState<InsurancePlan | null>(null);
+  const [insuranceLimitError, setInsuranceLimitError] = useState<string | null>(null);
   
   const { toast } = useToast();
   const { addAppointment } = useAppointments();
@@ -79,6 +83,23 @@ const BookingForm: React.FC<BookingFormProps> = ({
     fetchInsurancePlans();
   }, [professional.id]);
   
+  const handleInsurancePlanChange = (value: string) => {
+    setInsurancePlanId(value === "none" ? undefined : value);
+    setInsuranceLimitError(null);
+    
+    if (value !== "none") {
+      const plan = insurancePlans.find(p => p.id === value);
+      setSelectedInsurancePlan(plan || null);
+      
+      // Check if the plan has reached its limit
+      if (plan && plan.limit_per_plan !== null && plan.current_appointments >= plan.limit_per_plan) {
+        setInsuranceLimitError(`Este convênio atingiu o limite de ${plan.limit_per_plan} agendamentos. Por favor, escolha outro convênio ou opção particular.`);
+      }
+    } else {
+      setSelectedInsurancePlan(null);
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -86,6 +107,16 @@ const BookingForm: React.FC<BookingFormProps> = ({
       toast({
         title: 'Erro no formulário',
         description: 'Por favor, preencha os campos obrigatórios',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Check insurance plan limits
+    if (insuranceLimitError) {
+      toast({
+        title: 'Limite de convênio atingido',
+        description: insuranceLimitError,
         variant: 'destructive',
       });
       return;
@@ -137,8 +168,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
         notes,
         status: appointmentStatus,
         source: appointmentSource,
-        team_member_id: teamMemberId || null,
-        insurance_plan_id: insurancePlanId || null,
+        team_member_id: teamMemberId === "none" ? null : teamMemberId || null,
+        insurance_plan_id: insurancePlanId === "none" ? null : insurancePlanId || null,
       };
       
       // Create appointment and get its ID
@@ -227,7 +258,10 @@ const BookingForm: React.FC<BookingFormProps> = ({
           {teamMembers.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="teamMember">Profissional de preferência</Label>
-              <Select value={teamMemberId} onValueChange={setTeamMemberId}>
+              <Select 
+                value={teamMemberId} 
+                onValueChange={value => setTeamMemberId(value === "none" ? undefined : value)}
+              >
                 <SelectTrigger id="teamMember">
                   <SelectValue placeholder="Selecione um profissional (opcional)" />
                 </SelectTrigger>
@@ -246,19 +280,38 @@ const BookingForm: React.FC<BookingFormProps> = ({
           {insurancePlans.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="insurancePlan">Convênio</Label>
-              <Select value={insurancePlanId} onValueChange={setInsurancePlanId}>
+              <Select value={insurancePlanId} onValueChange={handleInsurancePlanChange}>
                 <SelectTrigger id="insurancePlan">
                   <SelectValue placeholder="Particular" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Particular</SelectItem>
                   {insurancePlans.map(plan => (
-                    <SelectItem key={plan.id} value={plan.id}>
-                      {plan.name}
+                    <SelectItem 
+                      key={plan.id} 
+                      value={plan.id}
+                      disabled={plan.limit_per_plan !== null && plan.current_appointments >= plan.limit_per_plan}
+                    >
+                      {plan.name} 
+                      {plan.limit_per_plan !== null && plan.current_appointments >= plan.limit_per_plan 
+                        ? ' (Limite atingido)' 
+                        : plan.limit_per_plan 
+                          ? ` (${plan.current_appointments}/${plan.limit_per_plan})` 
+                          : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              
+              {insuranceLimitError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Limite de convênio</AlertTitle>
+                  <AlertDescription>
+                    {insuranceLimitError}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           )}
           
@@ -282,7 +335,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           >
             Voltar
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || !!insuranceLimitError}>
             {isLoading ? 'Enviando...' : 'Confirmar agendamento'}
           </Button>
         </CardFooter>

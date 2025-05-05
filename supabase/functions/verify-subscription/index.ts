@@ -1,7 +1,6 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,95 +8,116 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Initialize Supabase client with anon key
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_ANON_KEY") || ""
-    );
-    
-    // Get the user from the token
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError || !userData.user) {
-      return new Response(JSON.stringify({ error: "Invalid user token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    
-    const user = userData.user;
-    
-    // Initialize Stripe with secret key
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2023-10-16",
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+      apiVersion: '2023-10-16',
     });
-    
-    // Check if user exists as Stripe customer
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    
-    if (customers.data.length === 0) {
-      // No customer record, so not subscribed
-      return new Response(JSON.stringify({ subscribed: false }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    const body = await req.json();
+    const { userId } = body;
+
+    if (!userId) {
+      throw new Error('User ID is required');
     }
-    
-    const customerId = customers.data[0].id;
-    
-    // Check if customer has active subscription
+
+    // Get subscriber data from database
+    const { data: subscribers, error: subscriberError } = await fetch(
+      `${Deno.env.get('SUPABASE_URL')}/rest/v1/subscribers?select=*&user_id=eq.${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+        },
+      }
+    ).then(res => res.json());
+
+    if (subscriberError) {
+      throw subscriberError;
+    }
+
+    // If no subscriber record, user is not premium
+    if (!subscribers || subscribers.length === 0 || !subscribers[0].stripe_customer_id) {
+      return new Response(
+        JSON.stringify({
+          isPremium: false,
+          subscription: null,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const stripeCustomerId = subscribers[0].stripe_customer_id;
+
+    // Get customer's subscriptions from Stripe
     const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
+      customer: stripeCustomerId,
+      status: 'active',
+      expand: ['data.default_payment_method'],
     });
-    
-    const isSubscribed = subscriptions.data.length > 0;
-    
-    // Store subscription status in database using service role key
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+
+    // Check if there's an active subscription
+    const isPremium = subscriptions.data.length > 0;
+    const activeSubscription = isPremium ? subscriptions.data[0] : null;
+
+    // Update the subscriber record in the database
+    if (isPremium !== subscribers[0].subscribed || 
+        (isPremium && subscribers[0].subscription_tier !== 'premium') || 
+        (!isPremium && subscribers[0].subscription_tier === 'premium')) {
+      
+      const subscriptionEnd = activeSubscription ? 
+        new Date(activeSubscription.current_period_end * 1000).toISOString() : 
+        null;
+        
+      await fetch(
+        `${Deno.env.get('SUPABASE_URL')}/rest/v1/subscribers?id=eq.${subscribers[0].id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            subscribed: isPremium,
+            subscription_tier: isPremium ? 'premium' : 'free',
+            subscription_end: subscriptionEnd,
+          }),
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        isPremium,
+        subscription: activeSubscription ? {
+          id: activeSubscription.id,
+          status: activeSubscription.status,
+          currentPeriodEnd: activeSubscription.current_period_end,
+          cancelAtPeriodEnd: activeSubscription.cancel_at_period_end,
+        } : null,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
-    
-    // Update user subscription status in profiles
-    await serviceClient
-      .from("profiles")
-      .update({
-        subscribed: isSubscribed,
-        subscription_status: isSubscribed ? "active" : "inactive",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
-    
-    return new Response(JSON.stringify({ 
-      subscribed: isSubscribed,
-      subscription_details: isSubscribed ? {
-        current_period_end: subscriptions.data[0].current_period_end,
-        plan: subscriptions.data[0].items.data[0].price.nickname || "Premium"
-      } : null
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error('Error verifying subscription:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });

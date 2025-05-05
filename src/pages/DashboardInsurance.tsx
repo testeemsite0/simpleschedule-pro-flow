@@ -22,6 +22,7 @@ const DashboardInsurance = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
   const [planName, setPlanName] = useState('');
+  const [planLimit, setPlanLimit] = useState<number | ''>('');
   
   useEffect(() => {
     if (user) {
@@ -59,10 +60,12 @@ const DashboardInsurance = () => {
     if (plan) {
       setSelectedPlan(plan);
       setPlanName(plan.name);
+      setPlanLimit(plan.limit_per_plan || '');
       setIsEditing(true);
     } else {
       setSelectedPlan(null);
       setPlanName('');
+      setPlanLimit('');
       setIsEditing(false);
     }
     setIsDialogOpen(true);
@@ -72,11 +75,17 @@ const DashboardInsurance = () => {
     if (!planName.trim() || !user) return;
     
     try {
+      // Convert planLimit to a number or null
+      const limitValue = planLimit === '' ? null : Number(planLimit);
+      
       if (isEditing && selectedPlan) {
         // Update existing plan
         const { error } = await supabase
           .from('insurance_plans')
-          .update({ name: planName.trim() })
+          .update({ 
+            name: planName.trim(),
+            limit_per_plan: limitValue
+          })
           .eq('id', selectedPlan.id);
           
         if (error) throw error;
@@ -92,6 +101,7 @@ const DashboardInsurance = () => {
           .insert([{
             name: planName.trim(),
             professional_id: user.id,
+            limit_per_plan: limitValue
           }]);
           
         if (error) throw error;
@@ -104,6 +114,7 @@ const DashboardInsurance = () => {
       
       // Reset and close dialog
       setPlanName('');
+      setPlanLimit('');
       setSelectedPlan(null);
       setIsEditing(false);
       setIsDialogOpen(false);
@@ -183,6 +194,21 @@ const DashboardInsurance = () => {
                   />
                 </div>
                 
+                <div className="space-y-2">
+                  <Label htmlFor="limit">Limite de Agendamentos</Label>
+                  <Input
+                    id="limit"
+                    type="number"
+                    value={planLimit}
+                    onChange={(e) => setPlanLimit(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                    placeholder="Deixe em branco para ilimitado"
+                    min="1"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Número máximo de agendamentos permitidos para este convênio. Deixe em branco para não impor limite.
+                  </p>
+                </div>
+                
                 <div className="flex justify-end gap-2 pt-2">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
@@ -225,6 +251,8 @@ const DashboardInsurance = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome do Convênio</TableHead>
+                    <TableHead>Limite de Agendamentos</TableHead>
+                    <TableHead>Agendamentos Atuais</TableHead>
                     <TableHead>Data de Criação</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -233,6 +261,8 @@ const DashboardInsurance = () => {
                   {insurancePlans.map((plan) => (
                     <TableRow key={plan.id}>
                       <TableCell className="font-medium">{plan.name}</TableCell>
+                      <TableCell>{plan.limit_per_plan ? plan.limit_per_plan : "Ilimitado"}</TableCell>
+                      <TableCell>{plan.current_appointments || 0}</TableCell>
                       <TableCell>
                         {new Date(plan.created_at).toLocaleDateString('pt-BR')}
                       </TableCell>

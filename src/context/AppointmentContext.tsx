@@ -1,75 +1,60 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Appointment, TimeSlot, Service } from '@/types';
+import React, { createContext, useState, useContext } from 'react';
+import { Appointment, TimeSlot } from '@/types';
+import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-interface AppointmentContextProps {
+interface AppointmentContextType {
   appointments: Appointment[];
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   getAppointmentsByProfessional: (professionalId: string) => Promise<Appointment[]>;
   getTimeSlotsByProfessional: (professionalId: string) => Promise<TimeSlot[]>;
-  getServicesByProfessional: (professionalId: string) => Promise<Service[]>;
+  addAppointment: (appointment: Appointment) => void;
   countMonthlyAppointments: (professionalId: string) => Promise<number>;
   isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
-  addAppointment: (appointmentData: Appointment) => void;
-  cancelAppointment: (appointmentId: string) => Promise<boolean>;
-  addTimeSlot: (timeSlotData: Omit<TimeSlot, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
-  updateTimeSlot: (timeSlotData: TimeSlot) => Promise<boolean>;
-  deleteTimeSlot: (timeSlotId: string) => Promise<boolean>;
+  checkInsurancePlanLimit: (planId: string) => Promise<boolean>;
 }
 
-const AppointmentContext = createContext<AppointmentContextProps | undefined>(undefined);
+const AppointmentContext = createContext<AppointmentContextType | undefined>(undefined);
 
-interface AppointmentProviderProps {
-  children: React.ReactNode;
-}
+export const useAppointments = () => {
+  const context = useContext(AppointmentContext);
+  if (!context) {
+    throw new Error('useAppointments must be used within an AppointmentProvider');
+  }
+  return context;
+};
 
-export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
+export const AppointmentProvider = ({ children }: { children: React.ReactNode }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const { user } = useAuth();
   
+  // Fetch appointments from Supabase
   const getAppointmentsByProfessional = async (professionalId: string): Promise<Appointment[]> => {
     try {
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
         .eq('professional_id', professionalId)
-        .order('date', { ascending: true })
-        .order('start_time', { ascending: true });
+        .order('date', { ascending: true });
         
       if (error) throw error;
       
-      // Ensure all appointments have the correct status type
-      const fetchedAppointments = (data || []).map(app => {
-        // Validate status is one of the allowed values
-        let status: "scheduled" | "completed" | "canceled" = "scheduled";
-        if (app.status === "completed") status = "completed";
-        else if (app.status === "canceled") status = "canceled";
-        
-        // Validate source is one of the allowed values
-        let source: "client" | "manual" | undefined = undefined;
-        if (app.source === "client") source = "client";
-        else if (app.source === "manual") source = "manual";
-        
-        return {
-          ...app,
-          status,
-          source
-        } as Appointment;
-      });
-      
-      setAppointments(fetchedAppointments);
-      return fetchedAppointments;
+      return data as Appointment[];
     } catch (error) {
       console.error('Error fetching appointments:', error);
       return [];
     }
   };
   
+  // Get time slots for a professional
   const getTimeSlotsByProfessional = async (professionalId: string): Promise<TimeSlot[]> => {
     try {
       const { data, error } = await supabase
         .from('time_slots')
         .select('*')
-        .eq('professional_id', professionalId);
+        .eq('professional_id', professionalId)
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
         
       if (error) throw error;
       
@@ -80,35 +65,24 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
     }
   };
   
-  const getServicesByProfessional = async (professionalId: string): Promise<Service[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .eq('professional_id', professionalId)
-        .order('name', { ascending: true });
-        
-      if (error) throw error;
-      
-      return data as Service[] || [];
-    } catch (error) {
-      console.error('Error fetching services:', error);
-      return [];
-    }
+  // Add new appointment to the state and database
+  const addAppointment = (appointment: Appointment) => {
+    setAppointments((prevAppointments) => [...prevAppointments, appointment]);
   };
   
+  // Count monthly appointments to check free tier limits
   const countMonthlyAppointments = async (professionalId: string): Promise<number> => {
-    // Get the first day of the current month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-    
     try {
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      
       const { count, error } = await supabase
         .from('appointments')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('professional_id', professionalId)
-        .gte('date', startOfMonth.toISOString().split('T')[0]);
+        .gte('date', firstDay.toISOString().split('T')[0])
+        .lte('date', lastDay.toISOString().split('T')[0]);
         
       if (error) throw error;
       
@@ -119,157 +93,75 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
     }
   };
   
+  // Check if professional is within free tier limits or has premium subscription
   const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
-    const count = await countMonthlyAppointments(professionalId);
+    if (!user) return false;
     
     try {
-      // Free tier limit is 5 appointments per month
-      // For public bookings, we'll allow up to 5 appointments per month
-      return count < 5;
-    } catch (error) {
-      console.error('Error checking subscription:', error);
-      // Default to allowing if we can't check subscription (fail-open)
-      return true;
-    }
-  };
-  
-  // Nova função para adicionar um agendamento diretamente ao estado
-  const addAppointment = (appointmentData: Appointment): void => {
-    // Ensure status is one of the allowed values
-    let status: "scheduled" | "completed" | "canceled" = "scheduled";
-    if (appointmentData.status === "completed") status = "completed";
-    else if (appointmentData.status === "canceled") status = "canceled";
-    
-    // Ensure source is one of the allowed values
-    let source: "client" | "manual" | undefined = undefined;
-    if (appointmentData.source === "client") source = "client";
-    else if (appointmentData.source === "manual") source = "manual";
-    
-    // Create a properly typed appointment object
-    const typedAppointment: Appointment = {
-      ...appointmentData,
-      status,
-      source
-    };
-    
-    setAppointments(prev => {
-      // Check if appointment already exists to avoid duplication
-      const appointmentExists = prev.some(app => app.id === typedAppointment.id);
-      if (appointmentExists) {
-        return prev;
+      // First check if the user has a premium subscription
+      const { data: subscriptionData, error: subscriptionError } = await supabase.functions.invoke('check-subscription', {
+        body: { userId: professionalId }
+      });
+      
+      if (subscriptionError) {
+        console.error('Error checking subscription status:', subscriptionError);
+        return false;
       }
       
-      // Add the new appointment to the list
-      return [...prev, typedAppointment];
-    });
-  };
-  
-  const cancelAppointment = async (appointmentId: string): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({ status: 'canceled' })
-        .eq('id', appointmentId);
-        
-      if (error) throw error;
+      // If the user has a premium subscription, they are not limited
+      if (subscriptionData.isPremium) {
+        return true;
+      }
       
-      // Atualizar estado local
-      setAppointments(prev => 
-        prev.map(app => 
-          app.id === appointmentId 
-            ? { ...app, status: 'canceled' } 
-            : app
-        )
-      );
+      // If not premium, check if they're within the free tier limit
+      return subscriptionData.isWithinFreeLimit;
       
-      return true;
     } catch (error) {
-      console.error('Error canceling appointment:', error);
+      console.error('Error checking appointment limits:', error);
       return false;
     }
   };
   
-  const addTimeSlot = async (timeSlotData: Omit<TimeSlot, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
+  // Check if an insurance plan has reached its limit
+  const checkInsurancePlanLimit = async (planId: string): Promise<boolean> => {
     try {
-      const { error } = await supabase
-        .from('time_slots')
-        .insert([timeSlotData]);
+      const { data, error } = await supabase
+        .from('insurance_plans')
+        .select('limit_per_plan, current_appointments')
+        .eq('id', planId)
+        .single();
         
       if (error) throw error;
       
-      return true;
-    } catch (error) {
-      console.error('Error adding time slot:', error);
-      return false;
-    }
-  };
-  
-  const updateTimeSlot = async (timeSlotData: TimeSlot): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('time_slots')
-        .update({
-          day_of_week: timeSlotData.day_of_week,
-          start_time: timeSlotData.start_time,
-          end_time: timeSlotData.end_time,
-          available: timeSlotData.available,
-          appointment_duration_minutes: timeSlotData.appointment_duration_minutes,
-          lunch_break_start: timeSlotData.lunch_break_start,
-          lunch_break_end: timeSlotData.lunch_break_end
-        })
-        .eq('id', timeSlotData.id);
-        
-      if (error) throw error;
+      if (!data || data.limit_per_plan === null) {
+        // No limit set, always allowed
+        return true;
+      }
       
-      return true;
-    } catch (error) {
-      console.error('Error updating time slot:', error);
-      return false;
-    }
-  };
-  
-  const deleteTimeSlot = async (timeSlotId: string): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('time_slots')
-        .delete()
-        .eq('id', timeSlotId);
-        
-      if (error) throw error;
+      // Check if the current count is less than the limit
+      return (data.current_appointments || 0) < data.limit_per_plan;
       
-      return true;
     } catch (error) {
-      console.error('Error deleting time slot:', error);
-      return false;
+      console.error('Error checking insurance plan limit:', error);
+      // In case of error, default to allowed
+      return true;
     }
   };
   
   return (
     <AppointmentContext.Provider 
-      value={{ 
-        appointments, 
+      value={{
+        appointments,
         setAppointments,
-        getAppointmentsByProfessional, 
+        getAppointmentsByProfessional,
         getTimeSlotsByProfessional,
-        getServicesByProfessional,
+        addAppointment,
         countMonthlyAppointments,
         isWithinFreeLimit,
-        addAppointment,
-        cancelAppointment,
-        addTimeSlot,
-        updateTimeSlot,
-        deleteTimeSlot
+        checkInsurancePlanLimit,
       }}
     >
       {children}
     </AppointmentContext.Provider>
   );
-};
-
-export const useAppointments = () => {
-  const context = useContext(AppointmentContext);
-  if (!context) {
-    throw new Error('useAppointments must be used within an AppointmentProvider');
-  }
-  return context;
 };

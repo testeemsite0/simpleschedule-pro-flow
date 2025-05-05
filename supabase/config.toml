@@ -38,3 +38,11 @@ search_path = ["public", "extensions"]
 [functions.check-subscription]
 verify_jwt = true
 search_path = ["public", "extensions"]
+
+[functions.get-stripe-secret]
+verify_jwt = true
+search_path = ["public", "extensions"]
+
+[functions.update-stripe-secret]
+verify_jwt = true
+search_path = ["public", "extensions"]
