@@ -12,7 +12,7 @@ import DateSelector from '../booking/DateSelector';
 import TimeSlotSelector from '../booking/TimeSlotSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface AppointmentCreationFormProps {
