@@ -12,11 +12,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useAppointments } from '@/context/AppointmentContext';
 import { TimeSlot, TeamMember } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const TeamMemberSchedules = () => {
   const { memberId } = useParams<{ memberId: string }>();
   const { user } = useAuth();
-  const { getTimeSlotsByTeamMember } = useAppointments();
+  const { getTimeSlotsByTeamMember, deleteTimeSlot } = useAppointments();
+  const { toast } = useToast();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | undefined>(undefined);
@@ -87,6 +89,35 @@ const TeamMemberSchedules = () => {
     setIsDialogOpen(true);
   };
   
+  const handleDeleteTimeSlot = async (timeSlot: TimeSlot) => {
+    if (confirm('Tem certeza que deseja excluir este horário?')) {
+      try {
+        const success = await deleteTimeSlot(timeSlot.id);
+        
+        if (success) {
+          toast({
+            title: 'Sucesso',
+            description: 'Horário excluído com sucesso',
+          });
+          
+          // Refresh time slots
+          if (teamMember) {
+            const data = await getTimeSlotsByTeamMember(teamMember.id);
+            setTimeSlots(data);
+          }
+        } else {
+          throw new Error('Falha ao excluir horário');
+        }
+      } catch (error) {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível excluir o horário',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+  
   if (loading) {
     return (
       <DashboardLayout title="Carregando...">
@@ -142,7 +173,9 @@ const TeamMemberSchedules = () => {
         ) : (
           <TimeSlotsList 
             timeSlots={timeSlots}
+            teamMembers={[teamMember]} // Pass the current team member in an array
             onEdit={handleEditTimeSlot}
+            onDelete={handleDeleteTimeSlot} // Add the delete handler
           />
         )}
       </div>
