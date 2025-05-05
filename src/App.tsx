@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AppointmentProvider } from './context/AppointmentContext';
 
@@ -23,6 +22,7 @@ import Profile from './pages/Profile';
 import AdminPanel from './pages/AdminPanel';
 import Booking from './pages/Booking';
 import DashboardAppointments from './pages/DashboardAppointments';
+import DashboardServices from './pages/DashboardServices';
 import { AuthProvider } from './context/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -41,7 +41,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AppointmentProvider>
-          <BrowserRouter>
+          <Router>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
@@ -63,12 +63,13 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/dashboard/services" element={<DashboardServices />} />
               
               {/* 404 Route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />
-          </BrowserRouter>
+          </Router>
         </AppointmentProvider>
       </AuthProvider>
     </QueryClientProvider>

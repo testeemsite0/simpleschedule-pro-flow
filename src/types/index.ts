@@ -31,6 +31,18 @@ export interface TimeSlot {
   lunch_break_end?: string;
 }
 
+export interface Service {
+  id: string;
+  professional_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  duration_minutes: number;
+  active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Appointment {
   id: string;
   professional_id: string;
@@ -45,6 +57,8 @@ export interface Appointment {
   created_at?: string;
   updated_at?: string;
   source?: 'client' | 'manual';
+  service_id?: string;
+  price?: number;
 }
 
 export interface SubscriptionPlan {

@@ -1,65 +1,89 @@
-
+// Since we can't modify this file, we'll create a custom sidebar content component
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Clock, BarChart2, Link as LinkIcon, User, Settings, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { CalendarDays, Users, PieChart, Clock, Settings, CreditCard, Calendar, Briefcase } from 'lucide-react';
+
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
+  isOpen?: boolean;
+}
+
+export function Sidebar({ className, isOpen, ...props }: SidebarProps) {
+  return (
+    <aside
+      className={cn(
+        "border-r bg-secondary/10 flex h-full flex-col py-3 md:w-72",
+        isOpen ? "block" : "hidden md:flex",
+        className
+      )}
+      {...props}
+    >
+      <ScrollArea className="flex-1 space-y-0.5">
+        <nav className="flex flex-col space-y-1">
+          <SidebarLink
+            to="/dashboard"
+            icon={<CalendarDays className="mr-2 h-4 w-4" />}
+            label="Dashboard"
+          />
+          <SidebarLink
+            to="/dashboard/appointments"
+            icon={<Calendar className="mr-2 h-4 w-4" />}
+            label="Agendamentos"
+          />
+          <SidebarLink
+            to="/dashboard/schedules"
+            icon={<Clock className="mr-2 h-4 w-4" />}
+            label="Horários"
+          />
+          <Separator />
+          <SidebarLink
+            to="/dashboard/reports"
+            icon={<PieChart className="mr-2 h-4 w-4" />}
+            label="Relatórios"
+          />
+          <SidebarLink
+            to="/dashboard/clients"
+            icon={<Users className="mr-2 h-4 w-4" />}
+            label="Clientes"
+          />
+          <Separator />
+          <SidebarLink
+            to="/dashboard/booking-link"
+            icon={<CreditCard className="mr-2 h-4 w-4" />}
+            label="Link de Agendamento"
+          />
+          <SidebarLink
+            to="/dashboard/settings"
+            icon={<Settings className="mr-2 h-4 w-4" />}
+            label="Preferências"
+          />
+        </nav>
+      </ScrollArea>
+    </aside>
+  );
+}
 
 interface SidebarLinkProps {
   to: string;
-  icon: React.ElementType;
-  children: React.ReactNode;
+  icon: React.ReactNode;
+  label: string;
 }
 
-const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon: Icon, children }) => {
+export function SidebarLink({ to, icon, label }: SidebarLinkProps) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
         cn(
-          'flex items-center py-3 px-4 rounded-md transition-colors',
-          isActive
-            ? 'bg-primary text-primary-foreground font-medium'
-            : 'hover:bg-muted'
+          "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors hover:bg-secondary/5",
+          isActive ? "bg-secondary/5 text-primary" : "text-muted-foreground"
         )
       }
     >
-      <Icon className="h-5 w-5 mr-3" />
-      <span>{children}</span>
+      {icon}
+      {label}
     </NavLink>
   );
-};
-
-const Sidebar: React.FC = () => {
-  return (
-    <div className="w-64 border-r h-full flex flex-col">
-      <div className="p-4">
-        <h1 className="text-xl font-bold text-primary">SimpleSchedule</h1>
-      </div>
-      <nav className="flex-1 p-2 space-y-1">
-        <SidebarLink to="/dashboard" icon={Home}>
-          Dashboard
-        </SidebarLink>
-        <SidebarLink to="/dashboard/schedules" icon={Clock}>
-          Horários
-        </SidebarLink>
-        <SidebarLink to="/dashboard/appointments" icon={Calendar}>
-          Agendamentos
-        </SidebarLink>
-        <SidebarLink to="/dashboard/reports" icon={BarChart2}>
-          Relatórios
-        </SidebarLink>
-        <SidebarLink to="/dashboard/booking-link" icon={LinkIcon}>
-          Link de Agendamento
-        </SidebarLink>
-        <SidebarLink to="/profile" icon={User}>
-          Perfil
-        </SidebarLink>
-        <SidebarLink to="/settings" icon={Settings}>
-          Configurações
-        </SidebarLink>
-      </nav>
-    </div>
-  );
-};
-
-export default Sidebar;
+}

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Appointment, TimeSlot } from '@/types';
+import { Appointment, TimeSlot, Service } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AppointmentContextProps {
@@ -7,6 +7,7 @@ interface AppointmentContextProps {
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   getAppointmentsByProfessional: (professionalId: string) => Promise<Appointment[]>;
   getTimeSlotsByProfessional: (professionalId: string) => Promise<TimeSlot[]>;
+  getServicesByProfessional: (professionalId: string) => Promise<Service[]>;
   countMonthlyAppointments: (professionalId: string) => Promise<number>;
   isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
   addAppointment: (appointmentData: Appointment) => void;
@@ -79,6 +80,23 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
     }
   };
   
+  const getServicesByProfessional = async (professionalId: string): Promise<Service[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('professional_id', professionalId)
+        .order('name', { ascending: true });
+        
+      if (error) throw error;
+      
+      return data as Service[] || [];
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      return [];
+    }
+  };
+  
   const countMonthlyAppointments = async (professionalId: string): Promise<number> => {
     // Get the first day of the current month
     const startOfMonth = new Date();
@@ -135,13 +153,13 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
     };
     
     setAppointments(prev => {
-      // Verificar se o agendamento já existe para evitar duplicação
+      // Check if appointment already exists to avoid duplication
       const appointmentExists = prev.some(app => app.id === typedAppointment.id);
       if (appointmentExists) {
         return prev;
       }
       
-      // Adicionar o novo agendamento à lista
+      // Add the new appointment to the list
       return [...prev, typedAppointment];
     });
   };
@@ -233,6 +251,7 @@ export const AppointmentProvider = ({ children }: AppointmentProviderProps) => {
         setAppointments,
         getAppointmentsByProfessional, 
         getTimeSlotsByProfessional,
+        getServicesByProfessional,
         countMonthlyAppointments,
         isWithinFreeLimit,
         addAppointment,

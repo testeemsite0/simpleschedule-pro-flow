@@ -19,7 +19,9 @@ export type Database = {
           end_time: string
           id: string
           notes: string | null
+          price: number | null
           professional_id: string
+          service_id: string | null
           source: string | null
           start_time: string
           status: string
@@ -34,7 +36,9 @@ export type Database = {
           end_time: string
           id?: string
           notes?: string | null
+          price?: number | null
           professional_id: string
+          service_id?: string | null
           source?: string | null
           start_time: string
           status: string
@@ -49,7 +53,9 @@ export type Database = {
           end_time?: string
           id?: string
           notes?: string | null
+          price?: number | null
           professional_id?: string
+          service_id?: string | null
           source?: string | null
           start_time?: string
           status?: string
@@ -61,6 +67,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -98,6 +111,42 @@ export type Database = {
           profession?: string
           slug?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          name: string
+          price: number
+          professional_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name: string
+          price: number
+          professional_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name?: string
+          price?: number
+          professional_id?: string
+          updated_at?: string
         }
         Relationships: []
       }

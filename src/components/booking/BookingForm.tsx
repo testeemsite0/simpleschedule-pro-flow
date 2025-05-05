@@ -109,15 +109,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Ensure the returned appointment has the correct literal types for status and source
-        const appointment = {
+        // Ensure the appointment has the correct literal types
+        const newAppointment = {
           ...data[0],
           status: appointmentStatus,
           source: appointmentSource
         };
         
-        // Add the appointment to the context with proper typing
-        addAppointment(appointment);
+        // Add the appointment to the context
+        addAppointment(newAppointment);
         
         toast({
           title: 'Agendamento realizado',
