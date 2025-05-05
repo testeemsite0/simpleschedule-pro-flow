@@ -1,15 +1,16 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { TimeSlot } from '@/types';
+import { TimeSlot, TeamMember } from '@/types';
 import { useAppointments } from '@/context/AppointmentContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TimeSlotFormProps {
   onSuccess?: () => void;
@@ -50,6 +51,35 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
   const [lunchBreakStart, setLunchBreakStart] = useState(initialData?.lunch_break_start || '12:00');
   const [lunchBreakEnd, setLunchBreakEnd] = useState(initialData?.lunch_break_end || '13:00');
   const [isLoading, setIsLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [selectedTeamMember, setSelectedTeamMember] = useState<string>(initialData?.team_member_id || '');
+  
+  // Fetch team members
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('team_members')
+            .select('*')
+            .eq('professional_id', user.id)
+            .eq('active', true);
+            
+          if (error) throw error;
+          setTeamMembers(data || []);
+        } catch (error) {
+          console.error("Erro ao buscar membros da equipe:", error);
+          toast({
+            title: 'Erro',
+            description: 'Não foi possível carregar os membros da equipe',
+            variant: 'destructive',
+          });
+        }
+      }
+    };
+    
+    fetchTeamMembers();
+  }, [user, toast]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,6 +155,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
         appointment_duration_minutes: parseInt(appointmentDuration),
         lunch_break_start: hasLunchBreak ? lunchBreakStart : null,
         lunch_break_end: hasLunchBreak ? lunchBreakEnd : null,
+        team_member_id: selectedTeamMember || null,
       };
       
       let success;
@@ -159,6 +190,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
           setHasLunchBreak(false);
           setLunchBreakStart('12:00');
           setLunchBreakEnd('13:00');
+          setSelectedTeamMember('');
         }
       }
     } catch (error) {
@@ -240,6 +272,31 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
               </SelectContent>
             </Select>
           </div>
+          
+          {teamMembers.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="teamMember">Membro da equipe</Label>
+              <Select
+                value={selectedTeamMember}
+                onValueChange={setSelectedTeamMember}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um membro da equipe (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos os membros / Geral</SelectItem>
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name} {member.position ? `- ${member.position}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Se selecionar um membro específico, esse horário só estará disponível para ele.
+              </p>
+            </div>
+          )}
           
           <div className="space-y-2 pt-4 border-t">
             <div className="flex items-center space-x-2">

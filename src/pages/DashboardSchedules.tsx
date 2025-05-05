@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import TimeSlotForm from '@/components/dashboard/TimeSlotForm';
 import TimeSlotsList from '@/components/dashboard/TimeSlotsList';
+import TeamSchedulesManager from '@/components/dashboard/TeamSchedulesManager';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
 import { useAppointments } from '@/context/AppointmentContext';
@@ -17,6 +19,7 @@ const DashboardSchedules = () => {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | undefined>(undefined);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("general");
   
   useEffect(() => {
     const fetchTimeSlots = async () => {
@@ -54,41 +57,52 @@ const DashboardSchedules = () => {
   
   return (
     <DashboardLayout title="Gerenciar horários disponíveis">
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <p className="text-muted-foreground">
-            Configure os horários em que você está disponível para atendimentos.
-          </p>
-          
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setSelectedTimeSlot(undefined)}>
-                Adicionar horário
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedTimeSlot ? 'Editar horário' : 'Adicionar novo horário'}
-                </DialogTitle>
-              </DialogHeader>
-              <TimeSlotForm 
-                onSuccess={handleAddSuccess}
-                initialData={selectedTimeSlot}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
+      <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="general">Horários Gerais</TabsTrigger>
+          <TabsTrigger value="team">Horários por Membro</TabsTrigger>
+        </TabsList>
         
-        {loading ? (
-          <p>Carregando horários...</p>
-        ) : (
-          <TimeSlotsList 
-            timeSlots={timeSlots}
-            onEdit={handleEditTimeSlot}
-          />
-        )}
-      </div>
+        <TabsContent value="general" className="space-y-8">
+          <div className="flex justify-between items-center">
+            <p className="text-muted-foreground">
+              Configure os horários em que você está disponível para atendimentos.
+            </p>
+            
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setSelectedTimeSlot(undefined)}>
+                  Adicionar horário
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedTimeSlot ? 'Editar horário' : 'Adicionar novo horário'}
+                  </DialogTitle>
+                </DialogHeader>
+                <TimeSlotForm 
+                  onSuccess={handleAddSuccess}
+                  initialData={selectedTimeSlot}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+          
+          {loading ? (
+            <p>Carregando horários...</p>
+          ) : (
+            <TimeSlotsList 
+              timeSlots={timeSlots}
+              onEdit={handleEditTimeSlot}
+            />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="team">
+          <TeamSchedulesManager />
+        </TabsContent>
+      </Tabs>
     </DashboardLayout>
   );
 };

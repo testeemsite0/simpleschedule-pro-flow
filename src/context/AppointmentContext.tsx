@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext } from 'react';
 import { Appointment, TimeSlot } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -9,11 +8,11 @@ interface AppointmentContextType {
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   getAppointmentsByProfessional: (professionalId: string) => Promise<Appointment[]>;
   getTimeSlotsByProfessional: (professionalId: string) => Promise<TimeSlot[]>;
+  getTimeSlotsByTeamMember: (teamMemberId: string) => Promise<TimeSlot[]>;
   addAppointment: (appointment: Appointment) => void;
   countMonthlyAppointments: (professionalId: string) => Promise<number>;
   isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
   checkInsurancePlanLimit: (planId: string) => Promise<boolean>;
-  // Added these methods to fix TypeScript errors
   cancelAppointment: (appointmentId: string) => Promise<boolean>;
   addTimeSlot: (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
   updateTimeSlot: (timeSlot: TimeSlot) => Promise<boolean>;
@@ -67,6 +66,25 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
       return data as TimeSlot[];
     } catch (error) {
       console.error('Error fetching time slots:', error);
+      return [];
+    }
+  };
+  
+  // Get time slots for a specific team member
+  const getTimeSlotsByTeamMember = async (teamMemberId: string): Promise<TimeSlot[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('time_slots')
+        .select('*')
+        .eq('team_member_id', teamMemberId)
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
+        
+      if (error) throw error;
+      
+      return data as TimeSlot[];
+    } catch (error) {
+      console.error('Error fetching team member time slots:', error);
       return [];
     }
   };
@@ -235,11 +253,11 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
         setAppointments,
         getAppointmentsByProfessional,
         getTimeSlotsByProfessional,
+        getTimeSlotsByTeamMember,
         addAppointment,
         countMonthlyAppointments,
         isWithinFreeLimit,
         checkInsurancePlanLimit,
-        // Added these methods to the provider value
         cancelAppointment,
         addTimeSlot,
         updateTimeSlot,
