@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Professional, TeamMember, InsurancePlan, TeamMemberInsurancePlan } from '@/types';
+import { Professional, TeamMember, InsurancePlan, TeamMemberInsurancePlan, Service } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppointments } from '@/context/AppointmentContext';
@@ -22,6 +23,7 @@ interface BookingFormProps {
   endTime: string;
   onSuccess: (name: string, appointmentId: string) => void;
   onCancel: () => void;
+  selectedTeamMember?: string; // New prop to accept pre-selected team member
 }
 
 const BookingForm: React.FC<BookingFormProps> = ({
@@ -30,70 +32,97 @@ const BookingForm: React.FC<BookingFormProps> = ({
   startTime,
   endTime,
   onSuccess,
-  onCancel
+  onCancel,
+  selectedTeamMember
 }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
-  const [teamMemberId, setTeamMemberId] = useState<string | undefined>(undefined);
+  const [teamMemberId, setTeamMemberId] = useState<string | undefined>(selectedTeamMember);
+  const [serviceId, setServiceId] = useState<string | undefined>(undefined);
   const [insurancePlanId, setInsurancePlanId] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [memberServices, setMemberServices] = useState<{[key: string]: Service[]}>({}); // Services by team member
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [teamMemberInsurancePlans, setTeamMemberInsurancePlans] = useState<TeamMemberInsurancePlan[]>([]);
   const [selectedInsurancePlan, setSelectedInsurancePlan] = useState<InsurancePlan | null>(null);
   const [insuranceLimitError, setInsuranceLimitError] = useState<string | null>(null);
   const [availableInsurancePlans, setAvailableInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
   
   const { toast } = useToast();
   const { addAppointment } = useAppointments();
   
   const formattedDate = format(selectedDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
   
+  // Fetch team members, services and insurance plans
   useEffect(() => {
-    const fetchTeamMembers = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch team members
+        const { data: teamMembersData, error: teamMembersError } = await supabase
           .from('team_members')
           .select('*')
           .eq('professional_id', professional.id)
           .eq('active', true);
           
-        if (error) throw error;
-        setTeamMembers(data || []);
-      } catch (error) {
-        console.error("Erro ao buscar membros da equipe:", error);
-      }
-    };
-    
-    const fetchInsurancePlans = async () => {
-      try {
-        const { data, error } = await supabase
+        if (teamMembersError) throw teamMembersError;
+        setTeamMembers(teamMembersData || []);
+        
+        // Fetch services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('services')
+          .select('*')
+          .eq('professional_id', professional.id)
+          .eq('active', true);
+          
+        if (servicesError) throw servicesError;
+        setServices(servicesData || []);
+        
+        // Fetch team member services
+        if (teamMembersData && teamMembersData.length > 0) {
+          const teamMemberIds = teamMembersData.map(member => member.id);
+          
+          const { data: memberServicesData, error: memberServicesError } = await supabase
+            .from('team_member_services')
+            .select('*')
+            .in('team_member_id', teamMemberIds);
+            
+          if (memberServicesError) throw memberServicesError;
+          
+          // Group services by team member
+          const servicesByMember: {[key: string]: Service[]} = {};
+          
+          if (memberServicesData) {
+            for (const memberService of memberServicesData) {
+              const service = servicesData?.find(s => s.id === memberService.service_id);
+              if (service) {
+                if (!servicesByMember[memberService.team_member_id]) {
+                  servicesByMember[memberService.team_member_id] = [];
+                }
+                servicesByMember[memberService.team_member_id].push(service);
+              }
+            }
+          }
+          
+          setMemberServices(servicesByMember);
+        }
+        
+        // Fetch insurance plans
+        const { data: insurancePlansData, error: insurancePlansError } = await supabase
           .from('insurance_plans')
           .select('*')
           .eq('professional_id', professional.id);
           
-        if (error) throw error;
-        setInsurancePlans(data || []);
-      } catch (error) {
-        console.error("Erro ao buscar convênios:", error);
-      }
-    };
-    
-    const fetchTeamMemberInsurancePlans = async () => {
-      try {
-        // Get all team member IDs
-        const { data: teamMembers, error: teamError } = await supabase
-          .from('team_members')
-          .select('id')
-          .eq('professional_id', professional.id)
-          .eq('active', true);
-          
-        if (teamError) throw teamError;
+        if (insurancePlansError) throw insurancePlansError;
+        setInsurancePlans(insurancePlansData || []);
         
-        if (teamMembers && teamMembers.length > 0) {
-          const teamMemberIds = teamMembers.map(member => member.id);
+        // Fetch team member insurance plans
+        if (teamMembersData && teamMembersData.length > 0) {
+          const teamMemberIds = teamMembersData.map(member => member.id);
           
           // Get team member insurance plans
           const { data: memberInsurancePlans, error: planError } = await supabase
@@ -116,44 +145,60 @@ const BookingForm: React.FC<BookingFormProps> = ({
               memberInsurancePlans.map(plan => plan.insurance_plan_id)
             ));
             
-            const { data: plans, error: planDataError } = await supabase
-              .from('insurance_plans')
-              .select('*')
-              .in('id', insurancePlanIds);
+            if (insurancePlanIds.length > 0) {
+              const { data: plans, error: planDataError } = await supabase
+                .from('insurance_plans')
+                .select('*')
+                .in('id', insurancePlanIds);
+                
+              if (planDataError) throw planDataError;
               
-            if (planDataError) throw planDataError;
-            
-            // Merge the data
-            const enrichedPlans = memberInsurancePlans.map(memberPlan => {
-              const planDetails = plans?.find(plan => plan.id === memberPlan.insurance_plan_id);
-              return {
-                ...memberPlan,
-                insurancePlan: planDetails
-              };
-            });
-            
-            setTeamMemberInsurancePlans(enrichedPlans as TeamMemberInsurancePlan[]);
+              // Merge the data
+              const enrichedPlans = memberInsurancePlans.map(memberPlan => {
+                const planDetails = plans?.find(plan => plan.id === memberPlan.insurance_plan_id);
+                return {
+                  ...memberPlan,
+                  insurancePlan: planDetails
+                };
+              });
+              
+              setTeamMemberInsurancePlans(enrichedPlans as TeamMemberInsurancePlan[]);
+            }
           }
         }
+        
+        // If team member is pre-selected, trigger the change handler
+        if (selectedTeamMember) {
+          handleTeamMemberChange(selectedTeamMember);
+        }
       } catch (error) {
-        console.error("Erro ao buscar convênios dos membros da equipe:", error);
+        console.error("Erro ao buscar dados:", error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar os dados necessários',
+          variant: 'destructive',
+        });
       }
     };
     
-    fetchTeamMembers();
-    fetchInsurancePlans();
-    fetchTeamMemberInsurancePlans();
-  }, [professional.id]);
+    fetchData();
+  }, [professional.id, toast, selectedTeamMember]);
   
   const handleTeamMemberChange = (value: string) => {
     setTeamMemberId(value === "none" ? undefined : value);
     setInsurancePlanId(undefined); // Limpa a seleção de convênio quando o profissional muda
+    setServiceId(undefined); // Limpa a seleção de serviço quando o profissional muda
     setInsuranceLimitError(null);
     
     if (value === "none") {
       setAvailableInsurancePlans([]);
+      setAvailableServices(services);
       return;
     }
+    
+    // Update available services for this team member
+    const memberServicesList = memberServices[value] || [];
+    setAvailableServices(memberServicesList.length > 0 ? memberServicesList : services);
     
     // Encontra todos os convênios disponíveis para este profissional
     const memberPlans = teamMemberInsurancePlans.filter(
@@ -318,6 +363,15 @@ const BookingForm: React.FC<BookingFormProps> = ({
         }
       }
       
+      // Get price from selected service if available
+      let price = null;
+      if (serviceId) {
+        const selectedService = services.find(s => s.id === serviceId);
+        if (selectedService) {
+          price = selectedService.price;
+        }
+      }
+      
       // Define appointment status and source as literal types
       const appointmentStatus = 'scheduled' as const;
       const appointmentSource = 'client' as const;
@@ -336,6 +390,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
         source: appointmentSource,
         team_member_id: teamMemberId === "none" ? null : teamMemberId || null,
         insurance_plan_id: insurancePlanId === "none" ? null : insurancePlanId || null,
+        service_id: serviceId || null,
+        price: price,
       };
       
       // Create appointment and get its ID
@@ -389,44 +445,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
             <p className="text-sm">{startTime} - {endTime}</p>
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome completo</Label>
-            <Input 
-              id="name" 
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
-            <Input 
-              id="phone" 
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="(00) 00000-0000"
-            />
-          </div>
-          
+          {/* Step 1: Select team member */}
           {teamMembers.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="teamMember">
                 Profissional
               </Label>
-              <Select value={teamMemberId} onValueChange={handleTeamMemberChange}>
+              <Select 
+                value={teamMemberId} 
+                onValueChange={handleTeamMemberChange}
+                disabled={!!selectedTeamMember} // Disable if pre-selected
+              >
                 <SelectTrigger id="teamMember">
                   <SelectValue placeholder="Selecione um profissional" />
                 </SelectTrigger>
@@ -443,6 +472,26 @@ const BookingForm: React.FC<BookingFormProps> = ({
             </div>
           )}
           
+          {/* Step 2: Select service */}
+          {availableServices.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="service">Serviço</Label>
+              <Select value={serviceId} onValueChange={setServiceId}>
+                <SelectTrigger id="service">
+                  <SelectValue placeholder="Selecione um serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableServices.map(service => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(service.price))}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {/* Step 3: Select insurance plan (only if team member is selected) */}
           {teamMemberId && teamMemberId !== "none" && (
             <div className="space-y-2">
               <Label htmlFor="insurancePlan">Convênio</Label>
@@ -502,6 +551,39 @@ const BookingForm: React.FC<BookingFormProps> = ({
               )}
             </div>
           )}
+          
+          {/* Client information */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome completo</Label>
+            <Input 
+              id="name" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email" 
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="phone">Telefone</Label>
+            <Input 
+              id="phone" 
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
           
           <div className="space-y-2">
             <Label htmlFor="notes">Notas ou motivo da consulta</Label>

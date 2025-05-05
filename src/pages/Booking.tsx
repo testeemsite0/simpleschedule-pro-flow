@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +20,7 @@ const Booking = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedStartTime, setSelectedStartTime] = useState<string>('');
   const [selectedEndTime, setSelectedEndTime] = useState<string>('');
+  const [selectedTeamMember, setSelectedTeamMember] = useState<string | undefined>(undefined);
   const [clientName, setClientName] = useState<string>('');
   const [appointmentId, setAppointmentId] = useState<string>('');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -125,10 +127,11 @@ const Booking = () => {
     }
   };
   
-  const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string) => {
+  const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
     setSelectedDate(date);
     setSelectedStartTime(startTime);
     setSelectedEndTime(endTime);
+    setSelectedTeamMember(teamMemberId);
     setCurrentStep('form');
   };
   
@@ -152,6 +155,7 @@ const Booking = () => {
     setSelectedDate(null);
     setSelectedStartTime('');
     setSelectedEndTime('');
+    setSelectedTeamMember(undefined);
     setAppointmentId('');
   };
   
@@ -213,6 +217,7 @@ const Booking = () => {
                   selectedDate={selectedDate}
                   startTime={selectedStartTime}
                   endTime={selectedEndTime}
+                  selectedTeamMember={selectedTeamMember}
                   onSuccess={handleBookingSuccess}
                   onCancel={handleBookingFormCancel}
                 />

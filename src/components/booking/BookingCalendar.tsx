@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
-import { TimeSlot, Appointment, Professional } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { TimeSlot, Appointment, Professional, TeamMember, Service } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import DateSelector from './DateSelector';
 import TimeSlotSelector from './TimeSlotSelector';
@@ -12,13 +14,14 @@ interface BookingCalendarProps {
   professional: Professional;
   timeSlots: TimeSlot[];
   appointments: Appointment[];
-  onSelectSlot: (date: Date, startTime: string, endTime: string) => void;
+  onSelectSlot: (date: Date, startTime: string, endTime: string, teamMemberId?: string) => void;
 }
 
 interface AvailableSlot {
   date: Date;
   startTime: string;
   endTime: string;
+  teamMemberId?: string;
 }
 
 const BookingCalendar: React.FC<BookingCalendarProps> = ({ 
@@ -30,8 +33,44 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedTeamMember, setSelectedTeamMember] = useState<string>("none");
+  const [selectedService, setSelectedService] = useState<string>("none");
   const [isOverLimit, setIsOverLimit] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Fetch team members and services
+  useEffect(() => {
+    const fetchTeamAndServices = async () => {
+      try {
+        // Fetch team members
+        const { data: teamMembersData, error: teamMembersError } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('professional_id', professional.id)
+          .eq('active', true);
+          
+        if (teamMembersError) throw teamMembersError;
+        setTeamMembers(teamMembersData || []);
+        
+        // Fetch services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('services')
+          .select('*')
+          .eq('professional_id', professional.id)
+          .eq('active', true);
+          
+        if (servicesError) throw servicesError;
+        setServices(servicesData || []);
+        
+      } catch (error) {
+        console.error("Error fetching team members and services:", error);
+      }
+    };
+    
+    fetchTeamAndServices();
+  }, [professional.id]);
   
   // Check if professional has reached the free plan limit
   useEffect(() => {
@@ -65,7 +104,17 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     checkAppointmentLimit();
   }, [professional.id]);
   
-  // Generate next 14 days for selection
+  // Filter time slots based on team member selection
+  const filteredTimeSlots = React.useMemo(() => {
+    if (selectedTeamMember === "none") {
+      return timeSlots;
+    }
+    return timeSlots.filter(slot => 
+      slot.team_member_id === selectedTeamMember || !slot.team_member_id
+    );
+  }, [timeSlots, selectedTeamMember]);
+  
+  // Generate next 14 days for selection based on filtered time slots
   useEffect(() => {
     if (isOverLimit) {
       setAvailableDates([]);
@@ -80,7 +129,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       const dayOfWeek = date.getDay();
       
       // Check if there are available slots for this day of week
-      const hasAvailableSlots = timeSlots.some(
+      const hasAvailableSlots = filteredTimeSlots.some(
         slot => slot.day_of_week === dayOfWeek && slot.available
       );
       
@@ -91,10 +140,10 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     
     setAvailableDates(dates);
     
-    if (dates.length > 0) {
+    if (dates.length > 0 && !selectedDate) {
       setSelectedDate(dates[0]);
     }
-  }, [timeSlots, isOverLimit]);
+  }, [filteredTimeSlots, isOverLimit, selectedDate]);
   
   // When a date is selected, find available time slots
   useEffect(() => {
@@ -108,7 +157,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     console.log("Selected day of week:", dayOfWeek);
     
     // Get all time slots for this day
-    const daySlots = timeSlots.filter(
+    const daySlots = filteredTimeSlots.filter(
       slot => slot.day_of_week === dayOfWeek && slot.available
     );
     
@@ -142,7 +191,22 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     
     console.log("Final available slots:", slots);
     setAvailableSlots(slots);
-  }, [selectedDate, timeSlots, appointments, isOverLimit]);
+  }, [selectedDate, filteredTimeSlots, appointments, isOverLimit]);
+  
+  const handleTeamMemberChange = (value: string) => {
+    setSelectedTeamMember(value);
+    // Reset date selection when changing team member
+    setSelectedDate(null);
+  };
+  
+  const handleServiceChange = (value: string) => {
+    setSelectedService(value);
+  };
+  
+  const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
+    const effectiveTeamMemberId = selectedTeamMember !== "none" ? selectedTeamMember : teamMemberId;
+    onSelectSlot(date, startTime, endTime, effectiveTeamMemberId);
+  };
   
   if (loading) {
     return (
@@ -164,15 +228,57 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   return (
     <div className="space-y-6">
+      {/* Step 1: Select Professional */}
+      {teamMembers.length > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="teamMember">Profissional</Label>
+          <Select value={selectedTeamMember} onValueChange={handleTeamMemberChange}>
+            <SelectTrigger id="teamMember">
+              <SelectValue placeholder="Selecione um profissional" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Qualquer profissional disponível</SelectItem>
+              {teamMembers.map(member => (
+                <SelectItem key={member.id} value={member.id}>
+                  {member.name} {member.position ? `- ${member.position}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      
+      {/* Step 2: Select Service */}
+      {services.length > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="service">Serviço</Label>
+          <Select value={selectedService} onValueChange={handleServiceChange}>
+            <SelectTrigger id="service">
+              <SelectValue placeholder="Selecione um serviço" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Consulta padrão</SelectItem>
+              {services.map(service => (
+                <SelectItem key={service.id} value={service.id}>
+                  {service.name} - {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(service.price))}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      
+      {/* Step 3: Select Date */}
       <DateSelector 
         availableDates={availableDates}
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
       />
       
+      {/* Step 4: Select Time */}
       <TimeSlotSelector 
         availableSlots={availableSlots}
-        onSelectSlot={onSelectSlot}
+        onSelectSlot={handleSelectTimeSlot}
       />
     </div>
   );

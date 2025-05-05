@@ -1,137 +1,168 @@
 
-import React, { useCallback } from 'react';
-import { TimeSlot } from '@/types';
+import React, { useMemo } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useAppointments } from '@/context/AppointmentContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import { Edit, Trash2 } from 'lucide-react';
+import { TimeSlot, TeamMember } from '@/types';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface TimeSlotsListProps {
   timeSlots: TimeSlot[];
+  teamMembers?: TeamMember[];
   onEdit: (timeSlot: TimeSlot) => void;
+  onDelete?: (timeSlot: TimeSlot) => void;
 }
 
-const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ timeSlots, onEdit }) => {
-  const { deleteTimeSlot } = useAppointments();
-  const { toast } = useToast();
+const days = [
+  'Domingo',
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+];
+
+const TimeSlotsList: React.FC<TimeSlotsListProps> = ({ 
+  timeSlots, 
+  teamMembers = [],
+  onEdit,
+  onDelete 
+}) => {
+  // Separate time slots into global and member-specific
+  const globalTimeSlots = useMemo(() => 
+    timeSlots.filter(slot => !slot.team_member_id), 
+    [timeSlots]
+  );
   
-  const handleDelete = useCallback(async (id: string) => {
-    if (window.confirm('Deseja realmente excluir este horário?')) {
-      const success = await deleteTimeSlot(id);
-      if (success) {
-        toast({
-          title: "Horário excluído",
-          description: "O horário foi excluído com sucesso."
-        });
-      } else {
-        toast({
-          title: "Erro",
-          description: "Não foi possível excluir o horário.",
-          variant: "destructive"
-        });
-      }
-    }
-  }, [deleteTimeSlot, toast]);
+  const memberSpecificTimeSlots = useMemo(() => 
+    timeSlots.filter(slot => !!slot.team_member_id), 
+    [timeSlots]
+  );
   
-  if (timeSlots.length === 0) {
-    return (
-      <Card className="p-6 text-center">
-        <p className="text-muted-foreground">Nenhum horário configurado.</p>
-      </Card>
-    );
-  }
-  
-  const getDayName = (dayNumber: number) => {
-    const days = [
-      'Domingo',
-      'Segunda-feira',
-      'Terça-feira',
-      'Quarta-feira',
-      'Quinta-feira',
-      'Sexta-feira',
-      'Sábado',
-    ];
-    return days[dayNumber];
+  // Format time to display
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    return `${hours}:${minutes}`;
   };
   
-  // Group time slots by day of week
-  const slotsByDay = timeSlots.reduce<Record<number, TimeSlot[]>>((acc, slot) => {
-    if (!acc[slot.day_of_week]) {
-      acc[slot.day_of_week] = [];
+  // Get team member name by ID
+  const getTeamMemberName = (teamMemberId: string | null | undefined) => {
+    if (!teamMemberId) return 'Geral';
+    const member = teamMembers.find(m => m.id === teamMemberId);
+    return member ? member.name : 'Profissional desconhecido';
+  };
+  
+  const renderTimeSlotTable = (slots: TimeSlot[]) => {
+    if (slots.length === 0) {
+      return (
+        <div className="text-center py-6 text-muted-foreground">
+          Nenhum horário encontrado.
+        </div>
+      );
     }
-    acc[slot.day_of_week].push(slot);
-    return acc;
-  }, {});
 
-  // Function to format minutes as hours and minutes
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes} min`;
-    } else {
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = minutes % 60;
-      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
-    }
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Dia</TableHead>
+            <TableHead>Horário</TableHead>
+            <TableHead className="hidden md:table-cell">Duração</TableHead>
+            {slots === memberSpecificTimeSlots && (
+              <TableHead className="hidden md:table-cell">Profissional</TableHead>
+            )}
+            <TableHead className="hidden md:table-cell">Status</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {slots.map((slot) => (
+            <TableRow key={slot.id}>
+              <TableCell>{days[slot.day_of_week]}</TableCell>
+              <TableCell>
+                {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+                {slot.lunch_break_start && slot.lunch_break_end && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Almoço: {formatTime(slot.lunch_break_start)} - {formatTime(slot.lunch_break_end)}
+                  </div>
+                )}
+              </TableCell>
+              <TableCell className="hidden md:table-cell">
+                {slot.appointment_duration_minutes} min
+              </TableCell>
+              {slots === memberSpecificTimeSlots && (
+                <TableCell className="hidden md:table-cell">
+                  {getTeamMemberName(slot.team_member_id)}
+                </TableCell>
+              )}
+              <TableCell className="hidden md:table-cell">
+                {slot.available ? (
+                  <Badge variant="success">Disponível</Badge>
+                ) : (
+                  <Badge variant="secondary">Indisponível</Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex space-x-2 justify-end">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(slot)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  {onDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(slot)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
   };
   
   return (
-    <div className="space-y-6">
-      {Object.entries(slotsByDay).map(([day, slots]) => (
-        <div key={day} className="space-y-3">
-          <h3 className="font-medium text-lg">{getDayName(parseInt(day))}</h3>
+    <Card>
+      <CardHeader>
+        <CardTitle>Horários Disponíveis</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="global" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="global">Horários Globais</TabsTrigger>
+            <TabsTrigger value="member">Horários por Profissional</TabsTrigger>
+          </TabsList>
           
-          <div className="space-y-2">
-            {slots.map((slot) => (
-              <Card key={slot.id} className="p-4">
-                <div className="flex justify-between items-center flex-wrap gap-4">
-                  <div>
-                    <p className="font-medium">
-                      {slot.start_time} - {slot.end_time}
-                    </p>
-                    
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge variant={slot.available ? "outline" : "secondary"}>
-                        {slot.available ? 'Disponível' : 'Indisponível'}
-                      </Badge>
-                      
-                      <Badge variant="outline" className="bg-blue-50">
-                        Duração: {formatDuration(slot.appointment_duration_minutes || 60)}
-                      </Badge>
-                      
-                      {slot.lunch_break_start && slot.lunch_break_end && (
-                        <Badge variant="outline" className="bg-amber-50">
-                          Almoço: {slot.lunch_break_start} - {slot.lunch_break_end}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => onEdit(slot)}
-                    >
-                      Editar
-                    </Button>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                      onClick={() => handleDelete(slot.id)}
-                    >
-                      Excluir
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
+          <TabsContent value="global">
+            {renderTimeSlotTable(globalTimeSlots)}
+          </TabsContent>
+          
+          <TabsContent value="member">
+            {renderTimeSlotTable(memberSpecificTimeSlots)}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 
