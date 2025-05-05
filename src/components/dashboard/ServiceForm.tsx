@@ -67,7 +67,16 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ service, onSave, onCancel }) 
   }, [service, form]);
 
   const onSubmit = (data: FormValues) => {
-    onSave(data);
+    // Ensure all required fields are present before calling onSave
+    const serviceData = {
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      duration_minutes: data.duration_minutes,
+      active: data.active,
+    };
+    
+    onSave(serviceData);
   };
 
   return (
