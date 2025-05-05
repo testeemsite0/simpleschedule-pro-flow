@@ -22,6 +22,7 @@ import ResetPassword from './pages/ResetPassword';
 import Booking from './pages/Booking';
 import './App.css';
 import { Toaster } from './components/ui/toaster';
+import Profile from './pages/Profile';
 
 const App = () => {
   return (
@@ -47,6 +48,7 @@ const App = () => {
         <Route path="/dashboard/clients" element={<DashboardClients />} />
         <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
         <Route path="/dashboard/settings" element={<Settings />} />
+        <Route path="/dashboard/profile" element={<Profile />} />
         
         <Route path="*" element={<NotFound />} />
       </Routes>
