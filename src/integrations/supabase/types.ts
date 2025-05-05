@@ -18,6 +18,7 @@ export type Database = {
           date: string
           end_time: string
           id: string
+          insurance_plan_id: string | null
           notes: string | null
           price: number | null
           professional_id: string
@@ -25,6 +26,7 @@ export type Database = {
           source: string | null
           start_time: string
           status: string
+          team_member_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -35,6 +37,7 @@ export type Database = {
           date: string
           end_time: string
           id?: string
+          insurance_plan_id?: string | null
           notes?: string | null
           price?: number | null
           professional_id: string
@@ -42,6 +45,7 @@ export type Database = {
           source?: string | null
           start_time: string
           status: string
+          team_member_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -52,6 +56,7 @@ export type Database = {
           date?: string
           end_time?: string
           id?: string
+          insurance_plan_id?: string | null
           notes?: string | null
           price?: number | null
           professional_id?: string
@@ -59,9 +64,17 @@ export type Database = {
           source?: string | null
           start_time?: string
           status?: string
+          team_member_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_professional_id_fkey"
             columns: ["professional_id"]
@@ -76,7 +89,38 @@ export type Database = {
             referencedRelation: "services"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "appointments_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      insurance_plans: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          professional_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          professional_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          professional_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -249,6 +293,78 @@ export type Database = {
         }
         Relationships: []
       }
+      team_member_services: {
+        Row: {
+          created_at: string
+          id: string
+          service_id: string
+          team_member_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_id: string
+          team_member_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_id?: string
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_services_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          active: boolean
+          avatar: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          position: string | null
+          professional_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          avatar?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          position?: string | null
+          professional_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          avatar?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          position?: string | null
+          professional_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_slots: {
         Row: {
           appointment_duration_minutes: number | null
@@ -261,6 +377,7 @@ export type Database = {
           lunch_break_start: string | null
           professional_id: string
           start_time: string
+          team_member_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -274,6 +391,7 @@ export type Database = {
           lunch_break_start?: string | null
           professional_id: string
           start_time: string
+          team_member_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -287,6 +405,7 @@ export type Database = {
           lunch_break_start?: string | null
           professional_id?: string
           start_time?: string
+          team_member_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -295,6 +414,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_slots_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
             referencedColumns: ["id"]
           },
         ]

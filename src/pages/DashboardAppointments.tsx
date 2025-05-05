@@ -82,6 +82,8 @@ const DashboardAppointments = () => {
     clientEmail: string;
     clientPhone: string;
     notes: string;
+    teamMemberId?: string;
+    insurancePlanId?: string;
   }) => {
     if (!user) {
       toast({
@@ -140,7 +142,9 @@ const DashboardAppointments = () => {
         end_time: formData.endTime,
         notes: formData.notes,
         status: appointmentStatus,
-        source: appointmentSource
+        source: appointmentSource,
+        team_member_id: formData.teamMemberId || null,
+        insurance_plan_id: formData.insurancePlanId || null
       };
       
       // Create appointment

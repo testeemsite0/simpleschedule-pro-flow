@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CalendarDays, Users, PieChart, Clock, Settings, CreditCard, Calendar, Briefcase } from 'lucide-react';
+import { CalendarDays, Users, PieChart, Clock, Settings, CreditCard, Calendar, Briefcase, Shield, UserPlus } from 'lucide-react';
 import { SidebarLink } from '@/components/layout/Sidebar';
 import { Separator } from '@/components/ui/separator';
 
@@ -35,6 +35,16 @@ export function DashboardSidebarContent() {
             to="/dashboard/services"
             icon={<Briefcase className="mr-2 h-4 w-4" />}
             label="Meus Serviços"
+          />
+          <SidebarLink
+            to="/dashboard/team"
+            icon={<UserPlus className="mr-2 h-4 w-4" />}
+            label="Equipe"
+          />
+          <SidebarLink
+            to="/dashboard/insurance"
+            icon={<Shield className="mr-2 h-4 w-4" />}
+            label="Convênios"
           />
         </div>
       </div>

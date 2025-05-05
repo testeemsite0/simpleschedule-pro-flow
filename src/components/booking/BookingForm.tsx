@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Professional } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Professional, TeamMember, InsurancePlan } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppointments } from '@/context/AppointmentContext';
@@ -33,12 +34,50 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [teamMemberId, setTeamMemberId] = useState<string | undefined>(undefined);
+  const [insurancePlanId, setInsurancePlanId] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   
   const { toast } = useToast();
   const { addAppointment } = useAppointments();
   
   const formattedDate = format(selectedDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
+  
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('professional_id', professional.id)
+          .eq('active', true);
+          
+        if (error) throw error;
+        setTeamMembers(data || []);
+      } catch (error) {
+        console.error("Erro ao buscar membros da equipe:", error);
+      }
+    };
+    
+    const fetchInsurancePlans = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('insurance_plans')
+          .select('*')
+          .eq('professional_id', professional.id);
+          
+        if (error) throw error;
+        setInsurancePlans(data || []);
+      } catch (error) {
+        console.error("Erro ao buscar convênios:", error);
+      }
+    };
+    
+    fetchTeamMembers();
+    fetchInsurancePlans();
+  }, [professional.id]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +137,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
         notes,
         status: appointmentStatus,
         source: appointmentSource,
+        team_member_id: teamMemberId || null,
+        insurance_plan_id: insurancePlanId || null,
       };
       
       // Create appointment and get its ID
@@ -182,6 +223,44 @@ const BookingForm: React.FC<BookingFormProps> = ({
               placeholder="(00) 00000-0000"
             />
           </div>
+          
+          {teamMembers.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="teamMember">Profissional de preferência</Label>
+              <Select value={teamMemberId} onValueChange={setTeamMemberId}>
+                <SelectTrigger id="teamMember">
+                  <SelectValue placeholder="Selecione um profissional (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem preferência específica</SelectItem>
+                  {teamMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name} {member.position ? `- ${member.position}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          {insurancePlans.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="insurancePlan">Convênio</Label>
+              <Select value={insurancePlanId} onValueChange={setInsurancePlanId}>
+                <SelectTrigger id="insurancePlan">
+                  <SelectValue placeholder="Particular" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Particular</SelectItem>
+                  {insurancePlans.map(plan => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label htmlFor="notes">Notas ou motivo da consulta</Label>

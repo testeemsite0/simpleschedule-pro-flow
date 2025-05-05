@@ -1,79 +1,58 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Toaster } from '@/components/ui/toaster';
-import { AppointmentProvider } from './context/AppointmentContext';
 
-// Pages
+import { Route, Routes } from 'react-router-dom';
 import Index from './pages/Index';
-import Features from './pages/Features';
-import About from './pages/About';
-import Pricing from './pages/Pricing';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import NotFound from './pages/NotFound';
 import Dashboard from './pages/Dashboard';
+import DashboardAppointments from './pages/DashboardAppointments';
 import DashboardSchedules from './pages/DashboardSchedules';
+import DashboardServices from './pages/DashboardServices';
+import DashboardTeam from './pages/DashboardTeam'; 
+import DashboardInsurance from './pages/DashboardInsurance';
 import DashboardReports from './pages/DashboardReports';
+import DashboardClients from './pages/DashboardClients';
 import DashboardBookingLink from './pages/DashboardBookingLink';
 import Settings from './pages/Settings';
-import Profile from './pages/Profile';
-import AdminPanel from './pages/AdminPanel';
+import NotFound from './pages/NotFound';
+import About from './pages/About';
+import Pricing from './pages/Pricing';
+import Features from './pages/Features';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Booking from './pages/Booking';
-import DashboardAppointments from './pages/DashboardAppointments';
-import DashboardServices from './pages/DashboardServices';
-import { AuthProvider } from './context/AuthContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import './App.css';
+import { Toaster } from './components/ui/toaster';
 
-function App() {
-  // Initialize QueryClient with proper configuration
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 1,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-      },
-    },
-  });
-
+const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AppointmentProvider>
-          <Router>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/features" element={<Features />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/booking/:slug" element={<Booking />} />
-              
-              {/* Protected Routes */}
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/schedules" element={<DashboardSchedules />} />
-              <Route path="/dashboard/appointments" element={<DashboardAppointments />} />
-              <Route path="/dashboard/reports" element={<DashboardReports />} />
-              <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/admin" element={<AdminPanel />} />
-              <Route path="/dashboard/services" element={<DashboardServices />} />
-              
-              {/* 404 Route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-          </Router>
-        </AppointmentProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <div className="App">
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/booking/:slug" element={<Booking />} />
+        
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/appointments" element={<DashboardAppointments />} />
+        <Route path="/dashboard/schedules" element={<DashboardSchedules />} />
+        <Route path="/dashboard/services" element={<DashboardServices />} />
+        <Route path="/dashboard/team" element={<DashboardTeam />} />
+        <Route path="/dashboard/insurance" element={<DashboardInsurance />} />
+        <Route path="/dashboard/reports" element={<DashboardReports />} />
+        <Route path="/dashboard/clients" element={<DashboardClients />} />
+        <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
+        <Route path="/dashboard/settings" element={<Settings />} />
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster />
+    </div>
   );
-}
+};
 
 export default App;

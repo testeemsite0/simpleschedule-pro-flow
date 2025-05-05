@@ -29,6 +29,7 @@ export interface TimeSlot {
   appointment_duration_minutes?: number;
   lunch_break_start?: string;
   lunch_break_end?: string;
+  team_member_id?: string;
 }
 
 export interface Service {
@@ -59,6 +60,8 @@ export interface Appointment {
   source?: 'client' | 'manual';
   service_id?: string;
   price?: number;
+  team_member_id?: string;
+  insurance_plan_id?: string;
 }
 
 export interface SubscriptionPlan {
@@ -100,4 +103,32 @@ export interface Subscriber {
   subscription_end?: string;
   updated_at: string;
   created_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  professional_id: string;
+  name: string;
+  email?: string;
+  position?: string;
+  avatar?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+  services?: Service[]; // Relação opcional com serviços
+}
+
+export interface TeamMemberService {
+  id: string;
+  team_member_id: string;
+  service_id: string;
+  created_at: string;
+}
+
+export interface InsurancePlan {
+  id: string;
+  professional_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
 }
