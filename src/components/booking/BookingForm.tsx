@@ -237,6 +237,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const handleInsurancePlanChange = (value: string) => {
     setInsurancePlanId(value === "none" ? undefined : value);
     setInsuranceLimitError(null);
+    setCurrentStep(2); // Avança para o próximo passo (dados do cliente)
     
     if (value === "none") {
       setSelectedInsurancePlan(null);
@@ -294,14 +295,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
     
     return true;
-  };
-  
-  const handleNextStep = () => {
-    if (currentStep === 1) {
-      if (validateClientInfo()) {
-        setCurrentStep(2);
-      }
-    }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -470,7 +463,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
               }`}>
                 {getStepStatus(1) === "completed" ? <CheckCircle className="w-5 h-5" /> : "1"}
               </div>
-              <span className="text-xs">Dados</span>
+              <span className="text-xs">Convênio</span>
             </div>
             <div className="flex-1 flex items-center mx-2">
               <div className={`h-0.5 w-full ${currentStep > 1 ? "bg-primary" : "bg-muted"}`}></div>
@@ -483,7 +476,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
               }`}>
                 {getStepStatus(2) === "completed" ? <CheckCircle className="w-5 h-5" /> : "2"}
               </div>
-              <span className="text-xs">Convênio</span>
+              <span className="text-xs">Cliente</span>
             </div>
           </div>
 
@@ -498,58 +491,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
             )}
           </div>
           
-          {/* Step 1: Client information */}
+          {/* Step 1: Select Insurance */}
           {currentStep === 1 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Informações do cliente</h2>
-              
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome completo <span className="text-destructive">*</span></Label>
-                <Input 
-                  id="name" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
-                <Input 
-                  id="email" 
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
-                <Input 
-                  id="phone" 
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notas ou motivo da consulta</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Forneça detalhes adicionais se necessário"
-                  rows={3}
-                />
-              </div>
-            </div>
-          )}
-          
-          {/* Step 2: Select insurance plan (only if team member is selected) */}
-          {currentStep === 2 && teamMemberId && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Tipo de atendimento</h2>
               
@@ -612,6 +555,56 @@ const BookingForm: React.FC<BookingFormProps> = ({
               </div>
             </div>
           )}
+          
+          {/* Step 2: Client information */}
+          {currentStep === 2 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Informações do cliente</h2>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome completo <span className="text-destructive">*</span></Label>
+                <Input 
+                  id="name" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
+                <Input 
+                  id="email" 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefone</Label>
+                <Input 
+                  id="phone" 
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notas ou motivo da consulta</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Forneça detalhes adicionais se necessário"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
         
         <CardFooter className="flex justify-between">
@@ -626,8 +619,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
               </Button>
               <Button 
                 type="button" 
-                onClick={handleNextStep}
-                disabled={!name || !email}
+                onClick={() => handleInsurancePlanChange(insurancePlanId || "none")}
               >
                 Próximo
               </Button>

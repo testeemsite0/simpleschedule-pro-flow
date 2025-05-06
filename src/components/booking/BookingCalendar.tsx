@@ -40,6 +40,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const [services, setServices] = useState<Service[]>([]);
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>("");
   const [selectedService, setSelectedService] = useState<string>("");
+  const [selectedInsurance, setSelectedInsurance] = useState<string>("none");
+  const [insurancePlans, setInsurancePlans] = useState<any[]>([]);
   const [isOverLimit, setIsOverLimit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -67,6 +69,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           
         if (servicesError) throw servicesError;
         setServices(servicesData || []);
+        
+        // Fetch insurance plans
+        const { data: insurancePlansData, error: insurancePlansError } = await supabase
+          .from('insurance_plans')
+          .select('*')
+          .eq('professional_id', professional.id);
+          
+        if (insurancePlansError) throw insurancePlansError;
+        setInsurancePlans(insurancePlansData || []);
         
       } catch (error) {
         console.error("Error fetching team members and services:", error);
@@ -120,7 +131,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   // Generate next 14 days for selection based on filtered time slots
   useEffect(() => {
-    if (isOverLimit || !selectedTeamMember || currentStep < 3) {
+    if (isOverLimit || !selectedTeamMember || currentStep < 4) {
       setAvailableDates([]);
       return;
     }
@@ -151,7 +162,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   // When a date is selected, find available time slots
   useEffect(() => {
-    if (!selectedDate || isOverLimit || currentStep < 4) {
+    if (!selectedDate || isOverLimit || currentStep < 5) {
       setAvailableSlots([]);
       return;
     }
@@ -200,18 +211,24 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   const handleTeamMemberChange = (value: string) => {
     setSelectedTeamMember(value);
     setSelectedService("");
+    setSelectedInsurance("none");
     setSelectedDate(null);
-    setCurrentStep(2); // Move to service selection step
+    setCurrentStep(2); // Move to insurance selection step
+  };
+  
+  const handleInsuranceChange = (value: string) => {
+    setSelectedInsurance(value);
+    setCurrentStep(3); // Move to service selection step
   };
   
   const handleServiceChange = (value: string) => {
     setSelectedService(value);
-    setCurrentStep(3); // Move to date selection step
+    setCurrentStep(4); // Move to date selection step
   };
   
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
-    setCurrentStep(4); // Move to time selection step
+    setCurrentStep(5); // Move to time selection step
   };
   
   const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
@@ -267,7 +284,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           }`}>
             {getStepStatus(2) === "completed" ? <CheckCircle className="w-5 h-5" /> : "2"}
           </div>
-          <span className="text-xs">Serviço</span>
+          <span className="text-xs">Convênio</span>
         </div>
         <div className="flex-1 flex items-center mx-2">
           <div className={`h-0.5 w-full ${currentStep > 2 ? "bg-primary" : "bg-muted"}`}></div>
@@ -280,7 +297,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           }`}>
             {getStepStatus(3) === "completed" ? <CheckCircle className="w-5 h-5" /> : "3"}
           </div>
-          <span className="text-xs">Data</span>
+          <span className="text-xs">Serviço</span>
         </div>
         <div className="flex-1 flex items-center mx-2">
           <div className={`h-0.5 w-full ${currentStep > 3 ? "bg-primary" : "bg-muted"}`}></div>
@@ -292,6 +309,19 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
             "border-2 border-muted text-muted-foreground"
           }`}>
             {getStepStatus(4) === "completed" ? <CheckCircle className="w-5 h-5" /> : "4"}
+          </div>
+          <span className="text-xs">Data</span>
+        </div>
+        <div className="flex-1 flex items-center mx-2">
+          <div className={`h-0.5 w-full ${currentStep > 4 ? "bg-primary" : "bg-muted"}`}></div>
+        </div>
+        <div className={`flex flex-col items-center ${getStepStatus(5) === "completed" ? "text-primary" : getStepStatus(5) === "current" ? "text-foreground" : "text-muted-foreground"}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
+            getStepStatus(5) === "completed" ? "bg-primary text-primary-foreground" : 
+            getStepStatus(5) === "current" ? "border-2 border-primary text-primary" : 
+            "border-2 border-muted text-muted-foreground"
+          }`}>
+            {getStepStatus(5) === "completed" ? <CheckCircle className="w-5 h-5" /> : "5"}
           </div>
           <span className="text-xs">Horário</span>
         </div>
@@ -324,8 +354,52 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         </div>
       )}
       
-      {/* Step 2: Select Service */}
-      {currentStep === 2 && services.length > 0 && selectedTeamMember && (
+      {/* Step 2: Select Insurance Plan */}
+      {currentStep === 2 && selectedTeamMember && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold mb-4">
+            Escolha um convênio
+          </h2>
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-4">
+              <Button
+                variant="outline"
+                className={`flex justify-between items-center p-4 h-auto ${selectedInsurance === "none" ? "border-primary bg-primary/5" : ""}`}
+                onClick={() => handleInsuranceChange("none")}
+              >
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">Particular</span>
+                  <span className="text-xs text-muted-foreground">Pagamento direto</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Button>
+              
+              {insurancePlans.map(plan => (
+                <Button
+                  key={plan.id}
+                  variant="outline"
+                  className={`flex justify-between items-center p-4 h-auto ${selectedInsurance === plan.id ? "border-primary bg-primary/5" : ""}`}
+                  onClick={() => handleInsuranceChange(plan.id)}
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">{plan.name}</span>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex justify-between mt-4">
+            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+              Voltar
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Step 3: Select Service */}
+      {currentStep === 3 && selectedTeamMember && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">
             Escolha um serviço
@@ -358,15 +432,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           </div>
           
           <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+            <Button variant="outline" onClick={() => setCurrentStep(2)}>
               Voltar
             </Button>
           </div>
         </div>
       )}
       
-      {/* Step 3: Select Date */}
-      {currentStep === 3 && selectedTeamMember && (
+      {/* Step 4: Select Date */}
+      {currentStep === 4 && selectedTeamMember && (
         <div className="space-y-4">
           <DateSelector 
             availableDates={availableDates}
@@ -375,15 +449,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           />
           
           <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setCurrentStep(2)}>
+            <Button variant="outline" onClick={() => setCurrentStep(3)}>
               Voltar
             </Button>
           </div>
         </div>
       )}
       
-      {/* Step 4: Select Time */}
-      {currentStep === 4 && selectedDate && (
+      {/* Step 5: Select Time */}
+      {currentStep === 5 && selectedDate && (
         <div className="space-y-4">
           <TimeSlotSelector 
             availableSlots={availableSlots}
@@ -391,7 +465,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           />
           
           <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setCurrentStep(3)}>
+            <Button variant="outline" onClick={() => setCurrentStep(4)}>
               Voltar
             </Button>
           </div>
@@ -411,6 +485,16 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
                   ` - ${teamMembers.find(m => m.id === selectedTeamMember)?.position}` : ''}
               </span>
             </div>
+            
+            {selectedInsurance && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Convênio:</span>
+                <span className="font-medium">
+                  {selectedInsurance === "none" ? "Particular" : 
+                   insurancePlans.find(p => p.id === selectedInsurance)?.name || ''}
+                </span>
+              </div>
+            )}
             
             {selectedService && (
               <div className="flex justify-between">

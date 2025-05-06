@@ -22,6 +22,7 @@ import DashboardReports from './pages/DashboardReports';
 import DashboardClients from './pages/DashboardClients';
 import DashboardBookingLink from './pages/DashboardBookingLink';
 import DashboardPreferences from './pages/DashboardPreferences';
+import DashboardInsurance from './pages/DashboardInsurance';
 import Index from './pages/Index';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -106,6 +107,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <DashboardBookingLink />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/insurance"
+              element={
+                <ProtectedRoute>
+                  <DashboardInsurance />
                 </ProtectedRoute>
               }
             />

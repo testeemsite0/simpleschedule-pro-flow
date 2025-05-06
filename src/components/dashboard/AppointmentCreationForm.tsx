@@ -302,7 +302,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     setInsuranceLimitError(null);
     setSelectedDate(null);
     setSelectedTimeSlot(null);
-    setCurrentStep(2); // Vai para a etapa de seleção de data
+    setCurrentStep(2); // Vai para a etapa de seleção de convênio
     
     // Encontra todos os convênios disponíveis para este profissional
     const memberPlans = teamMemberInsurancePlans.filter(
@@ -345,6 +345,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   const handleInsurancePlanChange = (value: string) => {
     setInsurancePlanId(value === "none" ? undefined : value);
     setInsuranceLimitError(null);
+    setCurrentStep(3); // Avança para seleção de data
     
     if (value === "none") {
       return;
@@ -390,7 +391,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     // Ensure we're working with a fresh copy of the date
     setSelectedDate(new Date(date));
     setSelectedTimeSlot(null);
-    setCurrentStep(3); // Avança para seleção de horário
+    setCurrentStep(4); // Avança para seleção de horário
   };
   
   const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string) => {
@@ -400,13 +401,13 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       endTime,
       teamMemberId 
     });
-    setCurrentStep(4); // Avança para informações do cliente
+    setCurrentStep(5); // Avança para informações do cliente
   };
   
   const handleNextStep = () => {
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       if (validateClientInfo()) {
-        setCurrentStep(5); // Avança para seleção de convênio
+        handleSubmit(new Event('submit') as React.FormEvent);
       }
     }
   };
@@ -467,7 +468,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           }`}>
             {getStepStatus(2) === "completed" ? <CheckCircle className="w-5 h-5" /> : "2"}
           </div>
-          <span className="text-xs">Data</span>
+          <span className="text-xs">Convênio</span>
         </div>
         <div className="flex-1 flex items-center mx-1">
           <div className={`h-0.5 w-full ${currentStep > 2 ? "bg-primary" : "bg-muted"}`}></div>
@@ -480,7 +481,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           }`}>
             {getStepStatus(3) === "completed" ? <CheckCircle className="w-5 h-5" /> : "3"}
           </div>
-          <span className="text-xs">Horário</span>
+          <span className="text-xs">Data</span>
         </div>
         <div className="flex-1 flex items-center mx-1">
           <div className={`h-0.5 w-full ${currentStep > 3 ? "bg-primary" : "bg-muted"}`}></div>
@@ -493,7 +494,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           }`}>
             {getStepStatus(4) === "completed" ? <CheckCircle className="w-5 h-5" /> : "4"}
           </div>
-          <span className="text-xs">Cliente</span>
+          <span className="text-xs">Horário</span>
         </div>
         <div className="flex-1 flex items-center mx-1">
           <div className={`h-0.5 w-full ${currentStep > 4 ? "bg-primary" : "bg-muted"}`}></div>
@@ -506,7 +507,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           }`}>
             {getStepStatus(5) === "completed" ? <CheckCircle className="w-5 h-5" /> : "5"}
           </div>
-          <span className="text-xs">Convênio</span>
+          <span className="text-xs">Cliente</span>
         </div>
       </div>
 
@@ -536,8 +537,75 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         </div>
       )}
       
-      {/* Step 2: Select Date */}
+      {/* Step 2: Select Insurance Plan */}
       {currentStep === 2 && teamMemberId && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold mb-4">Escolha um convênio</h2>
+          
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-4">
+              <Button
+                variant="outline"
+                className={`flex justify-between items-center p-4 h-auto ${insurancePlanId === undefined ? "border-primary bg-primary/5" : ""}`}
+                onClick={() => handleInsurancePlanChange("none")}
+              >
+                <div className="flex flex-col items-start">
+                  <span className="font-medium">Particular</span>
+                  <span className="text-xs text-muted-foreground">Pagamento direto</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Button>
+              
+              {availableInsurancePlans.map(plan => {
+                const isAvailable = plan.availableForBooking !== false;
+                const limitInfo = plan.memberLimit 
+                  ? `${plan.memberCurrentAppointments}/${plan.memberLimit}`
+                  : plan.limit_per_plan
+                    ? `${plan.current_appointments}/${plan.limit_per_plan}`
+                    : '';
+                
+                return (
+                  <Button
+                    key={plan.id} 
+                    variant="outline"
+                    disabled={!isAvailable}
+                    className={`flex justify-between items-center p-4 h-auto ${insurancePlanId === plan.id ? "border-primary bg-primary/5" : ""}`}
+                    onClick={() => handleInsurancePlanChange(plan.id)}
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">{plan.name}</span>
+                      {limitInfo && (
+                        <Badge 
+                          variant={isAvailable ? "secondary" : "destructive"}
+                          className="mt-1"
+                        >
+                          {limitInfo}
+                        </Badge>
+                      )}
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                );
+              })}
+              
+              {availableInsurancePlans.length === 0 && teamMemberId && (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  Este profissional não tem convênios disponíveis
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex justify-between mt-4">
+            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+              Voltar
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Step 3: Select Date */}
+      {currentStep === 3 && teamMemberId && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">Escolha uma data</h2>
           
@@ -548,15 +616,15 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           />
           
           <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+            <Button variant="outline" onClick={() => setCurrentStep(2)}>
               Voltar
             </Button>
           </div>
         </div>
       )}
       
-      {/* Step 3: Select Time */}
-      {currentStep === 3 && selectedDate && teamMemberId && (
+      {/* Step 4: Select Time */}
+      {currentStep === 4 && selectedDate && teamMemberId && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">Escolha um horário</h2>
           
@@ -568,15 +636,15 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           />
           
           <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setCurrentStep(2)}>
+            <Button variant="outline" onClick={() => setCurrentStep(3)}>
               Voltar
             </Button>
           </div>
         </div>
       )}
       
-      {/* Step 4: Client Information */}
-      {currentStep === 4 && selectedTimeSlot && (
+      {/* Step 5: Client Information */}
+      {currentStep === 5 && selectedTimeSlot && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">Informações do cliente</h2>
           
@@ -587,6 +655,13 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
               </p>
               <p className="text-sm">
                 {format(selectedDate!, 'dd/MM/yyyy')} | {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}
+              </p>
+              <p className="text-sm mt-1">
+                <span className="text-muted-foreground">Convênio: </span>
+                <span className="font-medium">
+                  {insurancePlanId === undefined ? "Particular" : 
+                   insurancePlans.find(p => p.id === insurancePlanId)?.name}
+                </span>
               </p>
             </div>
           )}
@@ -636,7 +711,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           </div>
           
           <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setCurrentStep(3)}>
+            <Button variant="outline" onClick={() => setCurrentStep(4)}>
               Voltar
             </Button>
             <Button 
@@ -644,102 +719,49 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
               onClick={handleNextStep}
               disabled={!clientName || !clientEmail}
             >
-              Próximo
+              {isSubmitting ? 'Criando...' : 'Criar Agendamento'}
             </Button>
           </div>
         </div>
       )}
       
-      {/* Step 5: Insurance Plan */}
-      {currentStep === 5 && teamMemberId && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold mb-4">Selecione o convênio</h2>
-          
-          {selectedTimeSlot && (
-            <div className="bg-accent/30 p-3 rounded-md mb-4">
-              <p className="font-medium">
+      {/* Selected options summary */}
+      {teamMemberId && currentStep < 5 && (
+        <div className="mt-6 p-4 bg-accent/30 rounded-md">
+          <h3 className="font-medium mb-2">Seleção atual:</h3>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Profissional:</span>
+              <span className="font-medium">
                 {teamMembers.find(m => m.id === teamMemberId)?.name || ''}
-              </p>
-              <p className="text-sm">
-                {format(selectedDate!, 'dd/MM/yyyy')} | {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}
-              </p>
-              <p className="text-sm font-medium mt-1">
-                Cliente: {clientName}
-              </p>
+                {teamMembers.find(m => m.id === teamMemberId)?.position ? 
+                  ` - ${teamMembers.find(m => m.id === teamMemberId)?.position}` : ''}
+              </span>
             </div>
-          )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="insurancePlan">Convênio</Label>
-            <Select value={insurancePlanId} onValueChange={handleInsurancePlanChange}>
-              <SelectTrigger id="insurancePlan">
-                <SelectValue placeholder="Particular" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Particular</SelectItem>
-                
-                {availableInsurancePlans.map(plan => {
-                  const isAvailable = plan.availableForBooking !== false;
-                  const limitInfo = plan.memberLimit 
-                    ? `${plan.memberCurrentAppointments}/${plan.memberLimit}`
-                    : plan.limit_per_plan
-                      ? `${plan.current_appointments}/${plan.limit_per_plan}`
-                      : '';
-                  
-                  return (
-                    <SelectItem 
-                      key={plan.id} 
-                      value={plan.id}
-                      disabled={!isAvailable}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span>{plan.name}</span>
-                        {limitInfo && (
-                          <Badge 
-                            variant={isAvailable ? "secondary" : "destructive"}
-                            className="ml-2"
-                          >
-                            {limitInfo}
-                          </Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-                
-                {availableInsurancePlans.length === 0 && teamMemberId && (
-                  <div className="p-2 text-center text-sm text-muted-foreground">
-                    Este profissional não tem convênios disponíveis
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
-              
-            {insuranceLimitError && (
-              <Alert variant="destructive" className="mt-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Limite de convênio</AlertTitle>
-                <AlertDescription>
-                  {insuranceLimitError}
-                </AlertDescription>
-              </Alert>
+            
+            {insurancePlanId !== undefined && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Convênio:</span>
+                <span className="font-medium">
+                  {insurancePlanId === undefined ? "Particular" : 
+                   insurancePlans.find(p => p.id === insurancePlanId)?.name || ''}
+                </span>
+              </div>
             )}
-          </div>
-          
-          <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => setCurrentStep(4)}>
-              Voltar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={
-                isSubmitting || 
-                !!insuranceLimitError
-              }
-            >
-              {isSubmitting ? 'Criando...' : 'Criar Agendamento'}
-            </Button>
+            
+            {selectedDate && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Data:</span>
+                <span className="font-medium">{format(selectedDate, 'dd/MM/yyyy')}</span>
+              </div>
+            )}
+            
+            {selectedTimeSlot && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Horário:</span>
+                <span className="font-medium">{selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
