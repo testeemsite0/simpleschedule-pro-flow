@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -407,13 +406,15 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   const handleNextStep = () => {
     if (currentStep === 5) {
       if (validateClientInfo()) {
-        handleSubmit(new Event('submit') as React.FormEvent);
+        handleSubmit();
       }
     }
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     
     if (!selectedDate || !selectedTimeSlot || !clientName || !clientEmail) {
       return;
