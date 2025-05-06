@@ -8,6 +8,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define the correct type for calendar_view
+type CalendarView = 'day' | 'week' | 'month';
+
 const DashboardPreferences = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -39,6 +42,12 @@ const DashboardPreferences = () => {
       }
       
       if (data) {
+        // Ensure calendar_view is one of the allowed values
+        let calendarView: CalendarView = 'week';
+        if (data.calendar_view === 'day' || data.calendar_view === 'week' || data.calendar_view === 'month') {
+          calendarView = data.calendar_view as CalendarView;
+        }
+        
         setPreferences({
           default_appointment_duration: data.default_appointment_duration || 60,
           appointment_buffer_minutes: data.appointment_buffer_minutes || 0,
@@ -47,7 +56,7 @@ const DashboardPreferences = () => {
           working_days: data.working_days || [1, 2, 3, 4, 5],
           notifications_enabled: data.notifications_enabled !== null ? data.notifications_enabled : true,
           reminder_hours_before: data.reminder_hours_before || 24,
-          calendar_view: data.calendar_view || 'week'
+          calendar_view: calendarView
         });
       }
     } catch (error) {

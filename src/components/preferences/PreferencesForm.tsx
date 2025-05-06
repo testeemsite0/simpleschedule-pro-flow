@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,7 +20,7 @@ const workingDays = [
   { id: 6, label: 'Sábado' },
 ];
 
-// Validation schema
+// Validation schema with proper type for calendar_view
 const preferencesFormSchema = z.object({
   default_appointment_duration: z.coerce.number().int().min(5).max(480),
   appointment_buffer_minutes: z.coerce.number().int().min(0).max(60),
@@ -72,7 +71,7 @@ export const PreferencesForm: React.FC<PreferencesFormProps> = ({
         working_days: initialData.working_days || [1, 2, 3, 4, 5],
         notifications_enabled: initialData.notifications_enabled !== undefined ? initialData.notifications_enabled : true,
         reminder_hours_before: initialData.reminder_hours_before || 24,
-        calendar_view: initialData.calendar_view || 'week'
+        calendar_view: (initialData.calendar_view as 'day' | 'week' | 'month') || 'week'
       });
     }
   }, [initialData, form]);
