@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { BookingStepIndicator } from './BookingStepIndicator';
 import { BookingAppointmentSummary } from './BookingAppointmentSummary';
 import { InsurancePlanStep } from './InsurancePlanStep';
 import { ClientInfoStep } from './ClientInfoStep';
+import { format } from 'date-fns';
 
 interface BookingFormProps {
   professional: Professional;
@@ -438,9 +438,6 @@ const BookingForm: React.FC<BookingFormProps> = ({
       setIsLoading(false);
     }
   };
-  
-  // Importar do BookingForm.tsx
-  import { format } from 'date-fns';
   
   return (
     <Card>
