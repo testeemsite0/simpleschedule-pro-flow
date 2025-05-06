@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, addDays, startOfDay } from 'date-fns';
+import { format, addDays, startOfDay, isBefore } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -142,6 +142,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       const date = addDays(now, i);
       const dayOfWeek = date.getDay();
       
+      // Descartar datas passadas
+      if (isBefore(date, now)) continue;
+      
       // Check if there are available slots for this day of week
       const hasAvailableSlots = filteredTimeSlots.some(
         slot => slot.day_of_week === dayOfWeek && slot.available
@@ -231,6 +234,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   };
   
   const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
+    // Avança para o próximo passo (formulário de cliente)
     onSelectSlot(date, startTime, endTime, selectedTeamMember);
   };
   

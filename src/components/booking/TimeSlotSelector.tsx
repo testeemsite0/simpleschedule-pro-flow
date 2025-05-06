@@ -2,6 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { isAfter } from 'date-fns';
 
 interface AvailableSlot {
   date: Date;
@@ -23,11 +24,37 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
 }) => {
   const [selectedSlot, setSelectedSlot] = React.useState<AvailableSlot | null>(null);
 
+  // Filtra slots que já passaram
+  const filteredSlots = React.useMemo(() => {
+    const now = new Date();
+    
+    return availableSlots.filter(slot => {
+      // Verifica se a data do slot é hoje
+      const isToday = 
+        slot.date.getDate() === now.getDate() &&
+        slot.date.getMonth() === now.getMonth() &&
+        slot.date.getFullYear() === now.getFullYear();
+      
+      // Se for hoje, precisa verificar se o horário já passou
+      if (isToday) {
+        const [hours, minutes] = slot.startTime.split(':').map(Number);
+        const slotTime = new Date();
+        slotTime.setHours(hours, minutes, 0, 0);
+        
+        // Retorna true apenas se o horário ainda não passou
+        return isAfter(slotTime, now);
+      }
+      
+      // Para datas futuras, sempre retorna true
+      return true;
+    });
+  }, [availableSlots]);
+
   const handleSelectSlot = (slot: AvailableSlot) => {
     setSelectedSlot(slot);
     
-    // Only call the parent's onSelectSlot function if showConfirmButton is false
-    // This prevents immediately proceeding to the next step in the manual booking flow
+    // Apenas chama a função onSelectSlot do componente pai se showConfirmButton for false
+    // Isso evita avançar imediatamente para o próximo passo
     if (!showConfirmButton) {
       onSelectSlot(slot.date, slot.startTime, slot.endTime, slot.teamMemberId);
     }
@@ -48,7 +75,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Horários disponíveis</h2>
       
-      {availableSlots.length === 0 ? (
+      {filteredSlots.length === 0 ? (
         <div className="text-center py-8 animate-fade-in">
           <p className="text-gray-600">
             Não há horários disponíveis para esta data.
@@ -57,7 +84,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 animate-fade-in">
-            {availableSlots.map((slot, index) => (
+            {filteredSlots.map((slot, index) => (
               <Button
                 key={`${slot.startTime}-${index}`}
                 variant="outline"

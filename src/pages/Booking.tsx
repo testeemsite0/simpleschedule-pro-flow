@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -128,10 +127,16 @@ const Booking = () => {
   };
   
   const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
-    setSelectedDate(date);
+    // Assegurar que as datas são tratadas como novos objetos
+    const safeDate = new Date(date);
+    
+    setSelectedDate(safeDate);
     setSelectedStartTime(startTime);
     setSelectedEndTime(endTime);
     setSelectedTeamMember(teamMemberId);
+    
+    // Importante: só avançar para o próximo passo se o usuário realmente confirmar
+    // a seleção de horário pelo botão "Confirmar Horário"
     setCurrentStep('form');
   };
   

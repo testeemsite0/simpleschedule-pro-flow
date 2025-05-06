@@ -179,6 +179,10 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     for (let i = 0; i < 14; i++) {
       const date = new Date(now);
       date.setDate(now.getDate() + i);
+      
+      // Descarta datas anteriores a hoje
+      if (date < now) continue;
+      
       const dayOfWeek = date.getDay();
       
       // Check if there are available slots for this day of week
@@ -235,6 +239,11 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     
     // Convert these into appointment slots
     const slots: AvailableSlot[] = [];
+    const now = new Date();
+    const isToday = 
+      selectedDate.getDate() === now.getDate() &&
+      selectedDate.getMonth() === now.getMonth() &&
+      selectedDate.getFullYear() === now.getFullYear();
     
     daySlotsData.forEach(slot => {
       // Convert times to minutes for easier calculation
@@ -260,6 +269,15 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         
         const startTime = minutesToTime(time);
         const endTime = minutesToTime(time + duration);
+        
+        // Verifica se o horário já passou
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const slotTime = new Date();
+        slotTime.setHours(hours, minutes, 0, 0);
+        
+        if (slotTime <= now) {
+          continue; // Pula horários que já passaram
+        }
         
         // Check if slot is already booked
         const isOverlapping = bookedAppointments.some(app => {
