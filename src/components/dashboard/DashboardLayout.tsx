@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Users, Settings, LayoutDashboard, FileText, UserRound, Link2, BarChart2 } from 'lucide-react';
+import { Calendar, Clock, Users, Settings, LayoutDashboard, FileText, UserRound, Link2, BarChart2, Shield } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,6 +40,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ title, childre
     { title: 'Horários', icon: <Clock size={20} />, path: '/dashboard/schedules' },
     { title: 'Equipe', icon: <Users size={20} />, path: '/dashboard/team' },
     { title: 'Serviços', icon: <FileText size={20} />, path: '/dashboard/services' },
+    { title: 'Convênios', icon: <Shield size={20} />, path: '/dashboard/insurance' },
     { title: 'Clientes', icon: <UserRound size={20} />, path: '/dashboard/clients' },
     { title: 'Link de Agendamento', icon: <Link2 size={20} />, path: '/dashboard/booking-link' },
     { title: 'Relatórios', icon: <BarChart2 size={20} />, path: '/dashboard/reports' },

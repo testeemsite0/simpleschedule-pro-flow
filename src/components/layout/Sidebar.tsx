@@ -1,10 +1,11 @@
+
 // Since we can't modify this file, we'll create a custom sidebar content component
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, Users, PieChart, Clock, Settings, CreditCard, Calendar, Briefcase } from 'lucide-react';
+import { CalendarDays, Users, PieChart, Clock, Settings, CreditCard, Calendar, Briefcase, Shield } from 'lucide-react';
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   isOpen?: boolean;
@@ -47,6 +48,11 @@ export function Sidebar({ className, isOpen, ...props }: SidebarProps) {
             to="/dashboard/clients"
             icon={<Users className="mr-2 h-4 w-4" />}
             label="Clientes"
+          />
+          <SidebarLink
+            to="/dashboard/insurance"
+            icon={<Shield className="mr-2 h-4 w-4" />}
+            label="Convênios"
           />
           <Separator />
           <SidebarLink
