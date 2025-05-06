@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
@@ -231,7 +230,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     setCurrentStep(5); // Move to time selection step
   };
   
-  const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
+  const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
     onSelectSlot(date, startTime, endTime, selectedTeamMember);
   };
   
@@ -461,7 +460,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         <div className="space-y-4">
           <TimeSlotSelector 
             availableSlots={availableSlots}
-            onSelectSlot={handleSelectTimeSlot}
+            onSelectSlot={handleTimeSlotSelect}
+            showConfirmButton={true}
           />
           
           <div className="flex justify-between mt-4">

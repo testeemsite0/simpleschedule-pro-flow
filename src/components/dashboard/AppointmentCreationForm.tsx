@@ -634,6 +634,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
             onSelectSlot={(date, start, end) => 
               handleTimeSlotSelect(date, start, end)
             }
+            showConfirmButton={true}
           />
           
           <div className="flex justify-between mt-4">

@@ -13,17 +13,35 @@ interface AvailableSlot {
 interface TimeSlotSelectorProps {
   availableSlots: AvailableSlot[];
   onSelectSlot: (date: Date, startTime: string, endTime: string, teamMemberId?: string) => void;
+  showConfirmButton?: boolean;
 }
 
 const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
   availableSlots,
-  onSelectSlot
+  onSelectSlot,
+  showConfirmButton = false
 }) => {
   const [selectedSlot, setSelectedSlot] = React.useState<AvailableSlot | null>(null);
 
   const handleSelectSlot = (slot: AvailableSlot) => {
     setSelectedSlot(slot);
-    onSelectSlot(slot.date, slot.startTime, slot.endTime, slot.teamMemberId);
+    
+    // Only call the parent's onSelectSlot function if showConfirmButton is false
+    // This prevents immediately proceeding to the next step in the manual booking flow
+    if (!showConfirmButton) {
+      onSelectSlot(slot.date, slot.startTime, slot.endTime, slot.teamMemberId);
+    }
+  };
+  
+  const handleConfirmSelection = () => {
+    if (selectedSlot) {
+      onSelectSlot(
+        selectedSlot.date, 
+        selectedSlot.startTime, 
+        selectedSlot.endTime, 
+        selectedSlot.teamMemberId
+      );
+    }
   };
 
   return (
@@ -37,21 +55,31 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 animate-fade-in">
-          {availableSlots.map((slot, index) => (
-            <Button
-              key={`${slot.startTime}-${index}`}
-              variant="outline"
-              size="sm"
-              className={cn(
-                "text-center py-3 h-auto",
-                selectedSlot === slot ? "bg-primary text-primary-foreground" : ""
-              )}
-              onClick={() => handleSelectSlot(slot)}
-            >
-              {slot.startTime}
-            </Button>
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 animate-fade-in">
+            {availableSlots.map((slot, index) => (
+              <Button
+                key={`${slot.startTime}-${index}`}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "text-center py-3 h-auto",
+                  selectedSlot === slot ? "bg-primary text-primary-foreground" : ""
+                )}
+                onClick={() => handleSelectSlot(slot)}
+              >
+                {slot.startTime}
+              </Button>
+            ))}
+          </div>
+          
+          {showConfirmButton && selectedSlot && (
+            <div className="flex justify-end mt-4">
+              <Button onClick={handleConfirmSelection}>
+                Confirmar Horário
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
