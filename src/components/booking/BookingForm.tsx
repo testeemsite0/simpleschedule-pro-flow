@@ -1,20 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Professional, TeamMember, InsurancePlan, TeamMemberInsurancePlan, Service } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppointments } from '@/context/AppointmentContext';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { BookingStepIndicator } from './BookingStepIndicator';
+import { BookingAppointmentSummary } from './BookingAppointmentSummary';
+import { InsurancePlanStep } from './InsurancePlanStep';
+import { ClientInfoStep } from './ClientInfoStep';
 
 interface BookingFormProps {
   professional: Professional;
@@ -62,7 +57,11 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const { toast } = useToast();
   const { addAppointment } = useAppointments();
   
-  const formattedDate = format(selectedDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
+  // Booking steps
+  const steps = [
+    { id: 1, label: 'Convênio' },
+    { id: 2, label: 'Cliente' }
+  ];
   
   // Fetch team members, services and insurance plans
   useEffect(() => {
@@ -227,7 +226,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
           memberPlanId: memberPlan.id,
           memberLimit: memberPlan.limit_per_member,
           memberCurrentAppointments: memberPlan.current_appointments
-        } as InsurancePlan;  // Explicitamente definimos como InsurancePlan
+        } as InsurancePlan;
       })
       .filter((plan): plan is InsurancePlan => plan !== null);
     
@@ -440,11 +439,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
     }
   };
   
-  const getStepStatus = (step: number) => {
-    if (step < currentStep) return "completed";
-    if (step === currentStep) return "current";
-    return "upcoming";
-  };
+  // Importar do BookingForm.tsx
+  import { format } from 'date-fns';
   
   return (
     <Card>
@@ -454,156 +450,42 @@ const BookingForm: React.FC<BookingFormProps> = ({
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           {/* Steps indicator */}
-          <div className="flex justify-between mb-8">
-            <div className={`flex flex-col items-center ${getStepStatus(1) === "completed" ? "text-primary" : getStepStatus(1) === "current" ? "text-foreground" : "text-muted-foreground"}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
-                getStepStatus(1) === "completed" ? "bg-primary text-primary-foreground" : 
-                getStepStatus(1) === "current" ? "border-2 border-primary text-primary" : 
-                "border-2 border-muted text-muted-foreground"
-              }`}>
-                {getStepStatus(1) === "completed" ? <CheckCircle className="w-5 h-5" /> : "1"}
-              </div>
-              <span className="text-xs">Convênio</span>
-            </div>
-            <div className="flex-1 flex items-center mx-2">
-              <div className={`h-0.5 w-full ${currentStep > 1 ? "bg-primary" : "bg-muted"}`}></div>
-            </div>
-            <div className={`flex flex-col items-center ${getStepStatus(2) === "completed" ? "text-primary" : getStepStatus(2) === "current" ? "text-foreground" : "text-muted-foreground"}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
-                getStepStatus(2) === "completed" ? "bg-primary text-primary-foreground" : 
-                getStepStatus(2) === "current" ? "border-2 border-primary text-primary" : 
-                "border-2 border-muted text-muted-foreground"
-              }`}>
-                {getStepStatus(2) === "completed" ? <CheckCircle className="w-5 h-5" /> : "2"}
-              </div>
-              <span className="text-xs">Cliente</span>
-            </div>
-          </div>
+          <BookingStepIndicator 
+            currentStep={currentStep} 
+            steps={steps} 
+          />
 
-          <div className="bg-accent/30 p-3 rounded-md">
-            <p className="font-medium">{professional.name}</p>
-            <p className="text-sm">{formattedDate}</p>
-            <p className="text-sm">{startTime} - {endTime}</p>
-            {teamMemberId && (
-              <Badge className="mt-1">
-                Profissional: {teamMembers.find(m => m.id === teamMemberId)?.name || ''}
-              </Badge>
-            )}
-          </div>
+          <BookingAppointmentSummary 
+            professionalName={professional.name}
+            selectedDate={selectedDate}
+            startTime={startTime}
+            endTime={endTime}
+            selectedTeamMember={teamMembers.find(m => m.id === teamMemberId)}
+          />
           
           {/* Step 1: Select Insurance */}
           {currentStep === 1 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Tipo de atendimento</h2>
-              
-              <div className="space-y-2">
-                <Label htmlFor="insurancePlan">Convênio</Label>
-                <Select value={insurancePlanId} onValueChange={handleInsurancePlanChange}>
-                  <SelectTrigger id="insurancePlan">
-                    <SelectValue placeholder="Particular" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Particular</SelectItem>
-                    
-                    {availableInsurancePlans.map(plan => {
-                      const isAvailable = plan.availableForBooking !== false;
-                      const limitInfo = plan.memberLimit 
-                        ? `${plan.memberCurrentAppointments}/${plan.memberLimit}`
-                        : plan.limit_per_plan
-                          ? `${plan.current_appointments}/${plan.limit_per_plan}`
-                          : '';
-                      
-                      return (
-                        <SelectItem 
-                          key={plan.id} 
-                          value={plan.id}
-                          disabled={!isAvailable}
-                          className="flex items-center justify-between"
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span>{plan.name}</span>
-                            {limitInfo && (
-                              <Badge 
-                                variant={isAvailable ? "secondary" : "destructive"}
-                                className="ml-2"
-                              >
-                                {limitInfo}
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                    
-                    {availableInsurancePlans.length === 0 && teamMemberId && (
-                      <div className="p-2 text-center text-sm text-muted-foreground">
-                        Este profissional não tem convênios disponíveis
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
-                  
-                {insuranceLimitError && (
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Limite de convênio</AlertTitle>
-                    <AlertDescription>
-                      {insuranceLimitError}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            </div>
+            <InsurancePlanStep 
+              availableInsurancePlans={availableInsurancePlans}
+              insurancePlanId={insurancePlanId}
+              onInsurancePlanChange={handleInsurancePlanChange}
+              insuranceLimitError={insuranceLimitError}
+              teamMemberId={teamMemberId}
+            />
           )}
           
           {/* Step 2: Client information */}
           {currentStep === 2 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Informações do cliente</h2>
-              
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome completo <span className="text-destructive">*</span></Label>
-                <Input 
-                  id="name" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
-                <Input 
-                  id="email" 
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
-                <Input 
-                  id="phone" 
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notas ou motivo da consulta</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Forneça detalhes adicionais se necessário"
-                  rows={3}
-                />
-              </div>
-            </div>
+            <ClientInfoStep 
+              name={name}
+              setName={setName}
+              email={email}
+              setEmail={setEmail}
+              phone={phone}
+              setPhone={setPhone}
+              notes={notes}
+              setNotes={setNotes}
+            />
           )}
         </CardContent>
         

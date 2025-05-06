@@ -1,8 +1,20 @@
 
 import React from 'react';
-import { CalendarDays, Users, PieChart, Clock, Settings, CreditCard, Calendar, Briefcase, Shield, UserPlus } from 'lucide-react';
+import { 
+  CalendarDays, 
+  Users, 
+  PieChart, 
+  Clock, 
+  Settings, 
+  CreditCard, 
+  Calendar, 
+  Briefcase, 
+  Shield, 
+  UserPlus 
+} from 'lucide-react';
 import { SidebarLink } from '@/components/layout/Sidebar';
 import { Separator } from '@/components/ui/separator';
+import { navItems } from './DashboardNavigation';
 
 export function DashboardSidebarContent() {
   return (
