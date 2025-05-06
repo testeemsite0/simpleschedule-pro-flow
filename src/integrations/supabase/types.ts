@@ -98,6 +98,48 @@ export type Database = {
           },
         ]
       }
+      clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          last_appointment: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          professional_id: string
+          total_appointments: number | null
+          total_revenue: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_appointment?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          professional_id: string
+          total_appointments?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_appointment?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          professional_id?: string
+          total_appointments?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       insurance_plans: {
         Row: {
           created_at: string
@@ -124,6 +166,39 @@ export type Database = {
           limit_per_plan?: number | null
           name?: string
           professional_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_templates: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          professional_id: string
+          subject: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          professional_id: string
+          subject: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          professional_id?: string
+          subject?: string
+          type?: string
           updated_at?: string
         }
         Relationships: []
@@ -296,6 +371,51 @@ export type Database = {
           premium_price?: number
           stripe_price_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      system_preferences: {
+        Row: {
+          appointment_buffer_minutes: number | null
+          calendar_view: string | null
+          created_at: string
+          default_appointment_duration: number | null
+          id: string
+          notifications_enabled: boolean | null
+          professional_id: string
+          reminder_hours_before: number | null
+          updated_at: string
+          working_days: number[] | null
+          working_hours_end: string | null
+          working_hours_start: string | null
+        }
+        Insert: {
+          appointment_buffer_minutes?: number | null
+          calendar_view?: string | null
+          created_at?: string
+          default_appointment_duration?: number | null
+          id?: string
+          notifications_enabled?: boolean | null
+          professional_id: string
+          reminder_hours_before?: number | null
+          updated_at?: string
+          working_days?: number[] | null
+          working_hours_end?: string | null
+          working_hours_start?: string | null
+        }
+        Update: {
+          appointment_buffer_minutes?: number | null
+          calendar_view?: string | null
+          created_at?: string
+          default_appointment_duration?: number | null
+          id?: string
+          notifications_enabled?: boolean | null
+          professional_id?: string
+          reminder_hours_before?: number | null
+          updated_at?: string
+          working_days?: number[] | null
+          working_hours_end?: string | null
+          working_hours_start?: string | null
         }
         Relationships: []
       }

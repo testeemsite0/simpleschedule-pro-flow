@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -22,11 +21,11 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
   const { cancelAppointment } = useAppointments();
   const { toast } = useToast();
   
-  // Carregar dados de membros da equipe e planos de saúde uma vez
+  // Load team members and insurance plans data once
   useEffect(() => {
     const fetchAdditionalData = async () => {
       try {
-        // Coletar IDs únicos para buscar
+        // Collect unique IDs to fetch
         const teamMemberIds = Array.from(new Set(
           appointments
             .filter(app => app.team_member_id)
@@ -39,7 +38,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
             .map(app => app.insurance_plan_id as string)
         ));
         
-        // Buscar membros da equipe se houver IDs
+        // Fetch team members if there are IDs
         if (teamMemberIds.length > 0) {
           const { data: teamMembersData } = await supabase
             .from('team_members')
@@ -55,7 +54,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
           }
         }
         
-        // Buscar planos de saúde se houver IDs
+        // Fetch insurance plans if there are IDs
         if (insurancePlanIds.length > 0) {
           const { data: plansData } = await supabase
             .from('insurance_plans')
@@ -71,7 +70,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
           }
         }
       } catch (error) {
-        console.error('Erro ao buscar dados adicionais:', error);
+        console.error('Error fetching additional data:', error);
       }
     };
     
@@ -82,11 +81,11 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
     if (window.confirm('Deseja realmente cancelar este agendamento?')) {
       const success = await cancelAppointment(id);
       if (success) {
-        // Atualizar o estado local para refletir o cancelamento
+        // Update the local state to reflect the cancellation
         const updatedAppointments = appointments.filter(app => app.id !== id);
         setAppointments(updatedAppointments);
         
-        // Notificar o componente pai sobre o cancelamento
+        // Notify the parent component about the cancellation
         if (onAppointmentCanceled) {
           onAppointmentCanceled(id);
         }
@@ -105,7 +104,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
     }
   }, [cancelAppointment, toast, onAppointmentCanceled, appointments]);
   
-  // Atualizando os appointments quando as props mudarem
+  // Update appointments when props change
   useEffect(() => {
     setAppointments(initialAppointments);
   }, [initialAppointments]);
@@ -168,7 +167,7 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
                   <p className="text-sm text-gray-600">{appointment.client_phone}</p>
                 )}
                 
-                {/* Informações adicionais: membro da equipe e convênio */}
+                {/* Additional information: team member and insurance plan */}
                 <div className="mt-2 flex flex-wrap gap-2">
                   {appointment.team_member_id && teamMembers[appointment.team_member_id] && (
                     <Badge variant="secondary" className="text-xs font-normal">
