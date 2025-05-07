@@ -88,8 +88,8 @@ export const BookingFormContent: React.FC<BookingFormContentProps> = ({
             <ClientInfoStep 
               name={name}
               setName={setName}
-              email={setEmail}
               email={email}
+              setEmail={setEmail}
               phone={phone}
               setPhone={setPhone}
               notes={notes}
