@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import TimeSlotForm from '@/components/dashboard/TimeSlotForm';
-import TimeSlotsList from '@/components/dashboard/TimeSlotsList';
+import TimeSlotForm from '@/components/dashboard/timeslots/TimeSlotForm';
+import TimeSlotsList from '@/components/dashboard/timeslots/TimeSlotsList';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAppointments } from '@/context/AppointmentContext';
 import { TimeSlot, TeamMember } from '@/types';
@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const TeamMemberSchedules = () => {
   const { memberId } = useParams<{ memberId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { getTimeSlotsByTeamMember, deleteTimeSlot } = useAppointments();
   const { toast } = useToast();
@@ -165,6 +166,10 @@ const TeamMemberSchedules = () => {
     }
   };
   
+  const handleGoBack = () => {
+    navigate("/dashboard/schedules");
+  };
+  
   if (loading) {
     return (
       <DashboardLayout title="Carregando...">
@@ -183,6 +188,12 @@ const TeamMemberSchedules = () => {
             {error || 'Membro da equipe não encontrado'}
           </AlertDescription>
         </Alert>
+        <div className="mt-4">
+          <Button variant="outline" onClick={handleGoBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar para Horários
+          </Button>
+        </div>
       </DashboardLayout>
     );
   }
@@ -190,6 +201,13 @@ const TeamMemberSchedules = () => {
   return (
     <DashboardLayout title={`Horários de ${teamMember.name}`}>
       <div className="space-y-8">
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={handleGoBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+        </div>
+        
         <div className="flex justify-between items-center">
           <p className="text-muted-foreground">
             Configure os horários em que {teamMember.name} está disponível para atendimentos.
@@ -201,7 +219,7 @@ const TeamMemberSchedules = () => {
                 Adicionar horário
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>
                   {selectedTimeSlot ? 'Editar horário' : 'Adicionar novo horário'}
@@ -210,6 +228,7 @@ const TeamMemberSchedules = () => {
               <TimeSlotForm 
                 onSuccess={handleAddSuccess}
                 initialData={selectedTimeSlot ? {...selectedTimeSlot, team_member_id: teamMember.id} : undefined}
+                onCancel={() => setIsDialogOpen(false)}
               />
             </DialogContent>
           </Dialog>
@@ -220,7 +239,7 @@ const TeamMemberSchedules = () => {
         ) : (
           <TimeSlotsList 
             timeSlots={timeSlots}
-            teamMembers={[teamMember]} // Pass the current team member in an array
+            teamMembers={[teamMember]}
             onEdit={handleEditTimeSlot}
             onDelete={handleDeleteTimeSlot}
             onBatchDelete={handleBatchDelete}

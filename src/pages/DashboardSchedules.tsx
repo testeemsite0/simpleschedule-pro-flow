@@ -1,10 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import TimeSlotForm from '@/components/dashboard/TimeSlotForm';
-import TimeSlotsList from '@/components/dashboard/TimeSlotsList';
+import TimeSlotForm from '@/components/dashboard/timeslots/TimeSlotForm';
+import TimeSlotsList from '@/components/dashboard/timeslots/TimeSlotsList';
+import TeamSchedulesManager from '@/components/dashboard/TeamSchedulesManager';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAppointments } from '@/context/AppointmentContext';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +25,7 @@ const DashboardSchedules = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("general");
   
   useEffect(() => {
     const fetchTimeSlots = async () => {
@@ -156,42 +161,56 @@ const DashboardSchedules = () => {
   return (
     <DashboardLayout title="Horários">
       <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <p className="text-muted-foreground">
-            Configure seus horários de trabalho e disponibilidade para agendamentos.
-          </p>
+        <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="general">Horários Gerais</TabsTrigger>
+            <TabsTrigger value="team">Por Membro da Equipe</TabsTrigger>
+          </TabsList>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setSelectedTimeSlot(undefined)}>
-                Adicionar horário
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedTimeSlot ? 'Editar horário' : 'Adicionar novo horário'}
-                </DialogTitle>
-              </DialogHeader>
-              <TimeSlotForm 
-                onSuccess={handleAddSuccess}
-                initialData={selectedTimeSlot}
+          <TabsContent value="general" className="space-y-6 pt-4">
+            <div className="flex justify-between items-center">
+              <p className="text-muted-foreground">
+                Configure seus horários de trabalho e disponibilidade para agendamentos.
+              </p>
+              
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => setSelectedTimeSlot(undefined)}>
+                    Adicionar horário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {selectedTimeSlot ? 'Editar horário' : 'Adicionar novo horário'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <TimeSlotForm 
+                    onSuccess={handleAddSuccess}
+                    initialData={selectedTimeSlot}
+                    onCancel={() => setIsDialogOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            {isLoading ? (
+              <p>Carregando horários...</p>
+            ) : (
+              <TimeSlotsList 
+                timeSlots={timeSlots}
+                teamMembers={teamMembers}
+                onEdit={handleEditTimeSlot}
+                onDelete={handleDeleteTimeSlot}
+                onBatchDelete={handleBatchDelete}
               />
-            </DialogContent>
-          </Dialog>
-        </div>
-        
-        {isLoading ? (
-          <p>Carregando horários...</p>
-        ) : (
-          <TimeSlotsList 
-            timeSlots={timeSlots}
-            teamMembers={teamMembers}
-            onEdit={handleEditTimeSlot}
-            onDelete={handleDeleteTimeSlot}
-            onBatchDelete={handleBatchDelete}
-          />
-        )}
+            )}
+          </TabsContent>
+          
+          <TabsContent value="team" className="space-y-6 pt-4">
+            <TeamSchedulesManager />
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );

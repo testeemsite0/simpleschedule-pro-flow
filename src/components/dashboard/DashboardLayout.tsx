@@ -13,28 +13,28 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ title, childre
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Sidebar - Fixed position */}
-      <div className="w-full md:w-64 bg-background border-r md:fixed md:h-screen overflow-y-auto">
+      <aside className="w-full md:w-64 bg-background border-r md:fixed md:h-screen z-20">
         <div className="p-4 h-16 flex items-center border-b">
           <Link to="/dashboard" className="font-semibold text-xl text-primary">
             AgendaFácil
           </Link>
         </div>
         
-        <div className="p-4 overflow-y-auto max-h-[calc(100vh-4rem)]">
+        <div className="overflow-y-auto h-[calc(100vh-4rem)]">
           <DashboardNavigation />
         </div>
-      </div>
+      </aside>
       
       {/* Main content - with margin to account for fixed sidebar */}
-      <div className="flex-1 md:ml-64">
-        {/* Header */}
+      <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
+        {/* Header - Fixed at the top of the content area */}
         <DashboardHeader title={title} />
         
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(100vh-4rem)]">
+        {/* Content - Scrollable area */}
+        <div className="flex-1 p-6 overflow-y-auto">
           {children}
         </div>
-      </div>
+      </main>
     </div>
   );
 };
