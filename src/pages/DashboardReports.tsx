@@ -12,6 +12,20 @@ import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 import AppointmentReports from '@/components/dashboard/AppointmentReports';
 
+// Definir interfaces para os dados de relatórios
+interface MonthlyData {
+  count: number;
+  revenue: number;
+}
+
+interface AppointmentData {
+  status: string;
+  source: string;
+  date: string;
+  price: number | null;
+  service_id?: string;
+}
+
 const DashboardReports = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -60,7 +74,7 @@ const DashboardReports = () => {
       // Fetch appointment statistics
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
-        .select('status, source, date, price')
+        .select('status, source, date, price, service_id')
         .eq('professional_id', user.id);
       
       if (appointmentsError) throw appointmentsError;
@@ -80,12 +94,12 @@ const DashboardReports = () => {
         };
         
         // Monthly breakdown
-        const monthlyData = {};
+        const monthlyData: Record<string, MonthlyData> = {};
         
         // Revenue data
         let totalRevenue = 0;
         
-        appointmentsData.forEach(appointment => {
+        appointmentsData.forEach((appointment: AppointmentData) => {
           // Count by status
           if (appointment.status === 'scheduled') statusCounts.scheduled++;
           else if (appointment.status === 'completed') statusCounts.completed++;
@@ -200,7 +214,7 @@ const DashboardReports = () => {
       if (servicesError) throw servicesError;
       
       if (servicesData && appointmentsData) {
-        const serviceRevenue = {};
+        const serviceRevenue: Record<string, { name: string; revenue: number }> = {};
         
         // Initialize service revenue map
         servicesData.forEach(service => {
@@ -211,7 +225,7 @@ const DashboardReports = () => {
         });
         
         // Sum up revenue by service
-        appointmentsData.forEach(appointment => {
+        appointmentsData.forEach((appointment: AppointmentData) => {
           if (appointment.service_id && appointment.price && serviceRevenue[appointment.service_id]) {
             serviceRevenue[appointment.service_id].revenue += Number(appointment.price);
           }
