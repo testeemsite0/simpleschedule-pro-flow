@@ -14,7 +14,7 @@ export const useBookingCalendarSteps = () => {
     setSelectedService("");
     setSelectedInsurance("none");
     setSelectedDate(null);
-    setCurrentStep(2); // Now goes to Service selection instead of Insurance
+    setCurrentStep(2); // Now goes to Service selection
   };
   
   const handleServiceChange = (value: string) => {
@@ -46,8 +46,8 @@ export const useBookingCalendarSteps = () => {
     selectedInsurance,
     selectedDate,
     handleTeamMemberChange,
-    handleInsuranceChange,
     handleServiceChange,
+    handleInsuranceChange,
     handleDateSelect,
     goToPreviousStep
   };

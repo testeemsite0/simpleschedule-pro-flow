@@ -33,8 +33,8 @@ export const useBookingCalendar = ({
     selectedInsurance,
     selectedDate: stepSelectedDate,
     handleTeamMemberChange,
-    handleInsuranceChange,
     handleServiceChange,
+    handleInsuranceChange,
     handleDateSelect,
     goToPreviousStep
   } = useBookingCalendarSteps();
@@ -49,6 +49,7 @@ export const useBookingCalendar = ({
     timeSlots,
     appointments,
     selectedTeamMember,
+    selectedService, // Pass service to useBookingSlots
     isOverLimit,
     currentStep
   });
@@ -72,8 +73,8 @@ export const useBookingCalendar = ({
     error,
     filteredTimeSlots,
     handleTeamMemberChange,
-    handleInsuranceChange,
     handleServiceChange,
+    handleInsuranceChange,
     handleDateSelect,
     goToPreviousStep,
   };

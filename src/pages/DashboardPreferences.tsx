@@ -7,6 +7,9 @@ import { PreferencesForm, PreferencesFormData } from '@/components/preferences/P
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 // Define the correct type for calendar_view
 type CalendarView = 'day' | 'week' | 'month';
@@ -93,9 +96,6 @@ const DashboardPreferences = () => {
           .update({
             default_appointment_duration: data.default_appointment_duration,
             appointment_buffer_minutes: data.appointment_buffer_minutes,
-            working_hours_start: data.working_hours_start,
-            working_hours_end: data.working_hours_end,
-            working_days: data.working_days,
             notifications_enabled: data.notifications_enabled,
             reminder_hours_before: data.reminder_hours_before,
             calendar_view: data.calendar_view,
@@ -110,9 +110,6 @@ const DashboardPreferences = () => {
             professional_id: user.id,
             default_appointment_duration: data.default_appointment_duration,
             appointment_buffer_minutes: data.appointment_buffer_minutes,
-            working_hours_start: data.working_hours_start,
-            working_hours_end: data.working_hours_end,
-            working_days: data.working_days,
             notifications_enabled: data.notifications_enabled,
             reminder_hours_before: data.reminder_hours_before,
             calendar_view: data.calendar_view
@@ -154,6 +151,17 @@ const DashboardPreferences = () => {
           </TabsList>
           
           <TabsContent value="general">
+            <Alert className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                As configurações de horários de trabalho e dias disponíveis foram movidas para a página de{" "}
+                <Link to="/dashboard/schedules" className="font-medium underline">
+                  Horários
+                </Link>
+                .
+              </AlertDescription>
+            </Alert>
+            
             {loading ? (
               <Card>
                 <CardHeader>
@@ -168,6 +176,7 @@ const DashboardPreferences = () => {
                 initialData={preferences || undefined}
                 onSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
+                simplified={true} // Add a flag to indicate simplified form
               />
             )}
           </TabsContent>

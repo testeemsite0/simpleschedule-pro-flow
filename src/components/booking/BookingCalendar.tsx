@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { TimeSlot, Appointment, Professional } from '@/types';
@@ -42,8 +41,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     currentStep,
     error,
     handleTeamMemberChange,
-    handleInsuranceChange,
     handleServiceChange,
+    handleInsuranceChange,
     handleDateSelect,
     goToPreviousStep,
   } = useBookingCalendar({
@@ -52,7 +51,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     appointments
   });
   
-  // Define booking steps - Updated order as requested
+  // Define booking steps - Updated to include Service step
   const steps = [
     { id: 1, label: 'Profissional' },
     { id: 2, label: 'Serviço' },
@@ -84,6 +83,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       </Card>
     );
   }
+
+  // Filter services for selected team member
+  const teamMemberServices = services.filter(service => {
+    // If no team member is selected, show all services
+    if (!selectedTeamMember) return true;
+    // Otherwise, filter services that this team member can provide
+    // This is a placeholder, as we don't have actual service-to-team-member mapping
+    return true; // Replace with actual filtering logic
+  });
   
   return (
     <div className="space-y-6">
@@ -113,18 +121,18 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               />
             )}
             
-            {/* Step 2: Select Service (moved up in the flow) */}
+            {/* Step 2: Select Service */}
             {currentStep === 2 && selectedTeamMember && (
               <ServiceStep
-                services={services}
+                services={teamMemberServices}
                 selectedService={selectedService}
                 onServiceChange={handleServiceChange}
                 onBack={goToPreviousStep}
               />
             )}
             
-            {/* Step 3: Select Insurance Plan (moved down in the flow) */}
-            {currentStep === 3 && selectedTeamMember && (
+            {/* Step 3: Select Insurance Plan */}
+            {currentStep === 3 && selectedService && (
               <InsuranceStep
                 insurancePlans={insurancePlans}
                 selectedInsurance={selectedInsurance}
@@ -134,7 +142,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
             )}
             
             {/* Step 4: Select Date */}
-            {currentStep === 4 && selectedTeamMember && (
+            {currentStep === 4 && selectedInsurance && (
               <DateStep
                 availableDates={availableDates}
                 selectedDate={selectedDate}
@@ -159,8 +167,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
       {selectedTeamMember && (
         <BookingSelectionSummary
           selectedTeamMember={selectedTeamMember}
-          selectedInsurance={selectedInsurance}
           selectedService={selectedService}
+          selectedInsurance={selectedInsurance}
           selectedDate={selectedDate}
           teamMembers={teamMembers}
           services={services}

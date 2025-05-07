@@ -7,6 +7,7 @@ interface UseBookingSlotsProps {
   timeSlots: TimeSlot[];
   appointments: Appointment[];
   selectedTeamMember: string;
+  selectedService: string; // Add service parameter
   isOverLimit: boolean;
   currentStep: number;
 }
@@ -22,6 +23,7 @@ export const useBookingSlots = ({
   timeSlots,
   appointments,
   selectedTeamMember,
+  selectedService, // Include service in destructuring
   isOverLimit,
   currentStep
 }: UseBookingSlotsProps) => {
@@ -36,7 +38,7 @@ export const useBookingSlots = ({
   
   // Generate available dates
   useEffect(() => {
-    if (isOverLimit || !selectedTeamMember || currentStep < 4) {
+    if (isOverLimit || !selectedTeamMember || !selectedService || currentStep < 4) {
       setAvailableDates([]);
       return;
     }
@@ -73,13 +75,17 @@ export const useBookingSlots = ({
         
         // Check if there are actually available timeslots after considering booked appointments
         if (daySlots.length > 0) {
-          // Import function from timeUtils.ts to generate available slots
-          const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
-          const availableTimeSlots = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
-          
-          // Only add date if there are actual available timeslots after filtering
-          if (availableTimeSlots.length > 0) {
-            dates.push(date);
+          try {
+            // Import function from timeUtils.ts to generate available slots
+            const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
+            const availableTimeSlots = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
+            
+            // Only add date if there are actual available timeslots after filtering
+            if (availableTimeSlots && availableTimeSlots.length > 0) {
+              dates.push(date);
+            }
+          } catch (error) {
+            console.error("Error generating available time slots:", error);
           }
         }
       }
@@ -92,7 +98,7 @@ export const useBookingSlots = ({
     } else if (dates.length === 0) {
       setSelectedDate(null);
     }
-  }, [filteredTimeSlots, appointments, isOverLimit, selectedDate, selectedTeamMember, currentStep]);
+  }, [filteredTimeSlots, appointments, isOverLimit, selectedDate, selectedTeamMember, selectedService, currentStep]);
   
   // Generate available time slots
   useEffect(() => {
@@ -121,18 +127,27 @@ export const useBookingSlots = ({
       app.date === formattedSelectedDate && app.status === 'scheduled'
     );
     
-    // Import function from timeUtils.ts to generate available slots
-    const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
-    const slots = generateAvailableTimeSlots(daySlots, bookedAppointments, selectedDate);
-    
-    // Sort by start time
-    slots.sort((a: AvailableSlot, b: AvailableSlot) => {
-      const timeA = a.startTime.split(':').map(Number);
-      const timeB = b.startTime.split(':').map(Number);
-      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-    });
-    
-    setAvailableSlots(slots);
+    try {
+      // Import function from timeUtils.ts to generate available slots
+      const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
+      const slots = generateAvailableTimeSlots(daySlots, bookedAppointments, selectedDate);
+      
+      if (slots && slots.length > 0) {
+        // Sort by start time
+        slots.sort((a: AvailableSlot, b: AvailableSlot) => {
+          const timeA = a.startTime.split(':').map(Number);
+          const timeB = b.startTime.split(':').map(Number);
+          return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+        });
+        
+        setAvailableSlots(slots);
+      } else {
+        setAvailableSlots([]);
+      }
+    } catch (error) {
+      console.error("Error generating available time slots:", error);
+      setAvailableSlots([]);
+    }
   }, [selectedDate, filteredTimeSlots, appointments, isOverLimit, currentStep]);
 
   return {
