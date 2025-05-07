@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -237,7 +236,7 @@ const DashboardAppointments = () => {
                 Criar Agendamento Manual
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-full max-w-lg sm:max-w-xl">
               <DialogHeader>
                 <DialogTitle>
                   Criar Novo Agendamento

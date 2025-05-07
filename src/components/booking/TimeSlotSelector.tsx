@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { isAfter, isSameDay } from 'date-fns';
+import { isAfter, isSameDay, parse, format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AvailableSlot {
@@ -25,31 +25,35 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
 }) => {
   const [selectedSlot, setSelectedSlot] = React.useState<AvailableSlot | null>(null);
 
-  // Filtra slots que já passaram
+  // Filter slots that have already passed
   const filteredSlots = React.useMemo(() => {
     const now = new Date();
     
     return availableSlots.filter(slot => {
-      // Verifica se a data do slot é hoje ou futura
-      const isToday = isSameDay(slot.date, now);
-      const isFutureDay = isAfter(slot.date, now) && !isToday;
+      // Check if the slot date is today or future
+      const slotDate = new Date(slot.date);
+      const isToday = isSameDay(slotDate, now);
+      const isFutureDay = isAfter(slotDate, now);
       
-      // Se for futuro, sempre é válido
-      if (isFutureDay) {
+      // If it's a future day, it's always valid
+      if (isFutureDay && !isToday) {
         return true;
       }
       
-      // Se for hoje, precisa verificar se o horário já passou
+      // If it's today, check if the time has already passed
       if (isToday) {
+        // Parse the time string to get hours and minutes
         const [hours, minutes] = slot.startTime.split(':').map(Number);
-        const slotTime = new Date();
-        slotTime.setHours(hours, minutes, 0, 0);
         
-        // Retorna true apenas se o horário ainda não passou
-        return isAfter(slotTime, now);
+        // Create a new date object with today's date but with the slot's time
+        const slotDateTime = new Date();
+        slotDateTime.setHours(hours, minutes, 0, 0);
+        
+        // Return true only if the time hasn't passed yet
+        return isAfter(slotDateTime, now);
       }
       
-      // Para datas passadas, retorna false
+      // For past dates, return false
       return false;
     });
   }, [availableSlots]);
@@ -57,8 +61,8 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
   const handleSelectSlot = (slot: AvailableSlot) => {
     setSelectedSlot(slot);
     
-    // Apenas chama a função onSelectSlot do componente pai se showConfirmButton for false
-    // Isso evita avançar imediatamente para o próximo passo
+    // Only call the parent component's onSelectSlot function if showConfirmButton is false
+    // This prevents immediately advancing to the next step
     if (!showConfirmButton) {
       onSelectSlot(slot.date, slot.startTime, slot.endTime, slot.teamMemberId);
     }
@@ -80,15 +84,15 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
       <h2 className="text-lg font-semibold">Horários disponíveis</h2>
       
       {filteredSlots.length === 0 ? (
-        <div className="text-center py-8 animate-fade-in">
+        <div className="text-center py-8">
           <p className="text-gray-600">
             Não há horários disponíveis para esta data.
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          <ScrollArea className="h-[280px]">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 animate-fade-in p-1">
+          <div className="h-[280px] overflow-auto border rounded-md p-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 p-1">
               {filteredSlots.map((slot, index) => (
                 <Button
                   key={`${slot.startTime}-${index}`}
@@ -104,7 +108,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
                 </Button>
               ))}
             </div>
-          </ScrollArea>
+          </div>
           
           {showConfirmButton && selectedSlot && (
             <div className="flex justify-end mt-4">

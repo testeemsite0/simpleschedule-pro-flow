@@ -21,13 +21,17 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     onSelectDate(safeDateCopy);
   };
 
+  if (availableDates.length === 0) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-muted-foreground">Nenhuma data disponível.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">
-        Escolha uma data
-      </h2>
-      
-      <div className="grid grid-cols-3 gap-2 mb-2">
+      <div className="grid grid-cols-3 gap-2 mb-2 max-h-[300px] overflow-y-auto p-2 border rounded-md">
         {availableDates.map((date) => {
           // Criar uma cópia segura da data para comparação
           const dateObj = new Date(date);
@@ -37,7 +41,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
             <Button
               key={dateObj.toISOString()}
               variant={isSelected ? "default" : "outline"}
-              className="flex-col h-auto py-2 text-sm"
+              className="flex-col h-auto py-3 text-sm"
               onClick={() => handleDateSelect(dateObj)}
             >
               <span className="text-xs font-normal">
