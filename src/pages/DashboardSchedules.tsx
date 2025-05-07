@@ -106,6 +106,53 @@ const DashboardSchedules = () => {
     }
   };
   
+  const handleBatchDelete = async (timeSlotIds: string[]) => {
+    if (timeSlotIds.length === 0) return;
+    
+    // Ask for confirmation
+    if (confirm(`Tem certeza que deseja excluir ${timeSlotIds.length} horário(s)?`)) {
+      try {
+        let success = true;
+        let failedCount = 0;
+        
+        // Delete each time slot
+        for (const id of timeSlotIds) {
+          const result = await deleteTimeSlot(id);
+          if (!result) {
+            success = false;
+            failedCount++;
+          }
+        }
+        
+        // Show appropriate toast message
+        if (success) {
+          toast({
+            title: 'Sucesso',
+            description: `${timeSlotIds.length} horário(s) excluído(s) com sucesso`,
+          });
+        } else {
+          toast({
+            title: 'Atenção',
+            description: `${timeSlotIds.length - failedCount} horário(s) excluído(s), mas ${failedCount} falhou(aram)`,
+            variant: 'default',
+          });
+        }
+        
+        // Refresh time slots
+        if (user) {
+          const data = await getTimeSlotsByProfessional(user.id);
+          setTimeSlots(data);
+        }
+      } catch (error) {
+        toast({
+          title: 'Erro',
+          description: 'Ocorreu um erro ao excluir os horários',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+  
   return (
     <DashboardLayout title="Horários">
       <div className="space-y-8">
@@ -142,6 +189,7 @@ const DashboardSchedules = () => {
             teamMembers={teamMembers}
             onEdit={handleEditTimeSlot}
             onDelete={handleDeleteTimeSlot}
+            onBatchDelete={handleBatchDelete}
           />
         )}
       </div>

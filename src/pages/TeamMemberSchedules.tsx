@@ -118,6 +118,53 @@ const TeamMemberSchedules = () => {
     }
   };
   
+  const handleBatchDelete = async (timeSlotIds: string[]) => {
+    if (timeSlotIds.length === 0) return;
+    
+    // Ask for confirmation
+    if (confirm(`Tem certeza que deseja excluir ${timeSlotIds.length} horário(s)?`)) {
+      try {
+        let success = true;
+        let failedCount = 0;
+        
+        // Delete each time slot
+        for (const id of timeSlotIds) {
+          const result = await deleteTimeSlot(id);
+          if (!result) {
+            success = false;
+            failedCount++;
+          }
+        }
+        
+        // Show appropriate toast message
+        if (success) {
+          toast({
+            title: 'Sucesso',
+            description: `${timeSlotIds.length} horário(s) excluído(s) com sucesso`,
+          });
+        } else {
+          toast({
+            title: 'Atenção',
+            description: `${timeSlotIds.length - failedCount} horário(s) excluído(s), mas ${failedCount} falhou(aram)`,
+            variant: 'default',
+          });
+        }
+        
+        // Refresh time slots
+        if (teamMember) {
+          const data = await getTimeSlotsByTeamMember(teamMember.id);
+          setTimeSlots(data);
+        }
+      } catch (error) {
+        toast({
+          title: 'Erro',
+          description: 'Ocorreu um erro ao excluir os horários',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+  
   if (loading) {
     return (
       <DashboardLayout title="Carregando...">
@@ -175,7 +222,8 @@ const TeamMemberSchedules = () => {
             timeSlots={timeSlots}
             teamMembers={[teamMember]} // Pass the current team member in an array
             onEdit={handleEditTimeSlot}
-            onDelete={handleDeleteTimeSlot} // Add the delete handler
+            onDelete={handleDeleteTimeSlot}
+            onBatchDelete={handleBatchDelete}
           />
         )}
       </div>
