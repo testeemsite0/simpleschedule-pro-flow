@@ -11,7 +11,7 @@ interface TimeSlotFormProps {
 
 const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData, onCancel }) => {
   return (
-    <div className="max-h-[60vh] overflow-y-auto p-4">
+    <div className="max-h-[60vh] overflow-y-auto">
       <TimeSlotFormCore
         onSuccess={onSuccess}
         initialData={initialData}
