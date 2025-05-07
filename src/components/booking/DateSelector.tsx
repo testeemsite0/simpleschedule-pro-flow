@@ -31,7 +31,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
 
   return (
     <div>
-      <div className="grid grid-cols-3 gap-2 mb-2 max-h-[300px] overflow-y-auto p-2 border rounded-md">
+      <div className="grid grid-cols-3 gap-2 mb-2 h-[300px] overflow-auto p-2 border rounded-md">
         {availableDates.map((date) => {
           // Criar uma cópia segura da data para comparação
           const dateObj = new Date(date);

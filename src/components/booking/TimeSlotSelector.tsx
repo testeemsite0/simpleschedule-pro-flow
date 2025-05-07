@@ -3,7 +3,6 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isAfter, isSameDay, parse, format } from 'date-fns';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AvailableSlot {
   date: Date;
@@ -33,10 +32,10 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
       // Check if the slot date is today or future
       const slotDate = new Date(slot.date);
       const isToday = isSameDay(slotDate, now);
-      const isFutureDay = isAfter(slotDate, now);
+      const isFutureDay = isAfter(slotDate, now) && !isToday;
       
       // If it's a future day, it's always valid
-      if (isFutureDay && !isToday) {
+      if (isFutureDay) {
         return true;
       }
       

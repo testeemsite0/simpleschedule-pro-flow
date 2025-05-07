@@ -364,222 +364,215 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
   };
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {isEditing ? 'Editar Horário' : 'Adicionar Novos Horários'}
-        </CardTitle>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          {!isEditing && (
-            <div className="flex items-center space-x-2 pb-4 border-b">
-              <Switch
-                id="batchMode"
-                checked={batchMode}
-                onCheckedChange={setBatchMode}
-              />
-              <Label htmlFor="batchMode">Adicionar múltiplos horários</Label>
-            </div>
-          )}
+    <form onSubmit={handleSubmit} className="max-h-full">
+      <div className="max-h-[60vh] overflow-y-auto p-4 space-y-4">
+        {!isEditing && (
+          <div className="flex items-center space-x-2 pb-4 border-b">
+            <Switch
+              id="batchMode"
+              checked={batchMode}
+              onCheckedChange={setBatchMode}
+            />
+            <Label htmlFor="batchMode">Adicionar múltiplos horários</Label>
+          </div>
+        )}
 
-          {/* Team Member Selection */}
-          {teamMembers.length > 0 && (
-            <div className="space-y-2">
-              <Label>
-                Profissionais <span className="text-destructive">*</span>
-              </Label>
-              
-              {batchMode ? (
-                <div className="space-y-2">
-                  <ScrollArea className="h-[150px] border rounded-md p-4">
-                    <div className="space-y-2">
-                      {teamMembers.map((member) => (
-                        <div key={member.id} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`member-${member.id}`}
-                            checked={selectedTeamMembers[member.id] || false}
-                            onCheckedChange={() => handleTeamMemberToggle(member.id)}
-                          />
-                          <Label 
-                            htmlFor={`member-${member.id}`}
-                            className="text-sm cursor-pointer"
-                          >
-                            {member.name} {member.position ? `- ${member.position}` : ''}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                  <p className="text-xs text-muted-foreground">
-                    Selecione os profissionais que irão atender nestes horários.
-                  </p>
-                </div>
-              ) : (
-                <Select
-                  value={selectedTeamMember}
-                  onValueChange={setSelectedTeamMember}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um profissional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teamMembers.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name} {member.position ? `- ${member.position}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
-
-          {/* Day Selection */}
+        {/* Team Member Selection */}
+        {teamMembers.length > 0 && (
           <div className="space-y-2">
             <Label>
-              Dia(s) da semana <span className="text-destructive">*</span>
+              Profissionais <span className="text-destructive">*</span>
             </Label>
             
             {batchMode ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {dayOptions.map((day) => (
-                  <div key={day.value} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`day-${day.value}`}
-                      checked={selectedDays[day.value] || false}
-                      onCheckedChange={() => handleDayToggle(day.value)}
-                    />
-                    <Label 
-                      htmlFor={`day-${day.value}`}
-                      className="text-sm cursor-pointer"
-                    >
-                      {day.label}
-                    </Label>
+              <div className="space-y-2">
+                <div className="h-[150px] overflow-y-auto border rounded-md p-4">
+                  <div className="space-y-2">
+                    {teamMembers.map((member) => (
+                      <div key={member.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`member-${member.id}`}
+                          checked={selectedTeamMembers[member.id] || false}
+                          onCheckedChange={() => handleTeamMemberToggle(member.id)}
+                        />
+                        <Label 
+                          htmlFor={`member-${member.id}`}
+                          className="text-sm cursor-pointer"
+                        >
+                          {member.name} {member.position ? `- ${member.position}` : ''}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Selecione os profissionais que irão atender nestes horários.
+                </p>
               </div>
             ) : (
               <Select
-                value={dayOfWeek}
-                onValueChange={setDayOfWeek}
+                value={selectedTeamMember}
+                onValueChange={setSelectedTeamMember}
+                required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o dia" />
+                  <SelectValue placeholder="Selecione um profissional" />
                 </SelectTrigger>
                 <SelectContent>
-                  {dayOptions.map((day) => (
-                    <SelectItem key={day.value} value={day.value}>
-                      {day.label}
+                  {teamMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name} {member.position ? `- ${member.position}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
           </div>
+        )}
+
+        {/* Day Selection */}
+        <div className="space-y-2">
+          <Label>
+            Dia(s) da semana <span className="text-destructive">*</span>
+          </Label>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startTime">
-                Horário inicial <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="startTime"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
+          {batchMode ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {dayOptions.map((day) => (
+                <div key={day.value} className="flex items-center space-x-2">
+                  <Checkbox 
+                    id={`day-${day.value}`}
+                    checked={selectedDays[day.value] || false}
+                    onCheckedChange={() => handleDayToggle(day.value)}
+                  />
+                  <Label 
+                    htmlFor={`day-${day.value}`}
+                    className="text-sm cursor-pointer"
+                  >
+                    {day.label}
+                  </Label>
+                </div>
+              ))}
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="endTime">
-                Horário final <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="appointmentDuration">Duração da consulta</Label>
+          ) : (
             <Select
-              value={appointmentDuration}
-              onValueChange={setAppointmentDuration}
+              value={dayOfWeek}
+              onValueChange={setDayOfWeek}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Duração" />
+                <SelectValue placeholder="Selecione o dia" />
               </SelectTrigger>
               <SelectContent>
-                {durationOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                {dayOptions.map((day) => (
+                  <SelectItem key={day.value} value={day.value}>
+                    {day.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="startTime">
+              Horário inicial <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="startTime"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+            />
           </div>
           
-          <div className="space-y-2 pt-4 border-t">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="hasLunchBreak"
-                checked={hasLunchBreak}
-                onCheckedChange={setHasLunchBreak}
-              />
-              <Label htmlFor="hasLunchBreak">Incluir intervalo de almoço</Label>
-            </div>
-            
-            {hasLunchBreak && (
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="lunchBreakStart">Início do almoço</Label>
-                  <Input
-                    id="lunchBreakStart"
-                    type="time"
-                    value={lunchBreakStart}
-                    onChange={(e) => setLunchBreakStart(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="lunchBreakEnd">Fim do almoço</Label>
-                  <Input
-                    id="lunchBreakEnd"
-                    type="time"
-                    value={lunchBreakEnd}
-                    onChange={(e) => setLunchBreakEnd(e.target.value)}
-                  />
-                </div>
-              </div>
-            )}
+          <div className="space-y-2">
+            <Label htmlFor="endTime">
+              Horário final <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="endTime"
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+            />
           </div>
-          
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="appointmentDuration">Duração da consulta</Label>
+          <Select
+            value={appointmentDuration}
+            onValueChange={setAppointmentDuration}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Duração" />
+            </SelectTrigger>
+            <SelectContent>
+              {durationOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2 pt-4 border-t">
           <div className="flex items-center space-x-2">
             <Switch
-              id="available"
-              checked={available}
-              onCheckedChange={setAvailable}
+              id="hasLunchBreak"
+              checked={hasLunchBreak}
+              onCheckedChange={setHasLunchBreak}
             />
-            <Label htmlFor="available">Disponível para agendamento</Label>
+            <Label htmlFor="hasLunchBreak">Incluir intervalo de almoço</Label>
           </div>
-        </CardContent>
+          
+          {hasLunchBreak && (
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="lunchBreakStart">Início do almoço</Label>
+                <Input
+                  id="lunchBreakStart"
+                  type="time"
+                  value={lunchBreakStart}
+                  onChange={(e) => setLunchBreakStart(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lunchBreakEnd">Fim do almoço</Label>
+                <Input
+                  id="lunchBreakEnd"
+                  type="time"
+                  value={lunchBreakEnd}
+                  onChange={(e) => setLunchBreakEnd(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
         
-        <CardFooter>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Salvando...' : isEditing 
-              ? 'Salvar alterações' 
-              : batchMode 
-                ? 'Adicionar horários em lote' 
-                : 'Adicionar horário'}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="available"
+            checked={available}
+            onCheckedChange={setAvailable}
+          />
+          <Label htmlFor="available">Disponível para agendamento</Label>
+        </div>
+      </div>
+      
+      <div className="p-4 border-t mt-4 bg-background sticky bottom-0">
+        <Button type="submit" disabled={isLoading} className="w-full">
+          {isLoading ? 'Salvando...' : isEditing 
+            ? 'Salvar alterações' 
+            : batchMode 
+              ? 'Adicionar horários em lote' 
+              : 'Adicionar horário'}
+        </Button>
+      </div>
+    </form>
   );
 };
 
