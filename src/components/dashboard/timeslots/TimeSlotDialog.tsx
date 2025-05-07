@@ -9,9 +9,10 @@ interface TimeSlotDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   selectedTimeSlot?: TimeSlot;
-  onSuccess: () => void;
+  onSuccess: (data?: any) => void;
   buttonText?: string;
   triggerComponent?: React.ReactNode;
+  isBatchProcessing?: boolean;
 }
 
 const TimeSlotDialog: React.FC<TimeSlotDialogProps> = ({
@@ -20,7 +21,8 @@ const TimeSlotDialog: React.FC<TimeSlotDialogProps> = ({
   selectedTimeSlot,
   onSuccess,
   buttonText = 'Adicionar horário',
-  triggerComponent
+  triggerComponent,
+  isBatchProcessing
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

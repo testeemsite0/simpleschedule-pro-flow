@@ -39,7 +39,7 @@ const DashboardSchedules = () => {
       });
       
       try {
-        await handleAddSuccess(data);
+        await handleAddSuccess();
         toast({
           title: 'Sucesso',
           description: `${data.batchCount || 'Múltiplos'} horários foram gerados com sucesso.`,
@@ -55,7 +55,7 @@ const DashboardSchedules = () => {
       }
     } else {
       // Regular non-batch add
-      handleAddSuccess(data);
+      handleAddSuccess();
     }
   };
   
