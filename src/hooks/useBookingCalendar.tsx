@@ -30,11 +30,17 @@ export const useBookingCalendar = ({ professionalId, timeSlots, appointments }: 
   const [isOverLimit, setIsOverLimit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch team members, services, and insurance plans
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
+        console.log("Fetching team members for professional:", professionalId);
+        
         // Fetch team members
         const { data: teamMembersData, error: teamMembersError } = await supabase
           .from('team_members')
@@ -42,7 +48,13 @@ export const useBookingCalendar = ({ professionalId, timeSlots, appointments }: 
           .eq('professional_id', professionalId)
           .eq('active', true);
           
-        if (teamMembersError) throw teamMembersError;
+        if (teamMembersError) {
+          console.error("Error fetching team members:", teamMembersError);
+          setError("Não foi possível carregar os profissionais");
+          throw teamMembersError;
+        }
+        
+        console.log("Team members loaded:", teamMembersData?.length || 0);
         setTeamMembers(teamMembersData || []);
         
         // Fetch services
@@ -52,7 +64,13 @@ export const useBookingCalendar = ({ professionalId, timeSlots, appointments }: 
           .eq('professional_id', professionalId)
           .eq('active', true);
           
-        if (servicesError) throw servicesError;
+        if (servicesError) {
+          console.error("Error fetching services:", servicesError);
+          setError("Não foi possível carregar os serviços");
+          throw servicesError;
+        }
+        
+        console.log("Services loaded:", servicesData?.length || 0);
         setServices(servicesData || []);
         
         // Fetch insurance plans
@@ -61,21 +79,32 @@ export const useBookingCalendar = ({ professionalId, timeSlots, appointments }: 
           .select('*')
           .eq('professional_id', professionalId);
           
-        if (insurancePlansError) throw insurancePlansError;
+        if (insurancePlansError) {
+          console.error("Error fetching insurance plans:", insurancePlansError);
+          setError("Não foi possível carregar os convênios");
+          throw insurancePlansError;
+        }
+        
+        console.log("Insurance plans loaded:", insurancePlansData?.length || 0);
         setInsurancePlans(insurancePlansData || []);
         
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
     
-    fetchData();
+    if (professionalId) {
+      fetchData();
+    }
   }, [professionalId]);
   
   // Check appointment limits
   useEffect(() => {
     const checkAppointmentLimit = async () => {
-      setLoading(true);
+      if (!professionalId) return;
+      
       try {
         // Count current month's scheduled appointments
         const today = new Date();
@@ -96,8 +125,6 @@ export const useBookingCalendar = ({ professionalId, timeSlots, appointments }: 
         setIsOverLimit(count !== null && count >= 5);
       } catch (error) {
         console.error("Error checking appointment limit:", error);
-      } finally {
-        setLoading(false);
       }
     };
     
@@ -186,6 +213,7 @@ export const useBookingCalendar = ({ professionalId, timeSlots, appointments }: 
   
   // Step navigation handlers
   const handleTeamMemberChange = (value: string) => {
+    console.log("Team member selected:", value);
     setSelectedTeamMember(value);
     setSelectedService("");
     setSelectedInsurance("none");
@@ -194,22 +222,25 @@ export const useBookingCalendar = ({ professionalId, timeSlots, appointments }: 
   };
   
   const handleInsuranceChange = (value: string) => {
+    console.log("Insurance selected:", value);
     setSelectedInsurance(value);
     setCurrentStep(3);
   };
   
   const handleServiceChange = (value: string) => {
+    console.log("Service selected:", value);
     setSelectedService(value);
     setCurrentStep(4);
   };
   
   const handleDateSelect = (date: Date) => {
+    console.log("Date selected:", date);
     setSelectedDate(date);
     setCurrentStep(5);
   };
   
   const goToPreviousStep = () => {
-    setCurrentStep(prev => prev - 1);
+    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
   return {
@@ -225,6 +256,7 @@ export const useBookingCalendar = ({ professionalId, timeSlots, appointments }: 
     isOverLimit,
     loading,
     currentStep,
+    error,
     filteredTimeSlots,
     handleTeamMemberChange,
     handleInsuranceChange,

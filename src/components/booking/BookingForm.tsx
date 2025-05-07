@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Professional, TeamMember, InsurancePlan, TeamMemberInsurancePlan, Service } from '@/types';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAppointments } from '@/context/AppointmentContext';
+import { Professional, TeamMember } from '@/types';
 import { BookingStepIndicator } from './BookingStepIndicator';
 import { BookingAppointmentSummary } from './BookingAppointmentSummary';
 import { InsurancePlanStep } from './InsurancePlanStep';
 import { ClientInfoStep } from './ClientInfoStep';
-import { format } from 'date-fns';
+import { useBookingForm } from '@/hooks/useBookingForm';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface BookingFormProps {
   professional: Professional;
@@ -18,7 +17,7 @@ interface BookingFormProps {
   endTime: string;
   onSuccess: (name: string, appointmentId: string) => void;
   onCancel: () => void;
-  selectedTeamMember?: string; // Pre-selected team member
+  selectedTeamMember?: string;
 }
 
 const BookingForm: React.FC<BookingFormProps> = ({
@@ -30,32 +29,34 @@ const BookingForm: React.FC<BookingFormProps> = ({
   onCancel,
   selectedTeamMember
 }) => {
-  // Form fields
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notes, setNotes] = useState('');
-  
-  // Selection fields
-  const [teamMemberId] = useState<string | undefined>(selectedTeamMember);
-  const [serviceId, setServiceId] = useState<string | undefined>(undefined);
-  const [insurancePlanId, setInsurancePlanId] = useState<string | undefined>(undefined);
-  
-  // Data and state
-  const [isLoading, setIsLoading] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [memberServices, setMemberServices] = useState<{[key: string]: Service[]}>({});
-  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
-  const [teamMemberInsurancePlans, setTeamMemberInsurancePlans] = useState<TeamMemberInsurancePlan[]>([]);
-  const [selectedInsurancePlan, setSelectedInsurancePlan] = useState<InsurancePlan | null>(null);
-  const [insuranceLimitError, setInsuranceLimitError] = useState<string | null>(null);
-  const [availableInsurancePlans, setAvailableInsurancePlans] = useState<InsurancePlan[]>([]);
-  const [availableServices, setAvailableServices] = useState<Service[]>([]);
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  
-  const { toast } = useToast();
-  const { addAppointment } = useAppointments();
+  const {
+    name,
+    setName,
+    email,
+    setEmail,
+    phone,
+    setPhone,
+    notes,
+    setNotes,
+    teamMemberId,
+    insurancePlanId,
+    isLoading,
+    teamMembers,
+    availableInsurancePlans,
+    insuranceLimitError,
+    currentStep,
+    setCurrentStep,
+    handleInsurancePlanChange,
+    handleSubmit
+  } = useBookingForm({
+    professional,
+    selectedDate,
+    startTime,
+    endTime,
+    selectedTeamMember,
+    onSuccess,
+    onCancel
+  });
   
   // Booking steps
   const steps = [
@@ -63,381 +64,7 @@ const BookingForm: React.FC<BookingFormProps> = ({
     { id: 2, label: 'Cliente' }
   ];
   
-  // Fetch team members, services and insurance plans
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch team members
-        const { data: teamMembersData, error: teamMembersError } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('professional_id', professional.id)
-          .eq('active', true);
-          
-        if (teamMembersError) throw teamMembersError;
-        setTeamMembers(teamMembersData || []);
-        
-        // Fetch services
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .eq('professional_id', professional.id)
-          .eq('active', true);
-          
-        if (servicesError) throw servicesError;
-        setServices(servicesData || []);
-        
-        // Fetch team member services
-        if (teamMembersData && teamMembersData.length > 0) {
-          const teamMemberIds = teamMembersData.map(member => member.id);
-          
-          const { data: memberServicesData, error: memberServicesError } = await supabase
-            .from('team_member_services')
-            .select('*')
-            .in('team_member_id', teamMemberIds);
-            
-          if (memberServicesError) throw memberServicesError;
-          
-          // Group services by team member
-          const servicesByMember: {[key: string]: Service[]} = {};
-          
-          if (memberServicesData) {
-            for (const memberService of memberServicesData) {
-              const service = servicesData?.find(s => s.id === memberService.service_id);
-              if (service) {
-                if (!servicesByMember[memberService.team_member_id]) {
-                  servicesByMember[memberService.team_member_id] = [];
-                }
-                servicesByMember[memberService.team_member_id].push(service);
-              }
-            }
-          }
-          
-          setMemberServices(servicesByMember);
-        }
-        
-        // Fetch insurance plans
-        const { data: insurancePlansData, error: insurancePlansError } = await supabase
-          .from('insurance_plans')
-          .select('*')
-          .eq('professional_id', professional.id);
-          
-        if (insurancePlansError) throw insurancePlansError;
-        setInsurancePlans(insurancePlansData || []);
-        
-        // Fetch team member insurance plans
-        if (teamMembersData && teamMembersData.length > 0) {
-          const teamMemberIds = teamMembersData.map(member => member.id);
-          
-          // Get team member insurance plans
-          const { data: memberInsurancePlans, error: planError } = await supabase
-            .from('team_member_insurance_plans')
-            .select(`
-              id,
-              team_member_id,
-              insurance_plan_id,
-              limit_per_member,
-              current_appointments,
-              created_at
-            `)
-            .in('team_member_id', teamMemberIds);
-            
-          if (planError) throw planError;
-          
-          // Get the actual insurance plans
-          if (memberInsurancePlans && memberInsurancePlans.length > 0) {
-            const insurancePlanIds = Array.from(new Set(
-              memberInsurancePlans.map(plan => plan.insurance_plan_id)
-            ));
-            
-            if (insurancePlanIds.length > 0) {
-              const { data: plans, error: planDataError } = await supabase
-                .from('insurance_plans')
-                .select('*')
-                .in('id', insurancePlanIds);
-                
-              if (planDataError) throw planDataError;
-              
-              // Merge the data
-              const enrichedPlans = memberInsurancePlans.map(memberPlan => {
-                const planDetails = plans?.find(plan => plan.id === memberPlan.insurance_plan_id);
-                return {
-                  ...memberPlan,
-                  insurancePlan: planDetails
-                };
-              });
-              
-              setTeamMemberInsurancePlans(enrichedPlans as TeamMemberInsurancePlan[]);
-            }
-          }
-        }
-        
-        // If team member is pre-selected, load their available insurance plans
-        if (selectedTeamMember) {
-          updateAvailableInsurancePlans(selectedTeamMember);
-          
-          // Update available services for this team member
-          const memberServicesList = memberServices[selectedTeamMember] || [];
-          setAvailableServices(memberServicesList.length > 0 ? memberServicesList : servicesData || []);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error);
-        toast({
-          title: 'Erro',
-          description: 'Não foi possível carregar os dados necessários',
-          variant: 'destructive',
-        });
-      }
-    };
-    
-    fetchData();
-  }, [professional.id, toast, selectedTeamMember]);
-  
-  const updateAvailableInsurancePlans = (memberId: string) => {
-    // Encontra todos os convênios disponíveis para este profissional
-    const memberPlans = teamMemberInsurancePlans.filter(
-      plan => plan.team_member_id === memberId
-    );
-    
-    if (memberPlans.length === 0) {
-      setAvailableInsurancePlans([]);
-      return;
-    }
-    
-    // Prepara lista de convênios disponíveis com informações de disponibilidade
-    const availablePlans = memberPlans
-      .map(memberPlan => {
-        const planDetails = insurancePlans.find(p => p.id === memberPlan.insurance_plan_id);
-        
-        if (!planDetails) return null;
-        
-        // Verifica se há vagas disponíveis para este profissional e convênio
-        const isAvailable = memberPlan.limit_per_member === null || 
-                          memberPlan.current_appointments < memberPlan.limit_per_member;
-                    
-        // Verifica se o limite global do plano foi atingido
-        const isGlobalLimitReached = planDetails.limit_per_plan !== null && 
-                                  planDetails.current_appointments >= planDetails.limit_per_plan;
-        
-        // Retorna uma versão estendida do plano com informações adicionais
-        return {
-          ...planDetails,
-          availableForBooking: isAvailable && !isGlobalLimitReached,
-          memberPlanId: memberPlan.id,
-          memberLimit: memberPlan.limit_per_member,
-          memberCurrentAppointments: memberPlan.current_appointments
-        } as InsurancePlan;
-      })
-      .filter((plan): plan is InsurancePlan => plan !== null);
-    
-    setAvailableInsurancePlans(availablePlans);
-  };
-  
-  const handleInsurancePlanChange = (value: string) => {
-    setInsurancePlanId(value === "none" ? undefined : value);
-    setInsuranceLimitError(null);
-    setCurrentStep(2); // Avança para o próximo passo (dados do cliente)
-    
-    if (value === "none") {
-      setSelectedInsurancePlan(null);
-      return;
-    }
-    
-    if (!teamMemberId) {
-      setInsuranceLimitError("Você deve selecionar um profissional primeiro");
-      return;
-    }
-    
-    const plan = insurancePlans.find(p => p.id === value);
-    setSelectedInsurancePlan(plan || null);
-    
-    // Verifica limitações específicas para este convênio e profissional
-    const memberPlan = teamMemberInsurancePlans.find(
-      plan => plan.team_member_id === teamMemberId && plan.insurance_plan_id === value
-    );
-    
-    if (!memberPlan) {
-      setInsuranceLimitError(`O profissional selecionado não atende este convênio.`);
-      return;
-    }
-    
-    // Verifica limite específico do profissional
-    if (memberPlan.limit_per_member !== null && memberPlan.current_appointments >= memberPlan.limit_per_member) {
-      setInsuranceLimitError(`Este profissional atingiu o limite de atendimentos para este convênio.`);
-      return;
-    }
-    
-    // Verifica limite global do convênio
-    if (plan && plan.limit_per_plan !== null && plan.current_appointments >= plan.limit_per_plan) {
-      setInsuranceLimitError(`Este convênio atingiu o limite global de ${plan.limit_per_plan} agendamentos.`);
-      return;
-    }
-  };
-  
-  const validateClientInfo = () => {
-    if (!name) {
-      toast({
-        title: 'Campo obrigatório',
-        description: 'Por favor, informe seu nome completo',
-        variant: 'destructive',
-      });
-      return false;
-    }
-    
-    if (!email) {
-      toast({
-        title: 'Campo obrigatório',
-        description: 'Por favor, informe seu email',
-        variant: 'destructive',
-      });
-      return false;
-    }
-    
-    return true;
-  };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!name || !email) {
-      toast({
-        title: 'Erro no formulário',
-        description: 'Por favor, preencha os campos obrigatórios',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // Check insurance plan limits
-    if (insuranceLimitError) {
-      toast({
-        title: 'Limite de convênio atingido',
-        description: insuranceLimitError,
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      // Format the date as YYYY-MM-DD for storage
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      
-      // Check if an appointment with the same date and start_time already exists
-      const { data: existingAppointment, error: checkError } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('professional_id', professional.id)
-        .eq('date', formattedDate)
-        .eq('start_time', startTime)
-        .eq('status', 'scheduled');
-      
-      if (checkError) {
-        throw checkError;
-      }
-      
-      // If an appointment already exists, show an error
-      if (existingAppointment && existingAppointment.length > 0) {
-        toast({
-          title: 'Horário indisponível',
-          description: 'Este horário já foi reservado. Por favor, selecione outro horário.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
-      
-      // If insurance plan selected, verify team member can accept it
-      if (insurancePlanId && insurancePlanId !== "none" && teamMemberId) {
-        // Get the RPC function result
-        const { data: canAccept, error: rpcError } = await supabase
-          .rpc('can_team_member_accept_insurance', {
-            member_id: teamMemberId,
-            plan_id: insurancePlanId
-          });
-          
-        if (rpcError) throw rpcError;
-        
-        if (!canAccept) {
-          toast({
-            title: 'Limite de convênio atingido',
-            description: 'Este profissional não pode mais atender este convênio. Por favor, escolha outro profissional ou convênio.',
-            variant: 'destructive',
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-      
-      // Get price from selected service if available
-      let price = null;
-      if (serviceId) {
-        const selectedService = services.find(s => s.id === serviceId);
-        if (selectedService) {
-          price = selectedService.price;
-        }
-      }
-      
-      // Define appointment status and source as literal types
-      const appointmentStatus = 'scheduled' as const;
-      const appointmentSource = 'client' as const;
-      
-      // Prepare appointment data
-      const appointmentData = {
-        professional_id: professional.id,
-        client_name: name,
-        client_email: email,
-        client_phone: phone,
-        date: formattedDate,
-        start_time: startTime,
-        end_time: endTime,
-        notes,
-        status: appointmentStatus,
-        source: appointmentSource,
-        team_member_id: teamMemberId || null,
-        insurance_plan_id: insurancePlanId === "none" ? null : insurancePlanId || null,
-        service_id: serviceId || null,
-        price: price,
-      };
-      
-      // Create appointment and get its ID
-      const { data, error } = await supabase
-        .from('appointments')
-        .insert([appointmentData])
-        .select();
-      
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        // Ensure the appointment has the correct literal types
-        const newAppointment = {
-          ...data[0],
-          status: appointmentStatus,
-          source: appointmentSource
-        };
-        
-        // Add the appointment to the context
-        addAppointment(newAppointment);
-        
-        toast({
-          title: 'Agendamento realizado',
-          description: 'Seu agendamento foi confirmado com sucesso',
-        });
-        
-        onSuccess(name, data[0].id);
-      }
-    } catch (error) {
-      console.error("Erro ao agendar:", error);
-      toast({
-        title: 'Erro ao agendar',
-        description: 'Ocorreu um erro ao processar seu agendamento',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const selectedTeamMemberObject = teamMembers.find(m => m.id === teamMemberId);
   
   return (
     <Card>
@@ -447,46 +74,52 @@ const BookingForm: React.FC<BookingFormProps> = ({
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           {/* Steps indicator */}
-          <BookingStepIndicator 
-            currentStep={currentStep} 
-            steps={steps} 
-          />
+          <div className="sticky top-0 bg-white pb-4 z-10">
+            <BookingStepIndicator 
+              currentStep={currentStep} 
+              steps={steps} 
+            />
+          </div>
 
           <BookingAppointmentSummary 
             professionalName={professional.name}
             selectedDate={selectedDate}
             startTime={startTime}
             endTime={endTime}
-            selectedTeamMember={teamMembers.find(m => m.id === teamMemberId)}
+            selectedTeamMember={selectedTeamMemberObject}
           />
           
-          {/* Step 1: Select Insurance */}
-          {currentStep === 1 && (
-            <InsurancePlanStep 
-              availableInsurancePlans={availableInsurancePlans}
-              insurancePlanId={insurancePlanId}
-              onInsurancePlanChange={handleInsurancePlanChange}
-              insuranceLimitError={insuranceLimitError}
-              teamMemberId={teamMemberId}
-            />
-          )}
-          
-          {/* Step 2: Client information */}
-          {currentStep === 2 && (
-            <ClientInfoStep 
-              name={name}
-              setName={setName}
-              email={email}
-              setEmail={setEmail}
-              phone={phone}
-              setPhone={setPhone}
-              notes={notes}
-              setNotes={setNotes}
-            />
-          )}
+          <ScrollArea className="h-[350px]">
+            <div className="space-y-6 pb-4 pr-4">
+              {/* Step 1: Select Insurance */}
+              {currentStep === 1 && (
+                <InsurancePlanStep 
+                  availableInsurancePlans={availableInsurancePlans}
+                  insurancePlanId={insurancePlanId}
+                  onInsurancePlanChange={handleInsurancePlanChange}
+                  insuranceLimitError={insuranceLimitError}
+                  teamMemberId={teamMemberId}
+                />
+              )}
+              
+              {/* Step 2: Client information */}
+              {currentStep === 2 && (
+                <ClientInfoStep 
+                  name={name}
+                  setName={setName}
+                  email={email}
+                  setEmail={setEmail}
+                  phone={phone}
+                  setPhone={setPhone}
+                  notes={notes}
+                  setNotes={setNotes}
+                />
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
         
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between border-t p-4">
           {currentStep === 1 ? (
             <>
               <Button 

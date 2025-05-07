@@ -1,8 +1,9 @@
 
 import React from 'react';
+import { Button } from '@/components/ui/button';
 import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DateSelectorProps {
   availableDates: Date[];
@@ -10,50 +11,44 @@ interface DateSelectorProps {
   onSelectDate: (date: Date) => void;
 }
 
-const DateSelector: React.FC<DateSelectorProps> = ({
-  availableDates,
-  selectedDate,
-  onSelectDate
-}) => {
-  // Criar uma cópia segura da data antes de passá-la para o evento de clique
-  const handleDateSelect = (date: Date) => {
-    const safeDateCopy = new Date(date);
-    onSelectDate(safeDateCopy);
-  };
-
-  if (availableDates.length === 0) {
-    return (
-      <div className="text-center py-4">
-        <p className="text-muted-foreground">Nenhuma data disponível.</p>
-      </div>
-    );
-  }
-
+const DateSelector: React.FC<DateSelectorProps> = ({ availableDates, selectedDate, onSelectDate }) => {
   return (
-    <div>
-      <div className="grid grid-cols-3 gap-2 mb-2 h-[300px] overflow-auto p-2 border rounded-md">
-        {availableDates.map((date) => {
-          // Criar uma cópia segura da data para comparação
-          const dateObj = new Date(date);
-          const isSelected = selectedDate && isSameDay(dateObj, selectedDate);
-          
-          return (
-            <Button
-              key={dateObj.toISOString()}
-              variant={isSelected ? "default" : "outline"}
-              className="flex-col h-auto py-3 text-sm"
-              onClick={() => handleDateSelect(dateObj)}
-            >
-              <span className="text-xs font-normal">
-                {format(dateObj, 'EEEE', { locale: ptBR })}
-              </span>
-              <span className="font-semibold">
-                {format(dateObj, 'dd/MM', { locale: ptBR })}
-              </span>
-            </Button>
-          );
-        })}
-      </div>
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Selecione uma data</h2>
+      
+      {availableDates.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            Nenhuma data disponível para agendamento.
+          </p>
+        </div>
+      ) : (
+        <ScrollArea className="h-[240px] border rounded-md p-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-2">
+            {availableDates.map((date) => (
+              <Button
+                key={date.toISOString()}
+                variant="outline"
+                className={`h-auto py-3 ${
+                  selectedDate && isSameDay(date, selectedDate)
+                    ? "bg-primary text-primary-foreground"
+                    : ""
+                }`}
+                onClick={() => onSelectDate(date)}
+              >
+                <div className="flex flex-col">
+                  <span className="font-semibold">
+                    {format(date, "dd", { locale: ptBR })}
+                  </span>
+                  <span className="text-xs">
+                    {format(date, "EEEE", { locale: ptBR })}
+                  </span>
+                </div>
+              </Button>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 };

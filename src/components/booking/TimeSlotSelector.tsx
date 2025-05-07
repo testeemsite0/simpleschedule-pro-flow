@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { isAfter, isSameDay, format } from 'date-fns';
 
@@ -92,8 +93,8 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="h-[280px] overflow-auto border rounded-md p-2">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 p-1">
+          <ScrollArea className="h-[280px] rounded-md border">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 p-4">
               {filteredSlots.map((slot, index) => (
                 <Button
                   key={`${slot.startTime}-${index}`}
@@ -109,7 +110,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
                 </Button>
               ))}
             </div>
-          </div>
+          </ScrollArea>
           
           {showConfirmButton && selectedSlot && (
             <div className="flex justify-end mt-4">

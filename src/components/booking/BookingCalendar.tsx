@@ -9,6 +9,9 @@ import { ServiceStep } from './steps/ServiceStep';
 import { DateStep } from './steps/DateStep';
 import { TimeStep } from './steps/TimeStep';
 import { BookingSelectionSummary } from './BookingSelectionSummary';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 import { useBookingCalendar } from '@/hooks/useBookingCalendar';
 
 interface BookingCalendarProps {
@@ -37,6 +40,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     isOverLimit,
     loading,
     currentStep,
+    error,
     handleTeamMemberChange,
     handleInsuranceChange,
     handleServiceChange,
@@ -57,8 +61,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     { id: 5, label: 'Horário' }
   ];
   
-  const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
-    // Pass the selected team member ID from our state
+  const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string) => {
+    // Always pass the selectedTeamMember to ensure consistency
+    console.log("Slot selected:", { date, startTime, endTime, teamMemberId: selectedTeamMember });
     onSelectSlot(date, startTime, endTime, selectedTeamMember);
   };
   
@@ -82,56 +87,73 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   
   return (
     <div className="space-y-6">
-      {/* Steps indicator */}
-      <BookingStepIndicator steps={steps} currentStep={currentStep} />
+      {/* Steps indicator with sticky positioning */}
+      <div className="sticky top-0 bg-white pb-4 z-10">
+        <BookingStepIndicator steps={steps} currentStep={currentStep} />
+      </div>
+      
+      {/* Error message if any */}
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-      {/* Step 1: Select Professional */}
-      {currentStep === 1 && teamMembers.length > 0 && (
-        <ProfessionalStep 
-          teamMembers={teamMembers}
-          selectedTeamMember={selectedTeamMember}
-          onTeamMemberChange={handleTeamMemberChange}
-        />
-      )}
-      
-      {/* Step 2: Select Insurance Plan */}
-      {currentStep === 2 && selectedTeamMember && (
-        <InsuranceStep
-          insurancePlans={insurancePlans}
-          selectedInsurance={selectedInsurance}
-          onInsuranceChange={handleInsuranceChange}
-          onBack={goToPreviousStep}
-        />
-      )}
-      
-      {/* Step 3: Select Service */}
-      {currentStep === 3 && selectedTeamMember && (
-        <ServiceStep
-          services={services}
-          selectedService={selectedService}
-          onServiceChange={handleServiceChange}
-          onBack={goToPreviousStep}
-        />
-      )}
-      
-      {/* Step 4: Select Date */}
-      {currentStep === 4 && selectedTeamMember && (
-        <DateStep
-          availableDates={availableDates}
-          selectedDate={selectedDate}
-          onDateSelect={handleDateSelect}
-          onBack={goToPreviousStep}
-        />
-      )}
-      
-      {/* Step 5: Select Time */}
-      {currentStep === 5 && selectedDate && (
-        <TimeStep
-          availableSlots={availableSlots}
-          onTimeSlotSelect={handleTimeSlotSelect}
-          onBack={goToPreviousStep}
-        />
-      )}
+      {/* Content area with fixed height and scrolling */}
+      <div className="relative">
+        <ScrollArea className="h-[400px] overflow-y-auto pr-4">
+          <div className="space-y-6 pb-4">
+            {/* Step 1: Select Professional */}
+            {currentStep === 1 && (
+              <ProfessionalStep 
+                teamMembers={teamMembers}
+                selectedTeamMember={selectedTeamMember}
+                onTeamMemberChange={handleTeamMemberChange}
+              />
+            )}
+            
+            {/* Step 2: Select Insurance Plan */}
+            {currentStep === 2 && selectedTeamMember && (
+              <InsuranceStep
+                insurancePlans={insurancePlans}
+                selectedInsurance={selectedInsurance}
+                onInsuranceChange={handleInsuranceChange}
+                onBack={goToPreviousStep}
+              />
+            )}
+            
+            {/* Step 3: Select Service */}
+            {currentStep === 3 && selectedTeamMember && (
+              <ServiceStep
+                services={services}
+                selectedService={selectedService}
+                onServiceChange={handleServiceChange}
+                onBack={goToPreviousStep}
+              />
+            )}
+            
+            {/* Step 4: Select Date */}
+            {currentStep === 4 && selectedTeamMember && (
+              <DateStep
+                availableDates={availableDates}
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+                onBack={goToPreviousStep}
+              />
+            )}
+            
+            {/* Step 5: Select Time */}
+            {currentStep === 5 && selectedDate && (
+              <TimeStep
+                availableSlots={availableSlots}
+                onTimeSlotSelect={handleTimeSlotSelect}
+                onBack={goToPreviousStep}
+              />
+            )}
+          </div>
+        </ScrollArea>
+      </div>
       
       {/* Selection summary */}
       {selectedTeamMember && (
