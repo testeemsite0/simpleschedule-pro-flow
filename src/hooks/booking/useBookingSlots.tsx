@@ -56,8 +56,32 @@ export const useBookingSlots = ({
         slot => slot.day_of_week === dayOfWeek && slot.available
       );
       
+      // Only add dates that have available timeslots
       if (hasAvailableSlots) {
-        dates.push(date);
+        // Format selected date for appointment filtering
+        const formattedDate = date.toISOString().split('T')[0];
+        
+        // Find booked appointments for this date
+        const bookedAppointments = appointments.filter(app => 
+          app.date === formattedDate && app.status === 'scheduled'
+        );
+        
+        // Get all time slots for this day
+        const daySlots = filteredTimeSlots.filter(
+          slot => slot.day_of_week === dayOfWeek && slot.available
+        );
+        
+        // Check if there are actually available timeslots after considering booked appointments
+        if (daySlots.length > 0) {
+          // Import function from timeUtils.ts to generate available slots
+          const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
+          const availableTimeSlots = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
+          
+          // Only add date if there are actual available timeslots after filtering
+          if (availableTimeSlots.length > 0) {
+            dates.push(date);
+          }
+        }
       }
     }
     
@@ -65,8 +89,10 @@ export const useBookingSlots = ({
     
     if (dates.length > 0 && !selectedDate) {
       setSelectedDate(dates[0]);
+    } else if (dates.length === 0) {
+      setSelectedDate(null);
     }
-  }, [filteredTimeSlots, isOverLimit, selectedDate, selectedTeamMember, currentStep]);
+  }, [filteredTimeSlots, appointments, isOverLimit, selectedDate, selectedTeamMember, currentStep]);
   
   // Generate available time slots
   useEffect(() => {

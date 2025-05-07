@@ -14,19 +14,19 @@ export const useBookingCalendarSteps = () => {
     setSelectedService("");
     setSelectedInsurance("none");
     setSelectedDate(null);
-    setCurrentStep(2);
-  };
-  
-  const handleInsuranceChange = (value: string) => {
-    console.log("Insurance selected:", value);
-    setSelectedInsurance(value);
-    setCurrentStep(3);
+    setCurrentStep(2); // Now goes to Service selection instead of Insurance
   };
   
   const handleServiceChange = (value: string) => {
     console.log("Service selected:", value);
     setSelectedService(value);
-    setCurrentStep(4);
+    setCurrentStep(3); // Now proceeds to Insurance selection
+  };
+  
+  const handleInsuranceChange = (value: string) => {
+    console.log("Insurance selected:", value);
+    setSelectedInsurance(value);
+    setCurrentStep(4); // Now proceeds to Date selection
   };
   
   const handleDateSelect = (date: Date) => {
