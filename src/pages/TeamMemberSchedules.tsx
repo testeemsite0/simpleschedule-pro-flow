@@ -2,31 +2,37 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import TimeSlotForm from '@/components/dashboard/timeslots/TimeSlotForm';
 import TimeSlotsList from '@/components/dashboard/timeslots/TimeSlotsList';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useAppointments } from '@/context/AppointmentContext';
-import { TimeSlot, TeamMember } from '@/types';
+import { TeamMember } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useTimeSlots } from '@/hooks/useTimeSlots';
+import TimeSlotDialog from '@/components/dashboard/timeslots/TimeSlotDialog';
 
 const TeamMemberSchedules = () => {
   const { memberId } = useParams<{ memberId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getTimeSlotsByTeamMember, deleteTimeSlot } = useAppointments();
-  const { toast } = useToast();
   
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | undefined>(undefined);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [teamMember, setTeamMember] = useState<TeamMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const {
+    timeSlots,
+    isLoading: timeSlotsLoading,
+    isDialogOpen,
+    setIsDialogOpen,
+    selectedTimeSlot,
+    setSelectedTimeSlot,
+    handleAddSuccess,
+    handleEditTimeSlot,
+    handleDeleteTimeSlot,
+    handleBatchDelete
+  } = useTimeSlots(memberId);
   
   useEffect(() => {
     const fetchTeamMember = async () => {
@@ -44,127 +50,23 @@ const TeamMemberSchedules = () => {
         
         if (data) {
           setTeamMember(data);
-          fetchTimeSlots(data.id);
         } else {
           setError('Membro da equipe não encontrado');
-          setLoading(false);
         }
       } catch (error) {
         console.error("Failed to fetch team member:", error);
         setError('Erro ao buscar dados do membro da equipe');
-        setLoading(false);
-      }
-    };
-    
-    const fetchTimeSlots = async (teamMemberId: string) => {
-      try {
-        const data = await getTimeSlotsByTeamMember(teamMemberId);
-        setTimeSlots(data);
-      } catch (error) {
-        console.error("Failed to fetch time slots:", error);
-        setError('Erro ao buscar horários');
       } finally {
         setLoading(false);
       }
     };
     
     fetchTeamMember();
-  }, [user, memberId, getTimeSlotsByTeamMember]);
+  }, [user, memberId]);
   
   if (!user) {
     return null;
   }
-  
-  const handleAddSuccess = () => {
-    // Refresh time slots
-    if (teamMember) {
-      getTimeSlotsByTeamMember(teamMember.id).then(data => {
-        setTimeSlots(data);
-      });
-    }
-    setIsDialogOpen(false);
-  };
-  
-  const handleEditTimeSlot = (timeSlot: TimeSlot) => {
-    setSelectedTimeSlot(timeSlot);
-    setIsDialogOpen(true);
-  };
-  
-  const handleDeleteTimeSlot = async (timeSlot: TimeSlot) => {
-    if (confirm('Tem certeza que deseja excluir este horário?')) {
-      try {
-        const success = await deleteTimeSlot(timeSlot.id);
-        
-        if (success) {
-          toast({
-            title: 'Sucesso',
-            description: 'Horário excluído com sucesso',
-          });
-          
-          // Refresh time slots
-          if (teamMember) {
-            const data = await getTimeSlotsByTeamMember(teamMember.id);
-            setTimeSlots(data);
-          }
-        } else {
-          throw new Error('Falha ao excluir horário');
-        }
-      } catch (error) {
-        toast({
-          title: 'Erro',
-          description: 'Não foi possível excluir o horário',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
-  
-  const handleBatchDelete = async (timeSlotIds: string[]) => {
-    if (timeSlotIds.length === 0) return;
-    
-    // Ask for confirmation
-    if (confirm(`Tem certeza que deseja excluir ${timeSlotIds.length} horário(s)?`)) {
-      try {
-        let success = true;
-        let failedCount = 0;
-        
-        // Delete each time slot
-        for (const id of timeSlotIds) {
-          const result = await deleteTimeSlot(id);
-          if (!result) {
-            success = false;
-            failedCount++;
-          }
-        }
-        
-        // Show appropriate toast message
-        if (success) {
-          toast({
-            title: 'Sucesso',
-            description: `${timeSlotIds.length} horário(s) excluído(s) com sucesso`,
-          });
-        } else {
-          toast({
-            title: 'Atenção',
-            description: `${timeSlotIds.length - failedCount} horário(s) excluído(s), mas ${failedCount} falhou(aram)`,
-            variant: 'default',
-          });
-        }
-        
-        // Refresh time slots
-        if (teamMember) {
-          const data = await getTimeSlotsByTeamMember(teamMember.id);
-          setTimeSlots(data);
-        }
-      } catch (error) {
-        toast({
-          title: 'Erro',
-          description: 'Ocorreu um erro ao excluir os horários',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
   
   const handleGoBack = () => {
     navigate("/dashboard/schedules");
@@ -213,28 +115,16 @@ const TeamMemberSchedules = () => {
             Configure os horários em que {teamMember.name} está disponível para atendimentos.
           </p>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setSelectedTimeSlot(undefined)}>
-                Adicionar horário
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedTimeSlot ? 'Editar horário' : 'Adicionar novo horário'}
-                </DialogTitle>
-              </DialogHeader>
-              <TimeSlotForm 
-                onSuccess={handleAddSuccess}
-                initialData={selectedTimeSlot ? {...selectedTimeSlot, team_member_id: teamMember.id} : undefined}
-                onCancel={() => setIsDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          <TimeSlotDialog
+            isOpen={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            selectedTimeSlot={selectedTimeSlot ? {...selectedTimeSlot, team_member_id: teamMember.id} : undefined}
+            onSuccess={handleAddSuccess}
+            buttonText="Adicionar horário"
+          />
         </div>
         
-        {loading ? (
+        {timeSlotsLoading ? (
           <p>Carregando horários...</p>
         ) : (
           <TimeSlotsList 
