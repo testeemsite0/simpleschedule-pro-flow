@@ -2,32 +2,33 @@
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
 
-export type StepStatus = 'completed' | 'current' | 'upcoming';
-
-interface BookingStepIndicatorProps {
-  currentStep: number;
-  steps: { id: number; label: string }[];
+interface Step {
+  id: number;
+  label: string;
 }
 
-export const BookingStepIndicator: React.FC<BookingStepIndicatorProps> = ({ 
+interface BookingStepIndicatorProps {
+  steps: Step[];
+  currentStep: number;
+  className?: string;
+}
+
+export const BookingStepIndicator: React.FC<BookingStepIndicatorProps> = ({
+  steps,
   currentStep,
-  steps 
+  className = ''
 }) => {
-  const getStepStatus = (step: number): StepStatus => {
-    if (step < currentStep) return "completed";
-    if (step === currentStep) return "current";
+  const getStepStatus = (stepId: number) => {
+    if (stepId < currentStep) return "completed";
+    if (stepId === currentStep) return "current";
     return "upcoming";
   };
-
+  
   return (
-    <div className="flex justify-between mb-8">
+    <div className={`flex justify-between mb-8 ${className}`}>
       {steps.map((step) => (
         <React.Fragment key={step.id}>
-          <div className={`flex flex-col items-center ${
-            getStepStatus(step.id) === "completed" ? "text-primary" : 
-            getStepStatus(step.id) === "current" ? "text-foreground" : 
-            "text-muted-foreground"
-          }`}>
+          <div className={`flex flex-col items-center ${getStepStatus(step.id) === "completed" ? "text-primary" : getStepStatus(step.id) === "current" ? "text-foreground" : "text-muted-foreground"}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
               getStepStatus(step.id) === "completed" ? "bg-primary text-primary-foreground" : 
               getStepStatus(step.id) === "current" ? "border-2 border-primary text-primary" : 

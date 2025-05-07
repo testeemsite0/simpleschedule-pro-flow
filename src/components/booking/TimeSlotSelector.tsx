@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { isAfter, isSameDay, parse, format } from 'date-fns';
+import { isAfter, isSameDay, format } from 'date-fns';
 
 interface AvailableSlot {
   date: Date;
@@ -69,12 +69,14 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
   
   const handleConfirmSelection = () => {
     if (selectedSlot) {
+      // Make sure to pass the teamMemberId parameter!
       onSelectSlot(
         selectedSlot.date, 
         selectedSlot.startTime, 
         selectedSlot.endTime, 
         selectedSlot.teamMemberId
       );
+      console.log("Confirmed time slot with teamMemberId:", selectedSlot.teamMemberId);
     }
   };
 
@@ -111,7 +113,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
           
           {showConfirmButton && selectedSlot && (
             <div className="flex justify-end mt-4">
-              <Button onClick={handleConfirmSelection}>
+              <Button onClick={handleConfirmSelection} className="bg-primary hover:bg-primary/90">
                 Confirmar Horário
               </Button>
             </div>

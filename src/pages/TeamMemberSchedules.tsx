@@ -2,15 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import TimeSlotsList from '@/components/dashboard/timeslots/TimeSlotsList';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { TeamMember } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useTimeSlots } from '@/hooks/useTimeSlots';
-import TimeSlotDialog from '@/components/dashboard/timeslots/TimeSlotDialog';
+import TeamMemberHeader from '@/components/dashboard/team/TeamMemberHeader';
+import TeamMemberScheduleContent from '@/components/dashboard/team/TeamMemberScheduleContent';
+import TeamMemberErrorState from '@/components/dashboard/team/TeamMemberErrorState';
 
 const TeamMemberSchedules = () => {
   const { memberId } = useParams<{ memberId: string }>();
@@ -31,7 +29,8 @@ const TeamMemberSchedules = () => {
     handleAddSuccess,
     handleEditTimeSlot,
     handleDeleteTimeSlot,
-    handleBatchDelete
+    handleBatchDelete,
+    teamMembers
   } = useTimeSlots(memberId);
   
   useEffect(() => {
@@ -64,13 +63,13 @@ const TeamMemberSchedules = () => {
     fetchTeamMember();
   }, [user, memberId]);
   
-  if (!user) {
-    return null;
-  }
-  
   const handleGoBack = () => {
     navigate("/dashboard/schedules");
   };
+  
+  if (!user) {
+    return null;
+  }
   
   if (loading) {
     return (
@@ -83,19 +82,7 @@ const TeamMemberSchedules = () => {
   if (error || !teamMember) {
     return (
       <DashboardLayout title="Erro">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Erro</AlertTitle>
-          <AlertDescription>
-            {error || 'Membro da equipe não encontrado'}
-          </AlertDescription>
-        </Alert>
-        <div className="mt-4">
-          <Button variant="outline" onClick={handleGoBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar para Horários
-          </Button>
-        </div>
+        <TeamMemberErrorState error={error || ''} onGoBack={handleGoBack} />
       </DashboardLayout>
     );
   }
@@ -103,38 +90,24 @@ const TeamMemberSchedules = () => {
   return (
     <DashboardLayout title={`Horários de ${teamMember.name}`}>
       <div className="space-y-8">
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={handleGoBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-        </div>
+        <TeamMemberHeader 
+          teamMember={teamMember}
+          onGoBack={handleGoBack}
+        />
         
-        <div className="flex justify-between items-center">
-          <p className="text-muted-foreground">
-            Configure os horários em que {teamMember.name} está disponível para atendimentos.
-          </p>
-          
-          <TimeSlotDialog
-            isOpen={isDialogOpen}
-            onOpenChange={setIsDialogOpen}
-            selectedTimeSlot={selectedTimeSlot ? {...selectedTimeSlot, team_member_id: teamMember.id} : undefined}
-            onSuccess={handleAddSuccess}
-            buttonText="Adicionar horário"
-          />
-        </div>
-        
-        {timeSlotsLoading ? (
-          <p>Carregando horários...</p>
-        ) : (
-          <TimeSlotsList 
-            timeSlots={timeSlots}
-            teamMembers={[teamMember]}
-            onEdit={handleEditTimeSlot}
-            onDelete={handleDeleteTimeSlot}
-            onBatchDelete={handleBatchDelete}
-          />
-        )}
+        <TeamMemberScheduleContent
+          teamMember={teamMember}
+          timeSlots={timeSlots}
+          teamMembers={teamMembers.length > 0 ? teamMembers : [teamMember]}
+          isLoading={timeSlotsLoading}
+          isDialogOpen={isDialogOpen}
+          setIsDialogOpen={setIsDialogOpen}
+          selectedTimeSlot={selectedTimeSlot}
+          handleAddSuccess={handleAddSuccess}
+          handleEditTimeSlot={handleEditTimeSlot}
+          handleDeleteTimeSlot={handleDeleteTimeSlot}
+          handleBatchDelete={handleBatchDelete}
+        />
       </div>
     </DashboardLayout>
   );

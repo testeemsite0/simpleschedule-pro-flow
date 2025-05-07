@@ -11,6 +11,7 @@ interface TimeSlotDialogProps {
   selectedTimeSlot?: TimeSlot;
   onSuccess: () => void;
   buttonText?: string;
+  triggerComponent?: React.ReactNode;
 }
 
 const TimeSlotDialog: React.FC<TimeSlotDialogProps> = ({
@@ -18,12 +19,13 @@ const TimeSlotDialog: React.FC<TimeSlotDialogProps> = ({
   onOpenChange,
   selectedTimeSlot,
   onSuccess,
-  buttonText = 'Adicionar horário'
+  buttonText = 'Adicionar horário',
+  triggerComponent
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button>{buttonText}</Button>
+        {triggerComponent || <Button>{buttonText}</Button>}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
