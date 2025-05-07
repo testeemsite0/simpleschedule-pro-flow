@@ -144,7 +144,7 @@ export const useBookingForm = ({
             updateAvailableInsurancePlans(selectedTeamMember, memberInsurancePlans, insurancePlansData || []);
             
             // Update available services for this team member
-            const memberServicesList = servicesByMember[selectedTeamMember] || [];
+            const memberServicesList = memberServices[selectedTeamMember] || [];
             setAvailableServices(
               memberServicesList.length > 0 ? memberServicesList : (servicesData || [])
             );
