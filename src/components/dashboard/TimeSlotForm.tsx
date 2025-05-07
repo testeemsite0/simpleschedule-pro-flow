@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { TimeSlot, TeamMember } from '@/types';
 import { useAppointments } from '@/context/AppointmentContext';
 import { useAuth } from '@/context/AuthContext';
@@ -42,7 +44,22 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
   const { addTimeSlot, updateTimeSlot } = useAppointments();
   const { toast } = useToast();
   
+  // Single day state (for editing)
   const [dayOfWeek, setDayOfWeek] = useState(initialData?.day_of_week.toString() || '');
+  
+  // Multiple days state (for batch creation)
+  const [selectedDays, setSelectedDays] = useState<Record<string, boolean>>({
+    '1': false, '2': false, '3': false, '4': false, '5': false, '0': false, '6': false
+  });
+  
+  // If editing, preselect the day
+  useEffect(() => {
+    if (isEditing && initialData?.day_of_week !== undefined) {
+      const day = initialData.day_of_week.toString();
+      setSelectedDays(prev => ({ ...prev, [day]: true }));
+    }
+  }, [isEditing, initialData]);
+  
   const [startTime, setStartTime] = useState(initialData?.start_time || '');
   const [endTime, setEndTime] = useState(initialData?.end_time || '');
   const [available, setAvailable] = useState(initialData?.available ?? true);
@@ -52,7 +69,15 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
   const [lunchBreakEnd, setLunchBreakEnd] = useState(initialData?.lunch_break_end || '13:00');
   const [isLoading, setIsLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  
+  // Single team member state (for editing)
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>(initialData?.team_member_id || '');
+  
+  // Multiple team members state (for batch creation)
+  const [selectedTeamMembers, setSelectedTeamMembers] = useState<Record<string, boolean>>({});
+  
+  // Batch mode toggle
+  const [batchMode, setBatchMode] = useState(!isEditing);
   
   // Fetch team members
   useEffect(() => {
@@ -66,7 +91,21 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
             .eq('active', true);
             
           if (error) throw error;
+          
           setTeamMembers(data || []);
+          
+          // Initialize selectedTeamMembers state
+          const teamMembersState: Record<string, boolean> = {};
+          data?.forEach(member => {
+            teamMembersState[member.id] = false;
+          });
+          
+          // If editing, preselect the team member
+          if (isEditing && initialData?.team_member_id) {
+            teamMembersState[initialData.team_member_id] = true;
+          }
+          
+          setSelectedTeamMembers(teamMembersState);
         } catch (error) {
           console.error("Erro ao buscar membros da equipe:", error);
           toast({
@@ -79,30 +118,33 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
     };
     
     fetchTeamMembers();
-  }, [user, toast]);
+  }, [user, toast, isEditing, initialData]);
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user) {
+  const handleDayToggle = (day: string) => {
+    setSelectedDays(prev => ({
+      ...prev,
+      [day]: !prev[day]
+    }));
+  };
+  
+  const handleTeamMemberToggle = (memberId: string) => {
+    setSelectedTeamMembers(prev => ({
+      ...prev,
+      [memberId]: !prev[memberId]
+    }));
+  };
+  
+  const validateInputs = () => {
+    if (!startTime || !endTime || !appointmentDuration) {
       toast({
         title: 'Erro',
-        description: 'Você precisa estar logado para adicionar horários',
+        description: 'Preencha os horários e duração da consulta',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
     
-    if (!dayOfWeek || !startTime || !endTime || !appointmentDuration || !selectedTeamMember) {
-      toast({
-        title: 'Erro',
-        description: 'Preencha todos os campos obrigatórios, incluindo o profissional',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // Validate that lunch break is within work hours
+    // Validate that lunch break is within work hours if enabled
     if (hasLunchBreak) {
       if (!lunchBreakStart || !lunchBreakEnd) {
         toast({
@@ -110,7 +152,7 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
           description: 'Horários de almoço inválidos',
           variant: 'destructive',
         });
-        return;
+        return false;
       }
       
       // Convert to minutes for easy comparison
@@ -130,13 +172,76 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
           description: 'O intervalo de almoço deve estar dentro do horário de trabalho',
           variant: 'destructive',
         });
-        return;
+        return false;
       }
       
       if (lunchStartMinutes >= lunchEndMinutes) {
         toast({
           title: 'Erro',
           description: 'O horário de início do almoço deve ser anterior ao horário de término',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+    
+    return true;
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: 'Erro',
+        description: 'Você precisa estar logado para adicionar horários',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Verify inputs
+    if (!validateInputs()) {
+      return;
+    }
+    
+    // Check if at least one day is selected in batch mode
+    if (batchMode) {
+      const hasDays = Object.values(selectedDays).some(selected => selected);
+      if (!hasDays) {
+        toast({
+          title: 'Erro',
+          description: 'Selecione pelo menos um dia da semana',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Check if at least one team member is selected in batch mode
+      const hasTeamMembers = Object.values(selectedTeamMembers).some(selected => selected);
+      if (!hasTeamMembers) {
+        toast({
+          title: 'Erro',
+          description: 'Selecione pelo menos um profissional',
+          variant: 'destructive',
+        });
+        return;
+      }
+    } else {
+      // Non-batch mode validations
+      if (!dayOfWeek) {
+        toast({
+          title: 'Erro',
+          description: 'Selecione um dia da semana',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      if (!selectedTeamMember) {
+        toast({
+          title: 'Erro',
+          description: 'Selecione um profissional',
           variant: 'destructive',
         });
         return;
@@ -146,43 +251,92 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
     setIsLoading(true);
     
     try {
-      const timeSlotData = {
+      const baseTimeSlotData = {
         professional_id: user.id,
-        day_of_week: parseInt(dayOfWeek),
         start_time: startTime,
         end_time: endTime,
         available,
         appointment_duration_minutes: parseInt(appointmentDuration),
         lunch_break_start: hasLunchBreak ? lunchBreakStart : null,
         lunch_break_end: hasLunchBreak ? lunchBreakEnd : null,
-        team_member_id: selectedTeamMember,
       };
       
-      let success;
-      
       if (isEditing && initialData) {
-        success = await updateTimeSlot({
-          ...timeSlotData,
+        // Update existing time slot (no batch mode for editing)
+        const success = await updateTimeSlot({
+          ...baseTimeSlotData,
           id: initialData.id,
-        });
-      } else {
-        success = await addTimeSlot(timeSlotData);
-      }
-      
-      if (success) {
-        toast({
-          title: 'Sucesso',
-          description: isEditing 
-            ? 'Horário atualizado com sucesso' 
-            : 'Horário adicionado com sucesso',
+          day_of_week: parseInt(dayOfWeek),
+          team_member_id: selectedTeamMember,
         });
         
-        if (onSuccess) {
-          onSuccess();
+        if (success) {
+          toast({
+            title: 'Sucesso',
+            description: 'Horário atualizado com sucesso',
+          });
+          
+          if (onSuccess) {
+            onSuccess();
+          }
+        }
+      } else {
+        // Create new time slots using batch mode
+        const selectedTeamMemberIds = Object.entries(selectedTeamMembers)
+          .filter(([_, selected]) => selected)
+          .map(([id]) => id);
+          
+        const selectedDaysOfWeek = Object.entries(selectedDays)
+          .filter(([_, selected]) => selected)
+          .map(([day]) => parseInt(day));
+          
+        let successCount = 0;
+        let failCount = 0;
+        const totalToCreate = selectedDaysOfWeek.length * selectedTeamMemberIds.length;
+          
+        // Create time slots for each day and team member combination
+        for (const day of selectedDaysOfWeek) {
+          for (const teamMemberId of selectedTeamMemberIds) {
+            const timeSlotData = {
+              ...baseTimeSlotData,
+              day_of_week: day,
+              team_member_id: teamMemberId,
+            };
+            
+            const success = await addTimeSlot(timeSlotData);
+            
+            if (success) {
+              successCount++;
+            } else {
+              failCount++;
+            }
+          }
         }
         
-        if (!isEditing) {
-          setDayOfWeek('');
+        if (successCount > 0) {
+          toast({
+            title: 'Sucesso',
+            description: `${successCount} de ${totalToCreate} horários foram adicionados com sucesso${
+              failCount > 0 ? `. ${failCount} falharam.` : '.'
+            }`,
+          });
+          
+          if (onSuccess) {
+            onSuccess();
+          }
+          
+          // Reset form if creating new slots
+          setSelectedDays({
+            '1': false, '2': false, '3': false, '4': false, '5': false, '0': false, '6': false
+          });
+          
+          // Reset team member selections
+          const resetTeamMembers: Record<string, boolean> = {};
+          Object.keys(selectedTeamMembers).forEach(key => {
+            resetTeamMembers[key] = false;
+          });
+          setSelectedTeamMembers(resetTeamMembers);
+          
           setStartTime('');
           setEndTime('');
           setAvailable(true);
@@ -190,7 +344,12 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
           setHasLunchBreak(false);
           setLunchBreakStart('12:00');
           setLunchBreakEnd('13:00');
-          setSelectedTeamMember('');
+        } else {
+          toast({
+            title: 'Erro',
+            description: 'Não foi possível adicionar os horários',
+            variant: 'destructive',
+          });
         }
       }
     } catch (error) {
@@ -208,60 +367,123 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
     <Card>
       <CardHeader>
         <CardTitle>
-          {isEditing ? 'Editar Horário' : 'Adicionar Novo Horário'}
+          {isEditing ? 'Editar Horário' : 'Adicionar Novos Horários'}
         </CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {!isEditing && (
+            <div className="flex items-center space-x-2 pb-4 border-b">
+              <Switch
+                id="batchMode"
+                checked={batchMode}
+                onCheckedChange={setBatchMode}
+              />
+              <Label htmlFor="batchMode">Adicionar múltiplos horários</Label>
+            </div>
+          )}
+
+          {/* Team Member Selection */}
           {teamMembers.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="teamMember">
-                Profissional <span className="text-destructive">*</span>
+              <Label>
+                Profissionais <span className="text-destructive">*</span>
               </Label>
+              
+              {batchMode ? (
+                <div className="space-y-2">
+                  <ScrollArea className="h-[150px] border rounded-md p-4">
+                    <div className="space-y-2">
+                      {teamMembers.map((member) => (
+                        <div key={member.id} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`member-${member.id}`}
+                            checked={selectedTeamMembers[member.id] || false}
+                            onCheckedChange={() => handleTeamMemberToggle(member.id)}
+                          />
+                          <Label 
+                            htmlFor={`member-${member.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {member.name} {member.position ? `- ${member.position}` : ''}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  <p className="text-xs text-muted-foreground">
+                    Selecione os profissionais que irão atender nestes horários.
+                  </p>
+                </div>
+              ) : (
+                <Select
+                  value={selectedTeamMember}
+                  onValueChange={setSelectedTeamMember}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um profissional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name} {member.position ? `- ${member.position}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
+          {/* Day Selection */}
+          <div className="space-y-2">
+            <Label>
+              Dia(s) da semana <span className="text-destructive">*</span>
+            </Label>
+            
+            {batchMode ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {dayOptions.map((day) => (
+                  <div key={day.value} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`day-${day.value}`}
+                      checked={selectedDays[day.value] || false}
+                      onCheckedChange={() => handleDayToggle(day.value)}
+                    />
+                    <Label 
+                      htmlFor={`day-${day.value}`}
+                      className="text-sm cursor-pointer"
+                    >
+                      {day.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            ) : (
               <Select
-                value={selectedTeamMember}
-                onValueChange={setSelectedTeamMember}
-                required
+                value={dayOfWeek}
+                onValueChange={setDayOfWeek}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um profissional" />
+                  <SelectValue placeholder="Selecione o dia" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name} {member.position ? `- ${member.position}` : ''}
+                  {dayOptions.map((day) => (
+                    <SelectItem key={day.value} value={day.value}>
+                      {day.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Selecione o profissional que irá atender neste horário.
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="dayOfWeek">Dia da semana</Label>
-            <Select
-              value={dayOfWeek}
-              onValueChange={setDayOfWeek}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o dia" />
-              </SelectTrigger>
-              <SelectContent>
-                {dayOptions.map((day) => (
-                  <SelectItem key={day.value} value={day.value}>
-                    {day.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            )}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startTime">Horário inicial</Label>
+              <Label htmlFor="startTime">
+                Horário inicial <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="startTime"
                 type="time"
@@ -271,7 +493,9 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="endTime">Horário final</Label>
+              <Label htmlFor="endTime">
+                Horário final <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="endTime"
                 type="time"
@@ -347,7 +571,11 @@ const TimeSlotForm: React.FC<TimeSlotFormProps> = ({ onSuccess, initialData }) =
         
         <CardFooter>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Adicionar horário'}
+            {isLoading ? 'Salvando...' : isEditing 
+              ? 'Salvar alterações' 
+              : batchMode 
+                ? 'Adicionar horários em lote' 
+                : 'Adicionar horário'}
           </Button>
         </CardFooter>
       </form>

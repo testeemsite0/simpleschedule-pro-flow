@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { isAfter } from 'date-fns';
+import { isAfter, isSameDay } from 'date-fns';
 
 interface AvailableSlot {
   date: Date;
@@ -29,11 +29,14 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
     const now = new Date();
     
     return availableSlots.filter(slot => {
-      // Verifica se a data do slot é hoje
-      const isToday = 
-        slot.date.getDate() === now.getDate() &&
-        slot.date.getMonth() === now.getMonth() &&
-        slot.date.getFullYear() === now.getFullYear();
+      // Verifica se a data do slot é hoje ou futura
+      const isToday = isSameDay(slot.date, now);
+      const isFutureDay = isAfter(slot.date, now) && !isToday;
+      
+      // Se for futuro, sempre é válido
+      if (isFutureDay) {
+        return true;
+      }
       
       // Se for hoje, precisa verificar se o horário já passou
       if (isToday) {
@@ -45,8 +48,8 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
         return isAfter(slotTime, now);
       }
       
-      // Para datas futuras, sempre retorna true
-      return true;
+      // Para datas passadas, retorna false
+      return false;
     });
   }, [availableSlots]);
 

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { TeamMember, InsurancePlan, TeamMemberInsurancePlan } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -126,69 +127,73 @@ const TeamMemberInsurancePlanForm: React.FC<TeamMemberInsurancePlanFormProps> = 
           </div>
         ) : (
           <div className="space-y-4">
-            {selectedPlans.map((plan) => {
-              const insurancePlan = availableInsurancePlans.find(
-                p => p.id === plan.insurancePlanId
-              );
-              
-              return (
-                <Card key={plan.insurancePlanId} className="overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-2">
-                        <Checkbox
-                          id={`plan-${plan.insurancePlanId}`}
-                          checked={plan.selected}
-                          onCheckedChange={(checked) => 
-                            handleCheckboxChange(plan.insurancePlanId, checked as boolean)
-                          }
-                        />
-                        <div>
-                          <Label
-                            htmlFor={`plan-${plan.insurancePlanId}`}
-                            className="text-base font-medium cursor-pointer"
-                          >
-                            {insurancePlan?.name}
-                          </Label>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-4 pr-2">
+                {selectedPlans.map((plan) => {
+                  const insurancePlan = availableInsurancePlans.find(
+                    p => p.id === plan.insurancePlanId
+                  );
+                  
+                  return (
+                    <Card key={plan.insurancePlanId} className="overflow-hidden">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-2">
+                            <Checkbox
+                              id={`plan-${plan.insurancePlanId}`}
+                              checked={plan.selected}
+                              onCheckedChange={(checked) => 
+                                handleCheckboxChange(plan.insurancePlanId, checked as boolean)
+                              }
+                            />
+                            <div>
+                              <Label
+                                htmlFor={`plan-${plan.insurancePlanId}`}
+                                className="text-base font-medium cursor-pointer"
+                              >
+                                {insurancePlan?.name}
+                              </Label>
+                              
+                              {plan.currentAppointments !== undefined && plan.currentAppointments > 0 && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Agendamentos atuais: {plan.currentAppointments}
+                                </p>
+                              )}
+                              
+                              {insurancePlan?.limit_per_plan && (
+                                <p className="text-xs text-muted-foreground">
+                                  Limite global: {insurancePlan.limit_per_plan}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                           
-                          {plan.currentAppointments !== undefined && plan.currentAppointments > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Agendamentos atuais: {plan.currentAppointments}
-                            </p>
-                          )}
-                          
-                          {insurancePlan?.limit_per_plan && (
-                            <p className="text-xs text-muted-foreground">
-                              Limite global: {insurancePlan.limit_per_plan}
-                            </p>
+                          {plan.selected && (
+                            <div className="w-32">
+                              <Label 
+                                htmlFor={`limit-${plan.insurancePlanId}`} 
+                                className="text-xs block mb-1"
+                              >
+                                Limite individual
+                              </Label>
+                              <Input
+                                id={`limit-${plan.insurancePlanId}`}
+                                type="number"
+                                min="1"
+                                placeholder="Ilimitado"
+                                value={plan.limitPerMember === null ? '' : plan.limitPerMember}
+                                onChange={(e) => handleLimitChange(plan.insurancePlanId, e.target.value)}
+                                className="h-8 text-sm"
+                              />
+                            </div>
                           )}
                         </div>
-                      </div>
-                      
-                      {plan.selected && (
-                        <div className="w-32">
-                          <Label 
-                            htmlFor={`limit-${plan.insurancePlanId}`} 
-                            className="text-xs block mb-1"
-                          >
-                            Limite individual
-                          </Label>
-                          <Input
-                            id={`limit-${plan.insurancePlanId}`}
-                            type="number"
-                            min="1"
-                            placeholder="Ilimitado"
-                            value={plan.limitPerMember === null ? '' : plan.limitPerMember}
-                            onChange={(e) => handleLimitChange(plan.insurancePlanId, e.target.value)}
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </ScrollArea>
           </div>
         )}
         
