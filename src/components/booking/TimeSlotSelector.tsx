@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isAfter, isSameDay } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AvailableSlot {
   date: Date;
@@ -86,22 +87,24 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 animate-fade-in">
-            {filteredSlots.map((slot, index) => (
-              <Button
-                key={`${slot.startTime}-${index}`}
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "text-center py-3 h-auto",
-                  selectedSlot === slot ? "bg-primary text-primary-foreground" : ""
-                )}
-                onClick={() => handleSelectSlot(slot)}
-              >
-                {slot.startTime}
-              </Button>
-            ))}
-          </div>
+          <ScrollArea className="h-[280px]">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 animate-fade-in p-1">
+              {filteredSlots.map((slot, index) => (
+                <Button
+                  key={`${slot.startTime}-${index}`}
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "text-center py-3 h-auto",
+                    selectedSlot === slot ? "bg-primary text-primary-foreground" : ""
+                  )}
+                  onClick={() => handleSelectSlot(slot)}
+                >
+                  {slot.startTime}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
           
           {showConfirmButton && selectedSlot && (
             <div className="flex justify-end mt-4">
