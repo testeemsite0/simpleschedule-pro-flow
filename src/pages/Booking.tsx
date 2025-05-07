@@ -1,249 +1,39 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import { useParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import BookingCalendar from '@/components/booking/BookingCalendar';
-import BookingForm from '@/components/booking/BookingForm';
-import BookingConfirmation from '@/components/booking/BookingConfirmation';
-import { useAppointments } from '@/context/AppointmentContext';
-import { Professional, Appointment, TimeSlot } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
+import { BookingProvider } from '@/context/BookingContext';
+import { useBookingData } from '@/hooks/useBookingData';
+import BookingContent from '@/components/booking/BookingContent';
+import BookingLoadingState from '@/components/booking/BookingLoadingState';
+import { useBooking } from '@/context/BookingContext';
 
-type BookingStep = 'calendar' | 'form' | 'confirmation';
-
-const Booking = () => {
+// Intermediate component that depends on the BookingContext
+const BookingContainer: React.FC = () => {
+  const { loading } = useBooking();
   const { slug } = useParams<{ slug: string }>();
-  const [professional, setProfessional] = useState<Professional | null>(null);
-  const [currentStep, setCurrentStep] = useState<BookingStep>('calendar');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedStartTime, setSelectedStartTime] = useState<string>('');
-  const [selectedEndTime, setSelectedEndTime] = useState<string>('');
-  const [selectedTeamMember, setSelectedTeamMember] = useState<string | undefined>(undefined);
-  const [clientName, setClientName] = useState<string>('');
-  const [appointmentId, setAppointmentId] = useState<string>('');
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [loading, setLoading] = useState(true);
   
-  // Fetch professional data directly from Supabase
-  useEffect(() => {
-    const fetchProfessionalData = async () => {
-      setLoading(true);
-      try {
-        if (!slug) {
-          console.error("No slug provided");
-          setLoading(false);
-          return;
-        }
-
-        // Fetch the professional by slug from the profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('slug', slug)
-          .single();
-
-        if (profileError) {
-          console.error("Error fetching professional by slug:", profileError);
-          setLoading(false);
-          return;
-        }
-
-        if (!profileData) {
-          console.error("No professional found with slug:", slug);
-          setLoading(false);
-          return;
-        }
-
-        console.log("Found professional:", profileData);
-        
-        const professionalData: Professional = {
-          id: profileData.id,
-          name: profileData.name,
-          email: profileData.email,
-          profession: profileData.profession,
-          bio: profileData.bio || undefined,
-          slug: profileData.slug,
-          address: undefined,
-          avatar: profileData.avatar || undefined
-        };
-        
-        setProfessional(professionalData);
-        
-        await fetchAppointmentsAndTimeSlots(professionalData.id);
-      } catch (error) {
-        console.error("Error fetching professional data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchProfessionalData();
-  }, [slug]);
+  // Initialize data fetching
+  useBookingData(slug);
   
-  const fetchAppointmentsAndTimeSlots = async (professionalId: string) => {
-    try {
-      // Fetch professional's appointments
-      const { data: appointmentsData } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('professional_id', professionalId);
-        
-      // Fetch professional's time slots
-      const { data: timeSlotsData } = await supabase
-        .from('time_slots')
-        .select('*')
-        .eq('professional_id', professionalId)
-        .order('day_of_week', { ascending: true })
-        .order('start_time', { ascending: true });
-       
-      console.log("Appointments data:", appointmentsData);
-      console.log("Time slots data:", timeSlotsData);
-      
-      // Convert the data and make sure the status is correctly typed
-      if (appointmentsData) {
-        const typedAppointments: Appointment[] = appointmentsData.map(app => {
-          // Validate and ensure the status is one of the allowed values
-          let status: "scheduled" | "completed" | "canceled" = "scheduled";
-          if (app.status === "completed") status = "completed";
-          else if (app.status === "canceled") status = "canceled";
-          
-          return {
-            ...app,
-            status
-          } as Appointment;
-        });
-        
-        setAppointments(typedAppointments);
-      } else {
-        setAppointments([]);
-      }
-      
-      setTimeSlots(timeSlotsData as TimeSlot[] || []);
-    } catch (error) {
-      console.error("Error fetching appointments and time slots:", error);
-    }
-  };
-  
-  const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
-    // Assegurar que as datas são tratadas como novos objetos
-    const safeDate = new Date(date);
-    
-    setSelectedDate(safeDate);
-    setSelectedStartTime(startTime);
-    setSelectedEndTime(endTime);
-    setSelectedTeamMember(teamMemberId);
-    
-    // Importante: só avançar para o próximo passo se o usuário realmente confirmar
-    // a seleção de horário pelo botão "Confirmar Horário"
-    setCurrentStep('form');
-  };
-  
-  const handleBookingSuccess = async (name: string, id: string) => {
-    setClientName(name);
-    setAppointmentId(id);
-    setCurrentStep('confirmation');
-    
-    // Refresh appointments after booking
-    if (professional) {
-      await fetchAppointmentsAndTimeSlots(professional.id);
-    }
-  };
-  
-  const handleBookingFormCancel = () => {
-    setCurrentStep('calendar');
-  };
-  
-  const handleConfirmationClose = () => {
-    setCurrentStep('calendar');
-    setSelectedDate(null);
-    setSelectedStartTime('');
-    setSelectedEndTime('');
-    setSelectedTeamMember(undefined);
-    setAppointmentId('');
-  };
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <p className="text-center">Carregando...</p>
-            </CardContent>
-          </Card>
-        </main>
-        <Footer />
+  return (
+    <main className="flex-1 py-8 px-4">
+      <div className="container max-w-4xl mx-auto">
+        {loading ? <BookingLoadingState /> : <BookingContent />}
       </div>
-    );
-  }
-  
-  if (!professional) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <p className="text-center">Profissional não encontrado</p>
-            </CardContent>
-          </Card>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-  
+    </main>
+  );
+};
+
+// Main component wrapper that provides context
+const Booking: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
-      <main className="flex-1 py-8 px-4">
-        <div className="container max-w-4xl mx-auto">
-          <Card>
-            <CardHeader className="border-b">
-              <CardTitle>Agendar com {professional.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              {currentStep === 'calendar' && (
-                <BookingCalendar 
-                  professional={professional}
-                  timeSlots={timeSlots}
-                  appointments={appointments}
-                  onSelectSlot={handleSelectTimeSlot}
-                />
-              )}
-              
-              {currentStep === 'form' && selectedDate && (
-                <BookingForm 
-                  professional={professional}
-                  selectedDate={selectedDate}
-                  startTime={selectedStartTime}
-                  endTime={selectedEndTime}
-                  selectedTeamMember={selectedTeamMember}
-                  onSuccess={handleBookingSuccess}
-                  onCancel={handleBookingFormCancel}
-                />
-              )}
-              
-              {currentStep === 'confirmation' && selectedDate && (
-                <BookingConfirmation
-                  professional={professional}
-                  clientName={clientName}
-                  date={selectedDate}
-                  startTime={selectedStartTime}
-                  endTime={selectedEndTime}
-                  appointmentId={appointmentId}
-                  onClose={handleConfirmationClose}
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-      
+      <BookingProvider>
+        <BookingContainer />
+      </BookingProvider>
       <Footer />
     </div>
   );
