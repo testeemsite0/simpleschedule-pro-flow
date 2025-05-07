@@ -1,14 +1,10 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Professional, TeamMember } from '@/types';
-import { BookingStepIndicator } from './BookingStepIndicator';
-import { BookingAppointmentSummary } from './BookingAppointmentSummary';
-import { InsurancePlanStep } from './InsurancePlanStep';
-import { ClientInfoStep } from './ClientInfoStep';
+import { Professional } from '@/types';
 import { useBookingForm } from '@/hooks/useBookingForm';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { BookingFormContent } from './BookingFormContent';
+import { BookingStepNavigator } from './FormSteps/BookingStepNavigator';
 
 interface BookingFormProps {
   professional: Professional;
@@ -66,6 +62,14 @@ const BookingForm: React.FC<BookingFormProps> = ({
   
   const selectedTeamMemberObject = teamMembers.find(m => m.id === teamMemberId);
   
+  const handleNext = () => {
+    handleInsurancePlanChange(insurancePlanId || "none");
+  };
+  
+  const handlePrevious = () => {
+    setCurrentStep(1);
+  };
+  
   return (
     <Card>
       <CardHeader>
@@ -73,89 +77,40 @@ const BookingForm: React.FC<BookingFormProps> = ({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          {/* Steps indicator */}
-          <div className="sticky top-0 bg-white pb-4 z-10">
-            <BookingStepIndicator 
-              currentStep={currentStep} 
-              steps={steps} 
-            />
-          </div>
-
-          <BookingAppointmentSummary 
+          <BookingFormContent 
             professionalName={professional.name}
             selectedDate={selectedDate}
             startTime={startTime}
             endTime={endTime}
             selectedTeamMember={selectedTeamMemberObject}
+            currentStep={currentStep}
+            steps={steps}
+            name={name}
+            setName={setName}
+            email={email}
+            setEmail={setEmail}
+            phone={phone}
+            setPhone={setPhone}
+            notes={notes}
+            setNotes={setNotes}
+            availableInsurancePlans={availableInsurancePlans}
+            insurancePlanId={insurancePlanId}
+            onInsurancePlanChange={handleInsurancePlanChange}
+            insuranceLimitError={insuranceLimitError}
+            teamMemberId={teamMemberId}
           />
-          
-          <ScrollArea className="h-[350px]">
-            <div className="space-y-6 pb-4 pr-4">
-              {/* Step 1: Select Insurance */}
-              {currentStep === 1 && (
-                <InsurancePlanStep 
-                  availableInsurancePlans={availableInsurancePlans}
-                  insurancePlanId={insurancePlanId}
-                  onInsurancePlanChange={handleInsurancePlanChange}
-                  insuranceLimitError={insuranceLimitError}
-                  teamMemberId={teamMemberId}
-                />
-              )}
-              
-              {/* Step 2: Client information */}
-              {currentStep === 2 && (
-                <ClientInfoStep 
-                  name={name}
-                  setName={setName}
-                  email={email}
-                  setEmail={setEmail}
-                  phone={phone}
-                  setPhone={setPhone}
-                  notes={notes}
-                  setNotes={setNotes}
-                />
-              )}
-            </div>
-          </ScrollArea>
         </CardContent>
         
         <CardFooter className="flex justify-between border-t p-4">
-          {currentStep === 1 ? (
-            <>
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={onCancel}
-              >
-                Voltar
-              </Button>
-              <Button 
-                type="button" 
-                onClick={() => handleInsurancePlanChange(insurancePlanId || "none")}
-              >
-                Próximo
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => setCurrentStep(1)}
-              >
-                Voltar
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={
-                  isLoading || 
-                  !!insuranceLimitError
-                }
-              >
-                {isLoading ? 'Enviando...' : 'Confirmar agendamento'}
-              </Button>
-            </>
-          )}
+          <BookingStepNavigator 
+            currentStep={currentStep}
+            isLoading={isLoading}
+            insuranceLimitError={insuranceLimitError}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+            onCancel={onCancel}
+            onSubmit={handleSubmit}
+          />
         </CardFooter>
       </form>
     </Card>
