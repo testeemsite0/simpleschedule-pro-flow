@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,6 +10,7 @@ import { Appointment, TimeSlot } from '@/types';
 import { useAppointments } from '@/context/AppointmentContext';
 import AppointmentCreationForm from '@/components/dashboard/AppointmentCreationForm';
 import AppointmentTabs from '@/components/dashboard/AppointmentTabs';
+import MaintenanceToggle from '@/components/dashboard/MaintenanceToggle';
 
 const DashboardAppointments = () => {
   const { user } = useAuth();
@@ -42,7 +42,12 @@ const DashboardAppointments = () => {
     try {
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          *,
+          team_members(name),
+          services(name, duration_minutes, price),
+          insurance_plans(name)
+        `)
         .eq('professional_id', user.id)
         .order('date', { ascending: true });
         
@@ -84,7 +89,7 @@ const DashboardAppointments = () => {
     notes: string;
     teamMemberId?: string;
     insurancePlanId?: string;
-    serviceId?: string; // Adicionado campo de serviço
+    serviceId?: string;
   }) => {
     if (!user) {
       toast({
@@ -98,19 +103,6 @@ const DashboardAppointments = () => {
     setIsSubmitting(true);
     
     try {
-      // Verifica se está dentro do limite gratuito
-      const withinLimit = await isWithinFreeLimit(user.id);
-      
-      if (!withinLimit) {
-        toast({
-          title: 'Limite Atingido',
-          description: 'Você atingiu o limite de agendamentos do plano gratuito. Atualize para o plano Premium para continuar.',
-          variant: 'destructive',
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
       // Verifica se este horário já está reservado
       const existingBooking = appointments.find(app => 
         app.date === formData.selectedDate && 
@@ -122,6 +114,17 @@ const DashboardAppointments = () => {
         toast({
           title: 'Erro',
           description: 'Este horário já está reservado.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Verifica se o serviço foi selecionado
+      if (!formData.serviceId) {
+        toast({
+          title: 'Erro',
+          description: 'Por favor, selecione um serviço para o agendamento.',
           variant: 'destructive',
         });
         setIsSubmitting(false);
@@ -146,30 +149,25 @@ const DashboardAppointments = () => {
         source: appointmentSource,
         team_member_id: formData.teamMemberId || null,
         insurance_plan_id: formData.insurancePlanId || null,
-        service_id: formData.serviceId || null // Adiciona service_id
+        service_id: formData.serviceId || null
       };
       
       // Cria agendamento
       const { data, error } = await supabase
         .from('appointments')
         .insert([appointmentData])
-        .select();
+        .select(`
+          *,
+          team_members(name),
+          services(name, duration_minutes, price),
+          insurance_plans(name)
+        `);
         
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Garante que o agendamento retornado tenha os tipos literais corretos
-        const appointment = {
-          ...data[0],
-          status: appointmentStatus,
-          source: appointmentSource
-        };
-        
-        // Adiciona o agendamento ao contexto com a tipagem adequada
-        addAppointment(appointment);
-        
-        // Também atualiza o estado local para garantir atualização imediata da UI
-        setAppointments(prevAppointments => [...prevAppointments, appointment]);
+        // Atualiza o estado local para garantir atualização imediata da UI
+        setAppointments(prevAppointments => [...prevAppointments, data[0]]);
         
         toast({
           title: 'Sucesso',
@@ -247,7 +245,7 @@ const DashboardAppointments = () => {
               </DialogHeader>
               
               <AppointmentCreationForm 
-                professionalId={user.id}
+                professionalId={user?.id ?? ''}
                 timeSlots={timeSlots}
                 appointments={appointments}
                 isSubmitting={isSubmitting}
@@ -258,25 +256,32 @@ const DashboardAppointments = () => {
           </Dialog>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Seus Agendamentos</CardTitle>
-            <CardDescription>
-              Visualize e gerencie todos os seus compromissos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AppointmentTabs 
-              upcomingAppointments={upcomingAppointments}
-              pastAppointments={pastAppointments}
-              canceledAppointments={canceledAppointments}
-              loading={loading}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              onAppointmentCanceled={handleAppointmentCanceled}
-            />
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="md:col-span-3">
+            <CardHeader>
+              <CardTitle>Seus Agendamentos</CardTitle>
+              <CardDescription>
+                Visualize e gerencie todos os seus compromissos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AppointmentTabs 
+                upcomingAppointments={upcomingAppointments}
+                pastAppointments={pastAppointments}
+                canceledAppointments={canceledAppointments}
+                loading={loading}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                onAppointmentCanceled={handleAppointmentCanceled}
+              />
+            </CardContent>
+          </Card>
+          
+          {/* Componente de alternância do modo manutenção */}
+          <div className="md:col-span-3">
+            <MaintenanceToggle />
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

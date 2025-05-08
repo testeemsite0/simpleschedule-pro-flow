@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { TimeSlot, Appointment } from '@/types';
-import { addDays, startOfDay, isBefore } from 'date-fns';
+import { addDays, startOfDay, isBefore, format } from 'date-fns';
 
 interface UseBookingSlotsProps {
   timeSlots: TimeSlot[];
   appointments: Appointment[];
   selectedTeamMember: string;
-  selectedService: string; // Adiciona parâmetro de serviço
+  selectedService: string;
   isOverLimit: boolean;
   currentStep: number;
 }
@@ -23,7 +23,7 @@ export const useBookingSlots = ({
   timeSlots,
   appointments,
   selectedTeamMember,
-  selectedService, // Inclui serviço na desestruturação
+  selectedService,
   isOverLimit,
   currentStep
 }: UseBookingSlotsProps) => {
@@ -31,7 +31,7 @@ export const useBookingSlots = ({
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  // Filtra time slots com base na seleção de membro da equipe
+  // Melhorado: filtra time slots com base na seleção de membro da equipe
   const filteredTimeSlots = timeSlots.filter(slot => 
     !selectedTeamMember || slot.team_member_id === selectedTeamMember
   );
@@ -48,6 +48,9 @@ export const useBookingSlots = ({
     const dates: Date[] = [];
     const now = startOfDay(new Date());
     
+    // Melhorado: cache para evitar recalcular slots para o mesmo dia várias vezes
+    const dateSlotCache: Record<string, AvailableSlot[]> = {};
+    
     for (let i = 0; i < 14; i++) {
       const date = addDays(now, i);
       const dayOfWeek = date.getDay();
@@ -56,14 +59,13 @@ export const useBookingSlots = ({
       if (isBefore(date, now)) continue;
       
       // Verifica se há slots disponíveis neste dia
-      const hasAvailableSlots = filteredTimeSlots.some(
+      const hasAvailableTimeSlots = filteredTimeSlots.some(
         slot => slot.day_of_week === dayOfWeek && slot.available
       );
       
-      // Só adiciona datas que têm timeslots disponíveis
-      if (hasAvailableSlots) {
+      if (hasAvailableTimeSlots) {
         // Formata data selecionada para filtragem de agendamentos
-        const formattedDate = date.toISOString().split('T')[0];
+        const formattedDate = format(date, 'yyyy-MM-dd');
         
         // Encontra agendamentos reservados para esta data
         const bookedAppointments = appointments.filter(app => 
@@ -75,16 +77,24 @@ export const useBookingSlots = ({
           slot => slot.day_of_week === dayOfWeek && slot.available
         );
         
-        // Verifica se realmente há timeslots disponíveis após considerar agendamentos marcados
         if (daySlots.length > 0) {
           try {
-            // Importa função de timeUtils.ts para gerar slots disponíveis
-            const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
-            const availableTimeSlots = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
+            // Se já calculamos os slots para esta data+profissional+serviço, use o cache
+            const cacheKey = `${formattedDate}_${selectedTeamMember}_${selectedService}`;
             
-            // Só adiciona a data se houver timeslots disponíveis reais após filtragem
+            if (!dateSlotCache[cacheKey]) {
+              const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
+              dateSlotCache[cacheKey] = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
+            }
+            
+            const availableTimeSlots = dateSlotCache[cacheKey];
+            
+            // Melhorado: Verifica explicitamente se há slots disponíveis
             if (availableTimeSlots && availableTimeSlots.length > 0) {
               dates.push(date);
+              console.log(`Date ${formattedDate} has ${availableTimeSlots.length} available slots`);
+            } else {
+              console.log(`Date ${formattedDate} has no available slots`);
             }
           } catch (error) {
             console.error("Error generating available time slots:", error);
@@ -93,15 +103,15 @@ export const useBookingSlots = ({
       }
     }
     
-    setAvailableDates(dates);
     console.log("Available dates generated:", dates.length);
+    setAvailableDates(dates);
     
     if (dates.length > 0 && !selectedDate) {
       setSelectedDate(dates[0]);
     } else if (dates.length === 0) {
       setSelectedDate(null);
     }
-  }, [filteredTimeSlots, appointments, isOverLimit, selectedDate, selectedTeamMember, selectedService, currentStep]);
+  }, [filteredTimeSlots, appointments, isOverLimit, selectedTeamMember, selectedService, currentStep, selectedDate]);
   
   // Gera slots de horário disponíveis
   useEffect(() => {
@@ -123,7 +133,7 @@ export const useBookingSlots = ({
     }
     
     // Formata a data selecionada para filtragem de agendamentos
-    const formattedSelectedDate = selectedDate.toISOString().split('T')[0];
+    const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
     
     // Encontra agendamentos marcados para esta data
     const bookedAppointments = appointments.filter(app => 
@@ -144,14 +154,16 @@ export const useBookingSlots = ({
         });
         
         setAvailableSlots(slots);
+        console.log(`${slots.length} slots available for date ${formattedSelectedDate}`);
       } else {
+        console.log(`No slots available for date ${formattedSelectedDate}`);
         setAvailableSlots([]);
       }
     } catch (error) {
       console.error("Error generating available time slots:", error);
       setAvailableSlots([]);
     }
-  }, [selectedDate, filteredTimeSlots, appointments, isOverLimit, currentStep]);
+  }, [selectedDate, filteredTimeSlots, appointments, isOverLimit, currentStep, selectedTeamMember, selectedService]);
 
   return {
     availableDates,
