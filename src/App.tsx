@@ -23,6 +23,7 @@ import DashboardClients from './pages/DashboardClients';
 import DashboardBookingLink from './pages/DashboardBookingLink';
 import DashboardPreferences from './pages/DashboardPreferences';
 import DashboardInsurance from './pages/DashboardInsurance';
+import AdminPanel from './pages/AdminPanel';
 import Index from './pages/Index';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -123,6 +124,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <DashboardPreferences />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPanel />
                 </ProtectedRoute>
               }
             />

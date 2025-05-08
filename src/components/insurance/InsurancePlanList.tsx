@@ -1,42 +1,51 @@
 
 import React from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
-import { InsurancePlan } from '@/types';
+import { Edit, Trash2, PlusCircle, Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface InsurancePlanListProps {
-  plans: InsurancePlan[];
-  onEdit: (plan: InsurancePlan) => void;
-  onDelete: (planId: string) => void;
+  plans: any[];
   loading: boolean;
+  onEdit: (plan: any) => void;
+  onDelete: (planId: string) => void;
   onAddNew: () => void;
+  onManageTeamAccess?: (planId: string, planName: string) => void;
 }
 
-export const InsurancePlanList: React.FC<InsurancePlanListProps> = ({ 
-  plans, 
-  onEdit, 
-  onDelete, 
+export const InsurancePlanList: React.FC<InsurancePlanListProps> = ({
+  plans,
   loading,
-  onAddNew
+  onEdit,
+  onDelete,
+  onAddNew,
+  onManageTeamAccess
 }) => {
   if (loading) {
-    return <p className="text-center py-8">Carregando convênios...</p>;
+    return (
+      <div className="flex justify-center py-8">
+        <p className="text-muted-foreground">Carregando convênios...</p>
+      </div>
+    );
   }
   
   if (plans.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">Você ainda não tem convênios cadastrados.</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          A opção "Particular" é padrão e não precisa ser cadastrada.
+        <p className="text-muted-foreground mb-4">
+          Você ainda não tem nenhum convênio cadastrado.
         </p>
-        <Button 
-          variant="outline" 
-          className="mt-2"
-          onClick={onAddNew}
-        >
-          Adicionar seu primeiro convênio
+        <Button onClick={onAddNew}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Adicionar Convênio
         </Button>
       </div>
     );
@@ -46,10 +55,9 @@ export const InsurancePlanList: React.FC<InsurancePlanListProps> = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Nome do Convênio</TableHead>
-          <TableHead>Limite de Agendamentos</TableHead>
-          <TableHead>Agendamentos Atuais</TableHead>
-          <TableHead>Data de Criação</TableHead>
+          <TableHead>Nome</TableHead>
+          <TableHead>Limite</TableHead>
+          <TableHead>Agendamentos</TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
@@ -57,27 +65,47 @@ export const InsurancePlanList: React.FC<InsurancePlanListProps> = ({
         {plans.map((plan) => (
           <TableRow key={plan.id}>
             <TableCell className="font-medium">{plan.name}</TableCell>
-            <TableCell>{plan.limit_per_plan ? plan.limit_per_plan : "Ilimitado"}</TableCell>
-            <TableCell>{plan.current_appointments || 0}</TableCell>
             <TableCell>
-              {new Date(plan.created_at).toLocaleDateString('pt-BR')}
+              {plan.limit_per_plan ? (
+                <Badge variant="secondary">
+                  {plan.limit_per_plan}
+                </Badge>
+              ) : (
+                <span className="text-muted-foreground text-sm">Ilimitado</span>
+              )}
             </TableCell>
-            <TableCell className="text-right">
-              <Button
-                variant="ghost"
+            <TableCell>
+              {plan.current_appointments || '0'}
+              {plan.limit_per_plan && (
+                <span className="text-muted-foreground text-sm ml-1">
+                  /{plan.limit_per_plan}
+                </span>
+              )}
+            </TableCell>
+            <TableCell className="text-right space-x-2">
+              {onManageTeamAccess && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onManageTeamAccess(plan.id, plan.name)}
+                >
+                  <Users className="h-4 w-4 mr-1" />
+                  Equipe
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
                 size="sm"
                 onClick={() => onEdit(plan)}
-                title="Editar"
               >
-                <Pencil size={16} />
+                <Edit className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
+              <Button 
+                variant="ghost" 
                 size="sm"
                 onClick={() => onDelete(plan.id)}
-                title="Excluir"
               >
-                <Trash2 size={16} />
+                <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </TableCell>
           </TableRow>

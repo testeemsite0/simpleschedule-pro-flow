@@ -16,13 +16,20 @@ export const useInsuranceSelection = ({ professionalId, teamMemberId }: UseInsur
   const [insuranceLimitError, setInsuranceLimitError] = useState<string | null>(null);
   const { toast } = useToast();
   
+  // Fetch all insurance plans for the professional
   useEffect(() => {
     fetchInsurancePlans();
   }, [professionalId]);
   
+  // Update available plans when teamMemberId or insurancePlans change
   useEffect(() => {
-    if (teamMemberId && insurancePlans.length > 0) {
-      fetchTeamMemberInsurancePlans(teamMemberId);
+    if (insurancePlans.length > 0) {
+      if (teamMemberId) {
+        fetchTeamMemberInsurancePlans(teamMemberId);
+      } else {
+        // When no team member is selected, show all professional's insurance plans
+        setAvailableInsurancePlans([...insurancePlans]);
+      }
     }
   }, [teamMemberId, insurancePlans]);
   
@@ -35,6 +42,7 @@ export const useInsuranceSelection = ({ professionalId, teamMemberId }: UseInsur
         
       if (error) throw error;
       
+      console.log('Fetched insurance plans:', data);
       setInsurancePlans(data || []);
     } catch (error) {
       console.error("Error fetching insurance plans:", error);
@@ -61,26 +69,25 @@ export const useInsuranceSelection = ({ professionalId, teamMemberId }: UseInsur
         
       if (planError) throw planError;
       
+      console.log('Fetched team member insurance plans:', memberPlansData);
       updateAvailableInsurancePlans(memberId, memberPlansData || [], insurancePlans);
     } catch (error) {
       console.error("Error fetching team member insurance plans:", error);
-      setAvailableInsurancePlans([]);
+      // If there's an error fetching team member plans, show all insurance plans
+      setAvailableInsurancePlans([...insurancePlans]);
     }
   };
   
   const updateAvailableInsurancePlans = (memberId: string, memberPlansData: any[] = [], allPlans: InsurancePlan[] = []) => {
-    // Find all insurance plans available for this professional
-    const memberPlans = memberPlansData.filter(
-      plan => plan.team_member_id === memberId
-    );
-    
-    if (memberPlans.length === 0) {
-      setAvailableInsurancePlans([]);
+    // If no member plans are found, show all insurance plans
+    if (memberPlansData.length === 0) {
+      console.log('No specific member plans found, showing all plans');
+      setAvailableInsurancePlans([...allPlans]);
       return;
     }
     
     // Prepare list of available insurance plans with availability information
-    const availablePlans = memberPlans
+    const availablePlans = memberPlansData
       .map(memberPlan => {
         const planDetails = allPlans.find(p => p.id === memberPlan.insurance_plan_id);
         
@@ -105,6 +112,7 @@ export const useInsuranceSelection = ({ professionalId, teamMemberId }: UseInsur
       })
       .filter((plan): plan is InsurancePlan => plan !== null);
     
+    console.log('Available plans after filtering:', availablePlans);
     setAvailableInsurancePlans(availablePlans);
   };
   
@@ -114,6 +122,13 @@ export const useInsuranceSelection = ({ professionalId, teamMemberId }: UseInsur
     
     if (value === "none") {
       setSelectedInsurancePlan(null);
+      return;
+    }
+    
+    // No need to validate team member for insurance when no team member is required
+    if (!teamMemberId && insurancePlans.some(p => p.id === value)) {
+      const plan = insurancePlans.find(p => p.id === value);
+      setSelectedInsurancePlan(plan || null);
       return;
     }
     

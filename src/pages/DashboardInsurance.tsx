@@ -2,15 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { InsurancePlan } from '@/types';
-import { Plus } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { InsurancePlanForm } from '@/components/insurance/InsurancePlanForm';
 import { InsurancePlanList } from '@/components/insurance/InsurancePlanList';
+import { TeamInsurancePlanManager } from '@/components/insurance/TeamInsurancePlanManager';
 
 const DashboardInsurance = () => {
   const { user } = useAuth();
@@ -19,6 +20,8 @@ const DashboardInsurance = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [selectedPlanForTeam, setSelectedPlanForTeam] = useState<{id: string, name: string} | null>(null);
   
   useEffect(() => {
     if (user) {
@@ -39,6 +42,7 @@ const DashboardInsurance = () => {
         
       if (error) throw error;
       
+      console.log('Fetched insurance plans:', data);
       setInsurancePlans(data || []);
     } catch (error) {
       console.error('Error fetching insurance plans:', error);
@@ -63,6 +67,32 @@ const DashboardInsurance = () => {
     }
     
     try {
+      // First check if there are any appointments using this insurance plan
+      const { data: appointmentsCount, error: countError } = await supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('insurance_plan_id', planId);
+        
+      if (countError) throw countError;
+      
+      if ((appointmentsCount as any)?.count > 0) {
+        toast({
+          title: 'Não foi possível excluir',
+          description: 'Este convênio possui agendamentos associados e não pode ser removido.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Remove any team member associations first
+      const { error: teamAssocError } = await supabase
+        .from('team_member_insurance_plans')
+        .delete()
+        .eq('insurance_plan_id', planId);
+        
+      if (teamAssocError) throw teamAssocError;
+      
+      // Now delete the insurance plan
       const { error } = await supabase
         .from('insurance_plans')
         .delete()
@@ -87,6 +117,11 @@ const DashboardInsurance = () => {
     }
   };
   
+  const handleManageTeamAccess = (planId: string, planName: string) => {
+    setSelectedPlanForTeam({ id: planId, name: planName });
+    setTeamDialogOpen(true);
+  };
+  
   return (
     <DashboardLayout title="Gerenciar Convênios">
       <div className="space-y-6">
@@ -109,7 +144,7 @@ const DashboardInsurance = () => {
           <CardHeader>
             <CardTitle>Seus Convênios</CardTitle>
             <CardDescription>
-              Gerencie os convênios aceitos por sua empresa
+              Gerencie os convênios aceitos por sua empresa e quais membros da equipe podem atendê-los
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -119,6 +154,7 @@ const DashboardInsurance = () => {
               onEdit={handleOpenDialog}
               onDelete={handleDelete}
               onAddNew={() => handleOpenDialog()}
+              onManageTeamAccess={handleManageTeamAccess}
             />
           </CardContent>
         </Card>
@@ -130,6 +166,14 @@ const DashboardInsurance = () => {
         selectedPlan={selectedPlan}
         onSuccess={fetchInsurancePlans}
         userId={user?.id || ''}
+      />
+      
+      <TeamInsurancePlanManager
+        open={teamDialogOpen}
+        onClose={() => setTeamDialogOpen(false)}
+        planId={selectedPlanForTeam?.id || null}
+        planName={selectedPlanForTeam?.name || null}
+        professionalId={user?.id || ''}
       />
     </DashboardLayout>
   );

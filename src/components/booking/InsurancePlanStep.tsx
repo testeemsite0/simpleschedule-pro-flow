@@ -23,6 +23,13 @@ export const InsurancePlanStep: React.FC<InsurancePlanStepProps> = ({
   insuranceLimitError,
   teamMemberId
 }) => {
+  // For debugging
+  console.log("InsurancePlanStep props:", {
+    availablePlans: availableInsurancePlans,
+    insurancePlanId,
+    teamMemberId
+  });
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Tipo de atendimento</h2>
@@ -37,42 +44,44 @@ export const InsurancePlanStep: React.FC<InsurancePlanStepProps> = ({
             <ScrollArea className="h-[200px]">
               <SelectItem value="none">Particular</SelectItem>
               
-              {availableInsurancePlans.map(plan => {
-                const isAvailable = plan.availableForBooking !== false;
-                const limitInfo = plan.memberLimit 
-                  ? `${plan.memberCurrentAppointments}/${plan.memberLimit}`
-                  : plan.limit_per_plan
-                    ? `${plan.current_appointments}/${plan.limit_per_plan}`
-                    : '';
-                
-                return (
-                  <SelectItem 
-                    key={plan.id} 
-                    value={plan.id}
-                    disabled={!isAvailable}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>{plan.name}</span>
-                      {limitInfo && (
-                        <Badge 
-                          variant={isAvailable ? "secondary" : "destructive"}
-                          className="ml-2"
-                        >
-                          {limitInfo}
-                        </Badge>
-                      )}
-                    </div>
-                  </SelectItem>
-                );
-              })}
+              {availableInsurancePlans.length > 0 ? (
+                availableInsurancePlans.map(plan => {
+                  const isAvailable = plan.availableForBooking !== false;
+                  const limitInfo = plan.memberLimit 
+                    ? `${plan.memberCurrentAppointments}/${plan.memberLimit}`
+                    : plan.limit_per_plan
+                      ? `${plan.current_appointments}/${plan.limit_per_plan}`
+                      : '';
+                  
+                  return (
+                    <SelectItem 
+                      key={plan.id} 
+                      value={plan.id}
+                      disabled={!isAvailable}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span>{plan.name}</span>
+                        {limitInfo && (
+                          <Badge 
+                            variant={isAvailable ? "secondary" : "destructive"}
+                            className="ml-2"
+                          >
+                            {limitInfo}
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  {teamMemberId 
+                    ? "Este profissional não tem convênios disponíveis" 
+                    : "Nenhum convênio disponível"}
+                </div>
+              )}
             </ScrollArea>
-            
-            {availableInsurancePlans.length === 0 && teamMemberId && (
-              <div className="p-2 text-center text-sm text-muted-foreground">
-                Este profissional não tem convênios disponíveis
-              </div>
-            )}
           </SelectContent>
         </Select>
           
