@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,16 +17,16 @@ const DashboardAppointments = () => {
   const { toast } = useToast();
   const { getTimeSlotsByProfessional, isWithinFreeLimit, addAppointment } = useAppointments();
   
-  // States for fetching data
+  // Estados para buscar dados
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // States for appointment creation
+  // Estados para criação de agendamento
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Tab state
+  // Estado da guia
   const [activeTab, setActiveTab] = useState('upcoming');
   
   useEffect(() => {
@@ -83,6 +84,7 @@ const DashboardAppointments = () => {
     notes: string;
     teamMemberId?: string;
     insurancePlanId?: string;
+    serviceId?: string; // Adicionado campo de serviço
   }) => {
     if (!user) {
       toast({
@@ -96,7 +98,7 @@ const DashboardAppointments = () => {
     setIsSubmitting(true);
     
     try {
-      // Check if within free limit
+      // Verifica se está dentro do limite gratuito
       const withinLimit = await isWithinFreeLimit(user.id);
       
       if (!withinLimit) {
@@ -109,7 +111,7 @@ const DashboardAppointments = () => {
         return;
       }
       
-      // Check if this slot is already booked
+      // Verifica se este horário já está reservado
       const existingBooking = appointments.find(app => 
         app.date === formData.selectedDate && 
         app.start_time === formData.startTime && 
@@ -126,11 +128,11 @@ const DashboardAppointments = () => {
         return;
       }
       
-      // Define appointment status and source as literal types
+      // Define status e fonte do agendamento como tipos literais
       const appointmentStatus = 'scheduled' as const;
       const appointmentSource = 'manual' as const;
       
-      // Prepare appointment data
+      // Prepara dados do agendamento
       const appointmentData = {
         professional_id: user.id,
         client_name: formData.clientName,
@@ -143,10 +145,11 @@ const DashboardAppointments = () => {
         status: appointmentStatus,
         source: appointmentSource,
         team_member_id: formData.teamMemberId || null,
-        insurance_plan_id: formData.insurancePlanId || null
+        insurance_plan_id: formData.insurancePlanId || null,
+        service_id: formData.serviceId || null // Adiciona service_id
       };
       
-      // Create appointment
+      // Cria agendamento
       const { data, error } = await supabase
         .from('appointments')
         .insert([appointmentData])
@@ -155,17 +158,17 @@ const DashboardAppointments = () => {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Ensure the returned appointment has the correct literal types
+        // Garante que o agendamento retornado tenha os tipos literais corretos
         const appointment = {
           ...data[0],
           status: appointmentStatus,
           source: appointmentSource
         };
         
-        // Add the appointment to the context with proper typing
+        // Adiciona o agendamento ao contexto com a tipagem adequada
         addAppointment(appointment);
         
-        // Also update local state to ensure immediate UI update
+        // Também atualiza o estado local para garantir atualização imediata da UI
         setAppointments(prevAppointments => [...prevAppointments, appointment]);
         
         toast({
@@ -173,7 +176,7 @@ const DashboardAppointments = () => {
           description: 'Agendamento criado com sucesso',
         });
         
-        // Reset form and close dialog
+        // Redefine formulário e fecha diálogo
         setIsDialogOpen(false);
       }
       
@@ -190,7 +193,7 @@ const DashboardAppointments = () => {
   };
   
   const handleAppointmentCanceled = (id: string) => {
-    // Atualizar o estado local dos agendamentos para refletir o cancelamento
+    // Atualiza o estado local dos agendamentos para refletir o cancelamento
     setAppointments(prevAppointments => 
       prevAppointments.map(app => 
         app.id === id ? { ...app, status: 'canceled' } : app
@@ -202,7 +205,7 @@ const DashboardAppointments = () => {
     return null;
   }
   
-  // Filter appointments based on tab
+  // Filtra agendamentos com base na guia
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
