@@ -119,6 +119,45 @@ const DashboardServices = () => {
     }
     
     try {
+      // Verificar se o serviço está sendo usado em algum agendamento
+      const { data: appointmentsWithService, error: appointmentsError } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('service_id', serviceId)
+        .limit(1);
+        
+      if (appointmentsError) throw appointmentsError;
+      
+      // Se encontramos agendamentos usando este serviço, não permitir a exclusão
+      if (appointmentsWithService && appointmentsWithService.length > 0) {
+        toast({
+          title: 'Não é possível excluir',
+          description: 'Este serviço está vinculado a agendamentos existentes e não pode ser excluído.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Verificar se o serviço está vinculado a algum profissional
+      const { data: teamMemberServices, error: teamMemberServicesError } = await supabase
+        .from('team_member_services')
+        .select('id')
+        .eq('service_id', serviceId)
+        .limit(1);
+        
+      if (teamMemberServicesError) throw teamMemberServicesError;
+      
+      // Se encontramos vínculos com profissionais, não permitir a exclusão
+      if (teamMemberServices && teamMemberServices.length > 0) {
+        toast({
+          title: 'Não é possível excluir',
+          description: 'Este serviço está vinculado a profissionais da equipe e não pode ser excluído.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Se não há vínculos, proceder com a exclusão
       const { error } = await supabase
         .from('services')
         .delete()

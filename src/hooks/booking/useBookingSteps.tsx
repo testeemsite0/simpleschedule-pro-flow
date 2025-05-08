@@ -32,9 +32,9 @@ export const useBookingSteps = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Funções para avançar e voltar nas etapas
+  // Funções para avançar e voltar nas etapas - ordem alterada: convênio antes do serviço
   const goToNextStep = () => {
-    const stepOrder: BookingStep[] = ['team-member', 'service', 'insurance', 'date', 'time', 'client-info', 'confirmation'];
+    const stepOrder: BookingStep[] = ['team-member', 'insurance', 'service', 'date', 'time', 'client-info', 'confirmation'];
     const currentIndex = stepOrder.indexOf(currentStep);
     
     if (currentIndex < stepOrder.length - 1) {
@@ -43,7 +43,7 @@ export const useBookingSteps = ({
   };
   
   const goToPreviousStep = () => {
-    const stepOrder: BookingStep[] = ['team-member', 'service', 'insurance', 'date', 'time', 'client-info', 'confirmation'];
+    const stepOrder: BookingStep[] = ['team-member', 'insurance', 'service', 'date', 'time', 'client-info', 'confirmation'];
     const currentIndex = stepOrder.indexOf(currentStep);
     
     if (currentIndex > 0) {

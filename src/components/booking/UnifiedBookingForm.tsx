@@ -54,11 +54,11 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     return <MaintenanceNotice />;
   }
 
-  // Defina os passos do agendamento
+  // Defina os passos do agendamento - Ordem atualizada: convênio antes do serviço
   const steps: Step[] = [
     { id: 1, label: "Profissional" },
-    { id: 2, label: "Serviço" },
-    { id: 3, label: "Convênio" },
+    { id: 2, label: "Convênio" },
+    { id: 3, label: "Serviço" },
     { id: 4, label: "Data" },
     { id: 5, label: "Horário" },
   ];
@@ -88,8 +88,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
             <BookingStepIndicator
               steps={steps}
               currentStep={currentStep === "team-member" ? 1 : 
-                currentStep === "service" ? 2 :
-                currentStep === "insurance" ? 3 :
+                currentStep === "insurance" ? 2 :
+                currentStep === "service" ? 3 :
                 currentStep === "date" ? 4 :
                 currentStep === "time" ? 5 : 1}
             />
@@ -106,16 +106,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
             />
           )}
 
-          {currentStep === "service" && bookingData.teamMemberId && (
-            <ServiceStep
-              services={filteredServices}
-              selectedService={bookingData.serviceId}
-              onServiceChange={setService}
-              onBack={goToPreviousStep}
-            />
-          )}
-
-          {currentStep === "insurance" && bookingData.serviceId && (
+          {currentStep === "insurance" && bookingData.teamMemberId && (
             <>
               {insurancePlans.map(plan => (
                 plan.limit_per_plan && plan.current_appointments >= plan.limit_per_plan ? (
@@ -136,7 +127,17 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
             </>
           )}
 
-          {currentStep === "date" && bookingData.insuranceId && (
+          {currentStep === "service" && bookingData.insuranceId && (
+            <ServiceStep
+              services={filteredServices}
+              selectedService={bookingData.serviceId}
+              onServiceChange={setService}
+              onBack={goToPreviousStep}
+              insuranceId={bookingData.insuranceId}
+            />
+          )}
+
+          {currentStep === "date" && bookingData.serviceId && (
             <DateStep
               availableDates={availableDates || []}
               selectedDate={bookingData.date || null}
@@ -154,8 +155,6 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               onBack={goToPreviousStep}
             />
           )}
-
-          {/* Você pode adicionar mais etapas conforme necessário */}
         </div>
       </CardContent>
     </Card>
