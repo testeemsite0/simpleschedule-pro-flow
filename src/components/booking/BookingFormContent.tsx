@@ -1,10 +1,10 @@
 
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BookingStepIndicator } from './BookingStepIndicator';
-import { BookingAppointmentSummary } from './BookingAppointmentSummary';
-import { InsurancePlanStep } from './InsurancePlanStep';
-import { ClientInfoStep } from './ClientInfoStep';
+import { StepIndicatorWrapper } from './form/StepIndicatorWrapper';
+import { BookingSummary } from './form/BookingSummary';
+import { InsuranceStepContent } from './form/InsuranceStepContent';
+import { ClientStepContent } from './form/ClientStepContent';
 import { TeamMember } from '@/types';
 
 interface BookingFormContentProps {
@@ -55,14 +55,12 @@ export const BookingFormContent: React.FC<BookingFormContentProps> = ({
   return (
     <>
       {/* Steps indicator */}
-      <div className="sticky top-0 bg-white pb-4 z-10">
-        <BookingStepIndicator 
-          currentStep={currentStep} 
-          steps={steps} 
-        />
-      </div>
+      <StepIndicatorWrapper 
+        currentStep={currentStep}
+        steps={steps}
+      />
 
-      <BookingAppointmentSummary 
+      <BookingSummary 
         professionalName={professionalName}
         selectedDate={selectedDate}
         startTime={startTime}
@@ -74,7 +72,7 @@ export const BookingFormContent: React.FC<BookingFormContentProps> = ({
         <div className="space-y-6 pb-4 pr-4">
           {/* Step 1: Select Insurance */}
           {currentStep === 1 && (
-            <InsurancePlanStep 
+            <InsuranceStepContent 
               availableInsurancePlans={availableInsurancePlans}
               insurancePlanId={insurancePlanId}
               onInsurancePlanChange={onInsurancePlanChange}
@@ -85,7 +83,7 @@ export const BookingFormContent: React.FC<BookingFormContentProps> = ({
           
           {/* Step 2: Client information */}
           {currentStep === 2 && (
-            <ClientInfoStep 
+            <ClientStepContent
               name={name}
               setName={setName}
               email={email}
