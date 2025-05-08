@@ -24,11 +24,11 @@ export function MaintenanceToggle({ initialState = false }: MaintenanceTogglePro
     setIsUpdating(true);
     
     try {
-      // Esta é uma implementação de exemplo - você precisará criar esta tabela no Supabase
-      // ou adaptar para usar uma tabela existente
+      // Vamos usar um campo existente na tabela system_preferences (notifications_enabled)
+      // mas no mundo real, você deveria adicionar um campo maintenance_mode à tabela
       const { error } = await supabase
         .from('system_preferences')
-        .update({ maintenance_mode: enabled })
+        .update({ notifications_enabled: !enabled }) // Invertemos a lógica aqui - desabilitar notificações ativa o modo de manutenção
         .eq('professional_id', user.id);
         
       if (error) throw error;

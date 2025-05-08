@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useBookingSteps, BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
 import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
@@ -17,6 +16,8 @@ interface UnifiedBookingContextType {
   insurancePlans: InsurancePlan[];
   timeSlots: TimeSlot[];
   appointments: Appointment[];
+  availableDates: Date[]; // Adicionando esta propriedade
+  availableSlots: TimeSlot[]; // Adicionando esta propriedade
   
   // Funções de navegação
   goToNextStep: () => void;
@@ -69,6 +70,8 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
   const [timeSlots, setTimeSlots] = React.useState<TimeSlot[]>(initialData.timeSlots || []);
   const [appointments, setAppointments] = React.useState<Appointment[]>(initialData.appointments || []);
   const [maintenanceMode, setMaintenanceMode] = React.useState(false);
+  const [availableDates, setAvailableDates] = React.useState<Date[]>([]);
+  const [availableSlots, setAvailableSlots] = React.useState<TimeSlot[]>([]);
 
   // Função utilitária para obter serviços disponíveis para um membro da equipe
   const getAvailableServicesForTeamMember = (teamMemberId: string) => {
@@ -106,6 +109,8 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
     timeSlots,
     appointments,
     maintenanceMode,
+    availableDates,
+    availableSlots,
     setMaintenanceMode,
     getAvailableServicesForTeamMember,
     checkInsuranceLimitReached

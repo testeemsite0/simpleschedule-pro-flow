@@ -18,6 +18,11 @@ interface UnifiedBookingFormProps {
   isAdminView?: boolean;
 }
 
+interface Step {
+  id: number;
+  label: string;
+}
+
 export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
   title = "Agendar Consulta",
   showStepIndicator = true,
@@ -50,12 +55,12 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
   }
 
   // Defina os passos do agendamento
-  const steps = [
-    { id: "team-member", label: "Profissional" },
-    { id: "service", label: "Serviço" },
-    { id: "insurance", label: "Convênio" },
-    { id: "date", label: "Data" },
-    { id: "time", label: "Horário" },
+  const steps: Step[] = [
+    { id: 1, label: "Profissional" },
+    { id: 2, label: "Serviço" },
+    { id: 3, label: "Convênio" },
+    { id: 4, label: "Data" },
+    { id: 5, label: "Horário" },
   ];
 
   // Filtra os serviços disponíveis para o profissional selecionado
@@ -82,7 +87,11 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           <div className="sticky top-0 bg-white z-10 pb-4">
             <BookingStepIndicator
               steps={steps}
-              currentStep={currentStep}
+              currentStep={currentStep === "team-member" ? 1 : 
+                currentStep === "service" ? 2 :
+                currentStep === "insurance" ? 3 :
+                currentStep === "date" ? 4 :
+                currentStep === "time" ? 5 : 1}
             />
           </div>
         )}

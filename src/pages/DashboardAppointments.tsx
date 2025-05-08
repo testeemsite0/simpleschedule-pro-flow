@@ -10,7 +10,7 @@ import { Appointment, TimeSlot } from '@/types';
 import { useAppointments } from '@/context/AppointmentContext';
 import AppointmentCreationForm from '@/components/dashboard/AppointmentCreationForm';
 import AppointmentTabs from '@/components/dashboard/AppointmentTabs';
-import MaintenanceToggle from '@/components/dashboard/MaintenanceToggle';
+import { MaintenanceToggle } from '@/components/admin/MaintenanceToggle';
 
 const DashboardAppointments = () => {
   const { user } = useAuth();
@@ -194,7 +194,7 @@ const DashboardAppointments = () => {
     // Atualiza o estado local dos agendamentos para refletir o cancelamento
     setAppointments(prevAppointments => 
       prevAppointments.map(app => 
-        app.id === id ? { ...app, status: 'canceled' } : app
+        app.id === id ? { ...app, status: 'canceled' as const } : app
       )
     );
   };
