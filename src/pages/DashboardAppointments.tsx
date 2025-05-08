@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -166,8 +167,15 @@ const DashboardAppointments = () => {
       if (error) throw error;
       
       if (data && data.length > 0) {
+        // Precisamos garantir que o tipo do status seja correto
+        const newAppointment = {
+          ...data[0],
+          status: appointmentStatus,
+          source: appointmentSource
+        } as Appointment;
+        
         // Atualiza o estado local para garantir atualização imediata da UI
-        setAppointments(prevAppointments => [...prevAppointments, data[0]]);
+        setAppointments(prevAppointments => [...prevAppointments, newAppointment]);
         
         toast({
           title: 'Sucesso',

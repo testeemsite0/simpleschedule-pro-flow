@@ -1,6 +1,15 @@
+
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useBookingSteps, BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
 import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
+
+// Define an interface for available time slots that matches what TimeStep component expects
+interface AvailableSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  teamMemberId?: string;
+}
 
 interface UnifiedBookingContextType {
   // Estado do agendamento
@@ -17,7 +26,7 @@ interface UnifiedBookingContextType {
   timeSlots: TimeSlot[];
   appointments: Appointment[];
   availableDates: Date[]; // Adicionando esta propriedade
-  availableSlots: TimeSlot[]; // Adicionando esta propriedade
+  availableSlots: AvailableSlot[]; // Modificado para usar o tipo correto
   
   // Funções de navegação
   goToNextStep: () => void;
@@ -71,7 +80,7 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
   const [appointments, setAppointments] = React.useState<Appointment[]>(initialData.appointments || []);
   const [maintenanceMode, setMaintenanceMode] = React.useState(false);
   const [availableDates, setAvailableDates] = React.useState<Date[]>([]);
-  const [availableSlots, setAvailableSlots] = React.useState<TimeSlot[]>([]);
+  const [availableSlots, setAvailableSlots] = React.useState<AvailableSlot[]>([]);
 
   // Função utilitária para obter serviços disponíveis para um membro da equipe
   const getAvailableServicesForTeamMember = (teamMemberId: string) => {
