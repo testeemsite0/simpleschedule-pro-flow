@@ -78,7 +78,7 @@ export const useBookingCalendar = ({
     insurancePlans,
     isOverLimit,
     loading,
-    currentStep,
+    currentStep,  // Making sure currentStep is returned
     error,
     filteredTimeSlots,
     handleTeamMemberChange,

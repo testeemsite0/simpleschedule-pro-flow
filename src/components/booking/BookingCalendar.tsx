@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { TimeSlot, Appointment, Professional } from '@/types';
@@ -38,6 +39,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     insurancePlans,
     isOverLimit,
     loading,
+    currentStep,  // Adding back the currentStep variable
     error,
     handleTeamMemberChange,
     handleServiceChange,
@@ -89,6 +91,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     services,
     insurancePlans,
     selectedTeamMember,
+    currentStep,
     error
   });
 
