@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBooking } from '@/context/BookingContext';
 import { BookingCalendarSection } from './sections/BookingCalendarSection';
@@ -23,8 +23,21 @@ const BookingContent: React.FC = () => {
     setAppointmentId,
   } = useBooking();
   
+  // Debug log current state
+  useEffect(() => {
+    console.log("BookingContent rendered with state:", {
+      currentStep,
+      selectedDate: selectedDate?.toISOString(),
+      selectedStartTime,
+      selectedEndTime
+    });
+  }, [currentStep, selectedDate, selectedStartTime, selectedEndTime]);
+  
   const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
-    // Assegurar que as datas são tratadas como novos objetos
+    // Log the time slot selection
+    console.log("Time slot selected:", { date, startTime, endTime, teamMemberId });
+    
+    // Create a new date object to avoid reference issues
     const safeDate = new Date(date);
     
     setSelectedDate(safeDate);
@@ -32,21 +45,30 @@ const BookingContent: React.FC = () => {
     setSelectedEndTime(endTime);
     setSelectedTeamMember(teamMemberId);
     
-    // Avançar para o próximo passo quando o usuário selecionar um horário
+    // Always advance to form step after selecting a time slot
+    console.log("Transitioning from calendar to form step");
     setCurrentStep('form');
   };
   
   const handleBookingSuccess = async (name: string, id: string) => {
+    // Log the booking success
+    console.log("Booking success:", { name, id });
+    
     setClientName(name);
     setAppointmentId(id);
     setCurrentStep('confirmation');
   };
   
   const handleBookingFormCancel = () => {
+    // Log the form cancellation
+    console.log("Booking form cancelled, returning to calendar step");
     setCurrentStep('calendar');
   };
   
   const handleConfirmationClose = () => {
+    // Log the confirmation close
+    console.log("Confirmation closed, resetting booking flow");
+    
     setCurrentStep('calendar');
     setSelectedDate(null);
     setSelectedStartTime('');

@@ -38,7 +38,7 @@ export const useBookingSlots = ({
     !selectedTeamMember || slot.team_member_id === selectedTeamMember
   );
   
-  // Generate available dates
+  // Generate available dates - REMOVED selectedDate from dependency array to prevent infinite loop
   useEffect(() => {
     // Only check for teamMember, not service
     if (isOverLimit || !selectedTeamMember) {
@@ -115,14 +115,15 @@ export const useBookingSlots = ({
     console.log("Available dates generated:", dates.length);
     setAvailableDates(dates);
     
+    // Initialize selectedDate if needed but prevent loops
     if (dates.length > 0 && !selectedDate) {
       setSelectedDate(dates[0]);
     } else if (dates.length === 0) {
       setSelectedDate(null);
     }
-  }, [filteredTimeSlots, appointments, isOverLimit, selectedTeamMember, currentStep, selectedDate]);
+  }, [filteredTimeSlots, appointments, isOverLimit, selectedTeamMember, currentStep]); // Removed selectedDate
   
-  // Generate available time slots
+  // Generate available time slots for the selected date
   useEffect(() => {
     if (!selectedDate || isOverLimit || currentStep < 5) {
       setAvailableSlots([]);

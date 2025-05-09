@@ -29,7 +29,8 @@ export const useBookingForm = ({
   // Selection fields
   const [teamMemberId] = useState<string | undefined>(selectedTeamMember);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  // Always start with step 2 (client info) when coming from calendar view
+  const [currentStep, setCurrentStep] = useState<number>(2);
   
   // Fetch team members
   useEffect(() => {
@@ -50,6 +51,8 @@ export const useBookingForm = ({
     
     fetchTeamMembers();
   }, [professional.id]);
+
+  console.log("useBookingForm initialized with step:", currentStep);
 
   // Use the extracted hooks
   const {
@@ -145,3 +148,4 @@ export const useBookingForm = ({
     handlePrevious
   };
 };
+

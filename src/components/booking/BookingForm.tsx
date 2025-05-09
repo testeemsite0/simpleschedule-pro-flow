@@ -54,7 +54,17 @@ const BookingForm: React.FC<BookingFormProps> = ({
     onCancel
   });
   
-  // Booking steps
+  // Debug current form state
+  console.log("BookingForm rendered with:", {
+    currentStep,
+    teamMemberId,
+    insurancePlanId,
+    selectedDate: selectedDate.toISOString(),
+    startTime,
+    endTime
+  });
+  
+  // Booking steps - always start with cliente info (2)
   const steps = [
     { id: 1, label: 'Convênio' },
     { id: 2, label: 'Cliente' }
@@ -63,10 +73,12 @@ const BookingForm: React.FC<BookingFormProps> = ({
   const selectedTeamMemberObject = teamMembers.find(m => m.id === teamMemberId);
   
   const handleNext = () => {
+    console.log("Moving to next form step: client info");
     handleInsurancePlanChange(insurancePlanId || "none");
   };
   
   const handlePrevious = () => {
+    console.log("Moving to previous form step: insurance selection");
     setCurrentStep(1);
   };
   

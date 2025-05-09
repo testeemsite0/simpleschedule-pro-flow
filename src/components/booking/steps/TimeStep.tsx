@@ -21,6 +21,14 @@ export const TimeStep: React.FC<TimeStepProps> = ({
   onTimeSlotSelect,
   onBack
 }) => {
+  // Debug available slots
+  console.log("TimeStep rendered with", availableSlots.length, "available slots");
+  
+  const handleSelectSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
+    console.log("TimeStep: Slot selected", { date, startTime, endTime, teamMemberId });
+    onTimeSlotSelect(date, startTime, endTime, teamMemberId);
+  };
+  
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold mb-4">
@@ -28,7 +36,7 @@ export const TimeStep: React.FC<TimeStepProps> = ({
       </h2>
       <TimeSlotSelector 
         availableSlots={availableSlots}
-        onSelectSlot={onTimeSlotSelect}
+        onSelectSlot={handleSelectSlot}
         showConfirmButton={true}
       />
       
@@ -40,3 +48,4 @@ export const TimeStep: React.FC<TimeStepProps> = ({
     </div>
   );
 };
+
