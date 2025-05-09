@@ -1,23 +1,19 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import BookingCalendar from '@/components/booking/BookingCalendar';
-import BookingForm from '@/components/booking/BookingForm';
-import BookingConfirmation from '@/components/booking/BookingConfirmation';
 import { useBooking } from '@/context/BookingContext';
+import { BookingCalendarSection } from './sections/BookingCalendarSection';
+import { BookingFormSection } from './sections/BookingFormSection';
+import { BookingConfirmationSection } from './sections/BookingConfirmationSection';
 
 const BookingContent: React.FC = () => {
   const { 
     professional,
-    timeSlots,
-    appointments,
     currentStep,
     selectedDate,
-    selectedStartTime, 
+    selectedStartTime,
     selectedEndTime,
     selectedTeamMember,
-    clientName,
-    appointmentId,
     setCurrentStep,
     setSelectedDate,
     setSelectedStartTime,
@@ -25,7 +21,6 @@ const BookingContent: React.FC = () => {
     setSelectedTeamMember,
     setClientName,
     setAppointmentId,
-    setProfessional
   } = useBooking();
   
   const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
@@ -37,8 +32,7 @@ const BookingContent: React.FC = () => {
     setSelectedEndTime(endTime);
     setSelectedTeamMember(teamMemberId);
     
-    // Importante: só avançar para o próximo passo se o usuário realmente confirmar
-    // a seleção de horário pelo botão "Confirmar Horário"
+    // Avançar para o próximo passo quando o usuário selecionar um horário
     setCurrentStep('form');
   };
   
@@ -78,16 +72,14 @@ const BookingContent: React.FC = () => {
       </CardHeader>
       <CardContent className="pt-6">
         {currentStep === 'calendar' && (
-          <BookingCalendar 
+          <BookingCalendarSection
             professional={professional}
-            timeSlots={timeSlots}
-            appointments={appointments}
             onSelectSlot={handleSelectTimeSlot}
           />
         )}
         
         {currentStep === 'form' && selectedDate && (
-          <BookingForm 
+          <BookingFormSection
             professional={professional}
             selectedDate={selectedDate}
             startTime={selectedStartTime}
@@ -99,13 +91,8 @@ const BookingContent: React.FC = () => {
         )}
         
         {currentStep === 'confirmation' && selectedDate && (
-          <BookingConfirmation
+          <BookingConfirmationSection
             professional={professional}
-            clientName={clientName}
-            date={selectedDate}
-            startTime={selectedStartTime}
-            endTime={selectedEndTime}
-            appointmentId={appointmentId}
             onClose={handleConfirmationClose}
           />
         )}
