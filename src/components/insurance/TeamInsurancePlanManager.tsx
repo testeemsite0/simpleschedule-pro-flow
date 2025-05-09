@@ -20,7 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, AlertTriangle } from 'lucide-react';
 
 interface TeamInsurancePlanManagerProps {
   open: boolean;
@@ -84,6 +84,8 @@ export const TeamInsurancePlanManager: React.FC<TeamInsurancePlanManagerProps> =
         
       if (assignmentError) throw assignmentError;
 
+      console.log('Fetched team members and assignments:', { teamMembers, assignments });
+
       // Create member assignments
       const memberAssignments = teamMembers.map((member: TeamMember) => {
         const assignment = assignments?.find(a => a.team_member_id === member.id);
@@ -122,6 +124,10 @@ export const TeamInsurancePlanManager: React.FC<TeamInsurancePlanManagerProps> =
 
   const handleLimitChange = (memberId: string, value: string) => {
     const numericValue = value === '' ? null : parseInt(value, 10);
+    
+    if (value !== '' && isNaN(numericValue as number)) {
+      return; // Ignore invalid numeric inputs
+    }
     
     setMembers(prevMembers => 
       prevMembers.map(member => 
@@ -207,11 +213,19 @@ export const TeamInsurancePlanManager: React.FC<TeamInsurancePlanManagerProps> =
     }
   };
 
+  // Check if any member has appointments but is being unassigned
+  const hasWarnings = members.some(member => 
+    !member.assigned && member.currentAppointments > 0
+  );
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Acesso à Convênio</DialogTitle>
+          <DialogTitle className="flex items-center">
+            <Users className="mr-2 h-5 w-5" />
+            Acesso ao Convênio
+          </DialogTitle>
           <DialogDescription>
             Configure quais membros da equipe podem atender {planName}
           </DialogDescription>
@@ -223,6 +237,19 @@ export const TeamInsurancePlanManager: React.FC<TeamInsurancePlanManagerProps> =
           </div>
         ) : (
           <>
+            {hasWarnings && (
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4 flex items-start">
+                <AlertTriangle className="h-5 w-5 text-amber-500 mr-2 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">Atenção</p>
+                  <p className="text-sm text-amber-700">
+                    Alguns membros da equipe têm agendamentos pendentes com este convênio. 
+                    Desassociá-los pode causar problemas nos agendamentos existentes.
+                  </p>
+                </div>
+              </div>
+            )}
+            
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-4">
                 {members.length === 0 ? (
@@ -248,11 +275,17 @@ export const TeamInsurancePlanManager: React.FC<TeamInsurancePlanManagerProps> =
                                 {member.name}
                               </Label>
                               
-                              {member.assigned && member.currentAppointments > 0 && (
+                              {member.currentAppointments > 0 && (
                                 <div className="mt-1">
                                   <Badge variant="secondary" className="text-xs">
                                     {member.currentAppointments} agendamento(s)
                                   </Badge>
+                                  
+                                  {!member.assigned && (
+                                    <Badge variant="destructive" className="text-xs ml-2">
+                                      Atenção: tem agendamentos
+                                    </Badge>
+                                  )}
                                 </div>
                               )}
                             </div>

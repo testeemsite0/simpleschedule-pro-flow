@@ -3,10 +3,11 @@ import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { InsurancePlan } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface InsurancePlanStepProps {
   availableInsurancePlans: InsurancePlan[];
@@ -35,7 +36,25 @@ export const InsurancePlanStep: React.FC<InsurancePlanStepProps> = ({
       <h2 className="text-lg font-semibold">Tipo de atendimento</h2>
       
       <div className="space-y-2">
-        <Label htmlFor="insurancePlan">Convênio</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="insurancePlan">Convênio</Label>
+          {availableInsurancePlans.length === 0 && teamMemberId && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center text-sm text-amber-600">
+                    <Info className="h-4 w-4 mr-1" />
+                    <span>Sem convênios disponíveis</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Este profissional não tem convênios configurados</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+        
         <Select value={insurancePlanId} onValueChange={onInsurancePlanChange}>
           <SelectTrigger id="insurancePlan">
             <SelectValue placeholder="Particular" />

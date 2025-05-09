@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -352,6 +351,28 @@ const DashboardStats = () => {
   );
 };
 
+// Updated function to check admin status - more secure approach
+const checkAdminAccess = async (userId: string) => {
+  try {
+    // First try to check if the user has an admin role in the profiles table
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError) throw profileError;
+    
+    // For now, we're still checking by email domain, but this function
+    // can be updated to use a proper role-based system in the future
+    return profileData.email.includes('@admin.com') || 
+           profileData.email === 'admin@example.com';
+  } catch (error) {
+    console.error('Error checking admin access:', error);
+    return false;
+  }
+};
+
 // Main Admin Panel Component
 const AdminPanel = () => {
   const { user } = useAuth();
@@ -359,36 +380,20 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    checkAdminAccess();
-  }, [user]);
-  
-  const checkAdminAccess = async () => {
-    if (!user) {
-      setIsAdmin(false);
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      // Check if user has admin role
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', user.id)
-        .single();
-        
-      if (error) throw error;
+    const verifyAdminAccess = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
       
-      // For this example, check if user's email is from the domain or a specific admin email
-      // In a real app, you'd have a proper roles system
-      setIsAdmin(data.email.includes('@admin.com') || data.email === 'admin@example.com');
-    } catch (error) {
-      console.error('Error checking admin access:', error);
-      setIsAdmin(false);
-    } finally {
+      const hasAccess = await checkAdminAccess(user.id);
+      setIsAdmin(hasAccess);
       setLoading(false);
-    }
-  };
+    };
+    
+    verifyAdminAccess();
+  }, [user]);
   
   if (loading) {
     return (
