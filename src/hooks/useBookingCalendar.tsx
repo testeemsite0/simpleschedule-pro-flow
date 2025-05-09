@@ -49,13 +49,22 @@ export const useBookingCalendar = ({
     timeSlots,
     appointments,
     selectedTeamMember,
-    selectedService, // Pass service to useBookingSlots
+    selectedService,
     isOverLimit,
     currentStep
   });
   
   // Merge the date from steps and slots
   const effectiveSelectedDate = stepSelectedDate || selectedDate;
+
+  console.log("useBookingCalendar: Current state", {
+    currentStep,
+    selectedTeamMember,
+    selectedInsurance,
+    selectedService,
+    availableDatesLength: availableDates?.length,
+    effectiveSelectedDate
+  });
 
   return {
     selectedDate: effectiveSelectedDate,

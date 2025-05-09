@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { TimeSlot, Appointment, Professional } from '@/types';
@@ -51,11 +52,11 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     appointments
   });
   
-  // Define booking steps - Updated to include Service step
+  // Define booking steps - Updated order: Convênio before Serviço
   const steps = [
     { id: 1, label: 'Profissional' },
-    { id: 2, label: 'Serviço' },
-    { id: 3, label: 'Convênio' },
+    { id: 2, label: 'Convênio' },
+    { id: 3, label: 'Serviço' },
     { id: 4, label: 'Data' },
     { id: 5, label: 'Horário' }
   ];
@@ -121,18 +122,8 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               />
             )}
             
-            {/* Step 2: Select Service */}
+            {/* Step 2: Select Insurance Plan - Moved before service selection */}
             {currentStep === 2 && selectedTeamMember && (
-              <ServiceStep
-                services={teamMemberServices}
-                selectedService={selectedService}
-                onServiceChange={handleServiceChange}
-                onBack={goToPreviousStep}
-              />
-            )}
-            
-            {/* Step 3: Select Insurance Plan */}
-            {currentStep === 3 && selectedService && (
               <InsuranceStep
                 insurancePlans={insurancePlans}
                 selectedInsurance={selectedInsurance}
@@ -141,8 +132,19 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               />
             )}
             
+            {/* Step 3: Select Service - Moved after insurance selection */}
+            {currentStep === 3 && selectedInsurance && (
+              <ServiceStep
+                services={teamMemberServices}
+                selectedService={selectedService}
+                onServiceChange={handleServiceChange}
+                onBack={goToPreviousStep}
+                insuranceId={selectedInsurance}
+              />
+            )}
+            
             {/* Step 4: Select Date */}
-            {currentStep === 4 && selectedInsurance && (
+            {currentStep === 4 && selectedService && (
               <DateStep
                 availableDates={availableDates}
                 selectedDate={selectedDate}
