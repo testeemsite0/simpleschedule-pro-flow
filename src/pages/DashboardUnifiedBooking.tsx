@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UnifiedBookingForm } from '@/components/booking/UnifiedBookingForm';
 import { UnifiedBookingProvider } from '@/context/UnifiedBookingContext';
 import { useAuth } from '@/context/AuthContext';
-import { AppointmentList } from '@/components/dashboard/AppointmentList';
-import { AppointmentTabs } from '@/components/dashboard/AppointmentTabs';
+import AppointmentList from '@/components/dashboard/AppointmentList';
+import AppointmentTabs from '@/components/dashboard/AppointmentTabs';
 
 const DashboardUnifiedBooking = () => {
   const [activeTab, setActiveTab] = useState("appointments");
