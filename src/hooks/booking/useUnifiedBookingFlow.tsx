@@ -2,173 +2,129 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useBookingSteps } from './useBookingSteps';
-import { supabase } from '@/integrations/supabase/client';
-import { Service, TeamMember, InsurancePlan, TimeSlot } from '@/types';
+import { useBookingDataFetching } from './useBookingDataFetching';
+import { useBookingServices } from './useBookingServices';
+import { useBookingAppointment } from './useBookingAppointment';
+import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
 import { format } from 'date-fns';
 
 interface UseUnifiedBookingFlowProps {
   professionalId?: string;
   isAdminView?: boolean;
+  initialStep?: string;
 }
 
 export const useUnifiedBookingFlow = ({
   professionalId,
-  isAdminView = false
+  isAdminView = false,
+  initialStep
 }: UseUnifiedBookingFlowProps = {}) => {
-  const bookingSteps = useBookingSteps();
+  const bookingSteps = useBookingSteps({
+    initialStep: initialStep || "team-member"
+  });
   
-  // Data states
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  // Utilizamos os hooks refatorados para separação de responsabilidades
+  const {
+    teamMembers,
+    services,
+    insurancePlans,
+    timeSlots,
+    appointments,
+    maintenanceMode,
+    setMaintenanceMode,
+    isLoading: dataLoading,
+    dataError
+  } = useBookingDataFetching({
+    professionalId
+  });
+
+  const {
+    getAvailableServicesForTeamMember,
+    checkInsuranceLimitReached
+  } = useBookingServices({
+    services,
+    insurancePlans
+  });
+
+  // Estados adicionais
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [availableSlots, setAvailableSlots] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
   
-  // Fetch initial data
+  const {
+    isLoading: appointmentLoading,
+    completeBooking
+  } = useBookingAppointment({
+    professionalId,
+    isAdminView,
+    bookingData: bookingSteps.bookingData,
+    onSuccess: () => {
+      // Você pode adicionar mais ações após sucesso aqui se necessário
+    },
+    goToStep: bookingSteps.goToStep,
+    updateErrorState: bookingSteps.updateErrorState
+  });
+
+  // Calculate availability when professional or relevant data changes
   useEffect(() => {
-    const fetchInitialData = async () => {
-      if (!professionalId) {
-        console.error("No professional ID provided for booking flow");
-        setIsLoading(false);
-        return;
+    // Calculate available dates based on timeSlots and appointments
+    // Simplified implementation - just providing a week of dates for now
+    const calculateAvailableDates = () => {
+      const today = new Date();
+      const dates = [];
+      for (let i = 0; i < 14; i++) {
+        const date = new Date();
+        date.setDate(today.getDate() + i);
+        dates.push(date);
+      }
+      return dates;
+    };
+
+    setAvailableDates(calculateAvailableDates());
+    
+    // Clear available time slots when professional changes
+    setAvailableSlots([]);
+  }, [professionalId, timeSlots, appointments]);
+
+  // Update available slots when date is selected
+  useEffect(() => {
+    const calculateAvailableSlots = () => {
+      if (!bookingSteps.bookingData.date || !bookingSteps.bookingData.teamMemberId) {
+        return [];
       }
       
-      console.log("Unified booking: Fetching data for professional ID:", professionalId);
-      setIsLoading(true);
-      setDataError(null);
+      // Simplified time slot calculation
+      // In a real implementation, this would check against timeSlots and appointments
+      const slots = [];
+      const startHour = 8;
+      const endHour = 18;
       
-      try {
-        const [
-          teamMembersResult,
-          servicesResult,
-          insurancePlansResult,
-          timeSlotsResult,
-          appointmentsResult,
-        ] = await Promise.all([
-          supabase.from('team_members').select('*').eq('professional_id', professionalId).eq('active', true),
-          supabase.from('services').select('*').eq('professional_id', professionalId).eq('active', true),
-          supabase.from('insurance_plans').select('*').eq('professional_id', professionalId),
-          supabase.from('time_slots').select('*').eq('professional_id', professionalId),
-          supabase.from('appointments').select('*').eq('professional_id', professionalId),
-        ]);
+      for (let hour = startHour; hour < endHour; hour++) {
+        const startTime = `${hour.toString().padStart(2, '0')}:00`;
+        const endTime = `${(hour + 1).toString().padStart(2, '0')}:00`;
         
-        // Check for errors in any of the queries
-        const errorResults = [
-          { name: 'team members', result: teamMembersResult },
-          { name: 'services', result: servicesResult },
-          { name: 'insurance plans', result: insurancePlansResult },
-          { name: 'time slots', result: timeSlotsResult },
-          { name: 'appointments', result: appointmentsResult }
-        ];
-        
-        const errors = errorResults.filter(item => item.result.error);
-        if (errors.length > 0) {
-          const errorMessage = errors.map(e => `Error loading ${e.name}: ${e.result.error?.message}`).join('; ');
-          console.error("Data loading errors:", errorMessage);
-          setDataError(`Erro ao carregar dados: ${errorMessage}`);
-          toast.error("Erro ao carregar dados para agendamento");
-        }
-        
-        // Always set data even if some queries failed, to avoid complete UI breakage
-        setTeamMembers(teamMembersResult.data || []);
-        setServices(servicesResult.data || []);
-        setInsurancePlans(insurancePlansResult.data || []);
-        setTimeSlots(timeSlotsResult.data || []);
-        setAppointments(appointmentsResult.data || []);
-        
-        console.log("Unified booking: Data loaded with", 
-          teamMembersResult.data?.length || 0, "team members",
-          servicesResult.data?.length || 0, "services",
-          timeSlotsResult.data?.length || 0, "time slots");
-          
-        // Special logging for team members to help debug
-        if (teamMembersResult.data && teamMembersResult.data.length === 0) {
-          console.warn("No team members found for professional ID:", professionalId);
-        } else {
-          console.log("Team members loaded:", teamMembersResult.data);
-        }
-      } catch (error) {
-        console.error("Error loading unified booking data:", error);
-        setDataError("Erro ao carregar dados para agendamento");
-        toast.error("Erro ao carregar dados para agendamento");
-      } finally {
-        setIsLoading(false);
+        slots.push({
+          date: bookingSteps.bookingData.date,
+          startTime,
+          endTime,
+          teamMemberId: bookingSteps.bookingData.teamMemberId
+        });
       }
+      
+      return slots;
     };
     
-    fetchInitialData();
-  }, [professionalId]);
-  
-  // Filter available services for a team member
-  const getAvailableServicesForTeamMember = (teamMemberId: string) => {
-    return services.filter(() => true);
-  };
-  
-  // Check if insurance limit reached
-  const checkInsuranceLimitReached = (insuranceId: string) => {
-    const insurance = insurancePlans.find(plan => plan.id === insuranceId);
-    if (!insurance || !insurance.limit_per_plan) return false;
-    return insurance.current_appointments >= insurance.limit_per_plan;
-  };
-  
-  // Complete booking process
-  const completeBooking = async () => {
-    setIsLoading(true);
-    const { bookingData } = bookingSteps;
-    
-    try {
-      if (!bookingData.teamMemberId || !bookingData.date || 
-          !bookingData.startTime || !bookingData.endTime ||
-          !bookingData.clientName || !bookingData.clientEmail) {
-        throw new Error("Dados incompletos para agendamento");
-      }
-      
-      const formattedDate = format(bookingData.date, 'yyyy-MM-dd');
-      
-      const appointmentData = {
-        professional_id: professionalId,
-        team_member_id: bookingData.teamMemberId,
-        client_name: bookingData.clientName,
-        client_email: bookingData.clientEmail,
-        client_phone: bookingData.clientPhone || '',
-        date: formattedDate,
-        start_time: bookingData.startTime,
-        end_time: bookingData.endTime,
-        notes: bookingData.notes || '',
-        status: 'scheduled',
-        source: isAdminView ? 'admin' : 'client',
-        insurance_plan_id: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null,
-        service_id: bookingData.serviceId || null
-      };
-      
-      const { data, error } = await supabase
-        .from('appointments')
-        .insert([appointmentData])
-        .select();
-      
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        toast.success("Agendamento realizado com sucesso!");
-        bookingSteps.goToStep("confirmation");
-        return true;
-      }
-      
-      return false;
-    } catch (error: any) {
-      console.error("Error creating appointment:", error);
-      bookingSteps.updateErrorState(error.message || "Erro ao processar agendamento");
-      toast.error(error.message || "Erro ao processar agendamento");
-      return false;
-    } finally {
-      setIsLoading(false);
+    if (bookingSteps.bookingData.date && bookingSteps.bookingData.teamMemberId) {
+      setAvailableSlots(calculateAvailableSlots());
     }
+  }, [bookingSteps.bookingData.date, bookingSteps.bookingData.teamMemberId]);
+  
+  const resetBooking = () => {
+    bookingSteps.resetBooking();
+    setAvailableSlots([]);
   };
+
+  // Indicador de carregamento unificado
+  const isLoading = dataLoading || appointmentLoading;
   
   return {
     ...bookingSteps,
@@ -185,6 +141,7 @@ export const useUnifiedBookingFlow = ({
     getAvailableServicesForTeamMember,
     checkInsuranceLimitReached,
     completeBooking,
-    setMaintenanceMode
+    setMaintenanceMode,
+    resetBooking
   };
 };
