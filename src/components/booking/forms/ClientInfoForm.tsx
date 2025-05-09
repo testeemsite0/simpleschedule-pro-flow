@@ -24,6 +24,13 @@ export const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
     onSubmit(name, email, phone, notes);
   };
 
+  // Create a wrapper function that takes no arguments
+  const handleSubmitButtonClick = () => {
+    // This function doesn't need to do anything because the form submission
+    // will be handled by the form's onSubmit event handler
+    // The button inside BookingFormActions already has type="submit"
+  };
+
   return (
     <form onSubmit={handleSubmit}>
       <ClientInfoStep
@@ -40,7 +47,7 @@ export const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
       <BookingFormActions 
         onBack={onBack}
         isLoading={isLoading}
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmitButtonClick}
         submitLabel="Finalizar Agendamento"
       />
     </form>
