@@ -29,8 +29,8 @@ export const InsuranceStep: React.FC<InsuranceStepProps> = ({
       </h2>
       
       {insurancePlans.length === 0 && (
-        <Alert variant="warning" className="mb-4">
-          <Info className="h-4 w-4" />
+        <Alert variant="default" className="mb-4 border-amber-500 bg-amber-50 text-amber-800">
+          <Info className="h-4 w-4 text-amber-500" />
           <AlertDescription>
             Não há convênios disponíveis. Continue com atendimento particular.
           </AlertDescription>
