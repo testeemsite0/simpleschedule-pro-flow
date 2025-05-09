@@ -71,7 +71,25 @@ export const useBookingDataFetching = ({
         setServices(servicesResult.data || []);
         setInsurancePlans(insurancePlansResult.data || []);
         setTimeSlots(timeSlotsResult.data || []);
-        setAppointments(appointmentsResult.data || []);
+        
+        // Type assertion to ensure appointment status is one of the allowed values
+        if (appointmentsResult.data) {
+          const typedAppointments = appointmentsResult.data.map(appointment => {
+            // Ensure status is one of the allowed types
+            const status = ['scheduled', 'completed', 'canceled'].includes(appointment.status) 
+              ? appointment.status as 'scheduled' | 'completed' | 'canceled' 
+              : 'scheduled'; // Default to 'scheduled' if invalid status
+            
+            return {
+              ...appointment,
+              status
+            } as Appointment;
+          });
+          
+          setAppointments(typedAppointments);
+        } else {
+          setAppointments([]);
+        }
         
         console.log("Booking data fetching: Data loaded with", 
           teamMembersResult.data?.length || 0, "team members",
