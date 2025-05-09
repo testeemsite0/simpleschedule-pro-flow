@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { useBookingSteps } from './useBookingSteps';
+import { useBookingSteps, BookingStep } from './useBookingSteps';
 import { useBookingDataFetching } from './useBookingDataFetching';
 import { useBookingServices } from './useBookingServices';
 import { useBookingAppointment } from './useBookingAppointment';
@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 interface UseUnifiedBookingFlowProps {
   professionalId?: string;
   isAdminView?: boolean;
-  initialStep?: string;
+  initialStep?: BookingStep; // Changed string to BookingStep
 }
 
 export const useUnifiedBookingFlow = ({

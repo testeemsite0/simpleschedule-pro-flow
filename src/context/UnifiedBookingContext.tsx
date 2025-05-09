@@ -58,7 +58,7 @@ interface UnifiedBookingProviderProps {
   children: ReactNode;
   professionalId?: string;
   isAdminView?: boolean;
-  initialStep?: BookingStep;
+  initialStep?: BookingStep; // Updated type here as well
 }
 
 export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
@@ -69,7 +69,8 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
 }) => {
   const unifiedBookingFlow = useUnifiedBookingFlow({
     professionalId,
-    isAdminView
+    isAdminView,
+    initialStep
   });
 
   return (
