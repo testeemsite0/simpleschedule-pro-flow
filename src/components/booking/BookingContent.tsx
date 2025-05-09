@@ -1,6 +1,8 @@
 
 import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info, AlertCircle } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import { BookingCalendarSection } from './sections/BookingCalendarSection';
 import { BookingFormSection } from './sections/BookingFormSection';
@@ -16,6 +18,7 @@ const BookingContent: React.FC = () => {
     selectedStartTime,
     selectedEndTime,
     selectedTeamMember,
+    loading,
     setCurrentStep,
     setSelectedDate,
     setSelectedStartTime,
@@ -31,12 +34,14 @@ const BookingContent: React.FC = () => {
   // Debug log current state
   useEffect(() => {
     console.log("BookingContent rendered with state:", {
+      professional,
       currentStep,
       selectedDate: selectedDate?.toISOString(),
       selectedStartTime,
-      selectedEndTime
+      selectedEndTime,
+      loading
     });
-  }, [currentStep, selectedDate, selectedStartTime, selectedEndTime]);
+  }, [currentStep, selectedDate, selectedStartTime, selectedEndTime, professional, loading]);
   
   const handleSelectTimeSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
     // Log the time slot selection
@@ -82,11 +87,26 @@ const BookingContent: React.FC = () => {
     setAppointmentId('');
   };
   
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardContent className="pt-6">
+          <p className="text-center py-8">Carregando informações de agendamento...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   if (!professional) {
     return (
-      <Card className="w-full max-w-md">
+      <Card className="w-full">
         <CardContent className="pt-6">
-          <p className="text-center">Profissional não encontrado</p>
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Profissional não encontrado. Verifique o link de agendamento.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     );

@@ -2,23 +2,43 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 import { TeamMember } from '@/types';
 
 interface ProfessionalStepProps {
   teamMembers: TeamMember[];
   selectedTeamMember: string;
   onTeamMemberChange: (teamMemberId: string) => void;
+  isLoading?: boolean;
 }
 
 export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
   teamMembers,
   selectedTeamMember,
-  onTeamMemberChange
+  onTeamMemberChange,
+  isLoading = false
 }) => {
+  if (isLoading) {
+    return (
+      <div className="text-center p-4">
+        <p className="text-muted-foreground">Carregando profissionais...</p>
+      </div>
+    );
+  }
+  
   if (teamMembers.length === 0) {
     return (
-      <div className="text-center p-4 border rounded-md">
-        <p className="text-muted-foreground">Nenhum profissional disponível.</p>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold mb-4">
+          Escolha um profissional
+        </h2>
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Não há profissionais disponíveis para agendamento. Por favor, entre em contato diretamente para verificar a disponibilidade.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }

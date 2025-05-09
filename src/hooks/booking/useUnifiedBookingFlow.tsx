@@ -26,12 +26,21 @@ export const useUnifiedBookingFlow = ({
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
   const [availableSlots, setAvailableSlots] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   
   // Fetch initial data
   useEffect(() => {
     const fetchInitialData = async () => {
-      if (!professionalId) return;
+      if (!professionalId) {
+        console.error("No professional ID provided for booking flow");
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("Unified booking: Fetching data for professional ID:", professionalId);
+      setIsLoading(true);
+      setDataError(null);
       
       try {
         const [
@@ -48,6 +57,24 @@ export const useUnifiedBookingFlow = ({
           supabase.from('appointments').select('*').eq('professional_id', professionalId),
         ]);
         
+        // Check for errors in any of the queries
+        const errorResults = [
+          { name: 'team members', result: teamMembersResult },
+          { name: 'services', result: servicesResult },
+          { name: 'insurance plans', result: insurancePlansResult },
+          { name: 'time slots', result: timeSlotsResult },
+          { name: 'appointments', result: appointmentsResult }
+        ];
+        
+        const errors = errorResults.filter(item => item.result.error);
+        if (errors.length > 0) {
+          const errorMessage = errors.map(e => `Error loading ${e.name}: ${e.result.error?.message}`).join('; ');
+          console.error("Data loading errors:", errorMessage);
+          setDataError(`Erro ao carregar dados: ${errorMessage}`);
+          toast.error("Erro ao carregar dados para agendamento");
+        }
+        
+        // Always set data even if some queries failed, to avoid complete UI breakage
         setTeamMembers(teamMembersResult.data || []);
         setServices(servicesResult.data || []);
         setInsurancePlans(insurancePlansResult.data || []);
@@ -58,9 +85,19 @@ export const useUnifiedBookingFlow = ({
           teamMembersResult.data?.length || 0, "team members",
           servicesResult.data?.length || 0, "services",
           timeSlotsResult.data?.length || 0, "time slots");
+          
+        // Special logging for team members to help debug
+        if (teamMembersResult.data && teamMembersResult.data.length === 0) {
+          console.warn("No team members found for professional ID:", professionalId);
+        } else {
+          console.log("Team members loaded:", teamMembersResult.data);
+        }
       } catch (error) {
         console.error("Error loading unified booking data:", error);
+        setDataError("Erro ao carregar dados para agendamento");
         toast.error("Erro ao carregar dados para agendamento");
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -144,6 +181,7 @@ export const useUnifiedBookingFlow = ({
     availableDates,
     availableSlots,
     isLoading,
+    error: bookingSteps.error || dataError,
     getAvailableServicesForTeamMember,
     checkInsuranceLimitReached,
     completeBooking,

@@ -161,6 +161,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
               teamMembers={teamMembers}
               selectedTeamMember={bookingData.teamMemberId}
               onTeamMemberChange={setTeamMember}
+              isLoading={isLoading}
             />
           )}
 
