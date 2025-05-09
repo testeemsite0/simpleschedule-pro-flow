@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +30,7 @@ interface AppointmentCreationFormProps {
     notes: string;
     teamMemberId?: string;
     insurancePlanId?: string;
-    serviceId?: string; // Adicionado campo de serviço
+    serviceId?: string;
   }) => void;
 }
 
@@ -59,20 +58,20 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   const [clientPhone, setClientPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [teamMemberId, setTeamMemberId] = useState<string | undefined>(undefined);
-  const [serviceId, setServiceId] = useState<string | undefined>(undefined); // Estado para serviço
+  const [serviceId, setServiceId] = useState<string | undefined>(undefined);
   const [insurancePlanId, setInsurancePlanId] = useState<string | undefined>(undefined);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [services, setServices] = useState<Service[]>([]); // Estado para serviços
+  const [services, setServices] = useState<Service[]>([]);
   const [memberServices, setMemberServices] = useState<{[key: string]: Service[]}>({});
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [teamMemberInsurancePlans, setTeamMemberInsurancePlans] = useState<TeamMemberInsurancePlan[]>([]);
   const [insuranceLimitError, setInsuranceLimitError] = useState<string | null>(null);
   const [availableInsurancePlans, setAvailableInsurancePlans] = useState<InsurancePlan[]>([]);
-  const [availableServices, setAvailableServices] = useState<Service[]>([]); // Serviços disponíveis
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(1);
   
-  // Busca membros da equipe e planos de seguro
   useEffect(() => {
+    
     const fetchTeamMembers = async () => {
       try {
         const { data, error } = await supabase
@@ -114,6 +113,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           
         if (error) throw error;
         setInsurancePlans(data || []);
+        setAvailableInsurancePlans(data || []);
       } catch (error) {
         console.error("Erro ao buscar convênios:", error);
       }
@@ -121,7 +121,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     
     const fetchTeamMemberInsurancePlans = async () => {
       try {
-        // Obtém todos os IDs de membros da equipe
+        
         const { data: teamMembers, error: teamError } = await supabase
           .from('team_members')
           .select('id')
@@ -133,7 +133,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         if (teamMembers && teamMembers.length > 0) {
           const teamMemberIds = teamMembers.map(member => member.id);
           
-          // Obtém planos de seguro de membros da equipe
+          
           const { data: memberInsurancePlans, error: planError } = await supabase
             .from('team_member_insurance_plans')
             .select(`
@@ -148,7 +148,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
             
           if (planError) throw planError;
           
-          // Obtém os planos de seguro reais
+          
           if (memberInsurancePlans && memberInsurancePlans.length > 0) {
             const insurancePlanIds = Array.from(new Set(
               memberInsurancePlans.map(plan => plan.insurance_plan_id)
@@ -161,7 +161,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
               
             if (planDataError) throw planDataError;
             
-            // Mescla os dados
+            
             const enrichedPlans = memberInsurancePlans.map(memberPlan => {
               const planDetails = plans?.find(plan => plan.id === memberPlan.insurance_plan_id);
               return {
@@ -180,7 +180,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     
     const fetchTeamMemberServices = async () => {
       try {
-        // Obtém todos os IDs de membros da equipe
+        
         const { data: teamMembers, error: teamError } = await supabase
           .from('team_members')
           .select('id')
@@ -192,7 +192,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         if (teamMembers && teamMembers.length > 0) {
           const teamMemberIds = teamMembers.map(member => member.id);
           
-          // Obtém serviços de membros da equipe
+          
           const { data: memberServicesData, error: servicesError } = await supabase
             .from('team_member_services')
             .select('*')
@@ -200,7 +200,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
             
           if (servicesError) throw servicesError;
           
-          // Obtém os dados completos dos serviços
+          
           const { data: servicesData, error: servicesDataError } = await supabase
             .from('services')
             .select('*')
@@ -209,7 +209,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
             
           if (servicesDataError) throw servicesDataError;
           
-          // Mescla os dados
+          
           const servicesByMember: {[key: string]: Service[]} = {};
           
           if (memberServicesData && servicesData) {
@@ -238,9 +238,9 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     fetchTeamMemberServices();
   }, [professionalId]);
   
-  // Gera datas disponíveis para seleção com base em slots de tempo
+  
   useEffect(() => {
-    if (!teamMemberId || !serviceId) { // Agora requer serviceId também
+    if (!teamMemberId) {
       setAvailableDates([]);
       return;
     }
@@ -249,22 +249,22 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     
-    // Filtra slots de tempo por membro da equipe selecionado
+    
     const memberTimeSlots = timeSlots.filter(
       slot => slot.team_member_id === teamMemberId && slot.available
     );
     
-    // Encontra todas as datas únicas nos próximos 14 dias que têm slots disponíveis
+    
     for (let i = 0; i < 14; i++) {
       const date = new Date(now);
       date.setDate(now.getDate() + i);
       
-      // Pula datas antes de hoje
+      
       if (date < now) continue;
       
       const dayOfWeek = date.getDay();
       
-      // Verifica se há slots disponíveis para este dia da semana
+      
       const hasAvailableSlots = memberTimeSlots.some(
         slot => slot.day_of_week === dayOfWeek
       );
@@ -274,59 +274,60 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       }
     }
     
+    console.log(`Generated ${dates.length} available dates for team member ${teamMemberId}`);
     setAvailableDates(dates);
     
-    // Seleciona automaticamente a primeira data, se disponível
+    
     if (dates.length > 0 && !selectedDate) {
       setSelectedDate(new Date(dates[0]));
     }
-  }, [timeSlots, teamMemberId, selectedDate, serviceId]); // Adiciona serviceId às dependências
+  }, [timeSlots, teamMemberId]);
   
-  // Gera slots de tempo disponíveis para a data selecionada
+  
   useEffect(() => {
-    if (!selectedDate || !teamMemberId || !serviceId) { // Agora requer serviceId também
+    if (!selectedDate || !teamMemberId) {
       setAvailableSlots([]);
       return;
     }
     
-    // Cria uma cópia nova da data para evitar problemas de referência
+    
     const date = new Date(selectedDate);
     const dayOfWeek = date.getDay();
     
-    // Obtém todos os slots para este dia para o membro da equipe selecionado
+    
     const daySlotsData = timeSlots.filter(slot => 
       slot.day_of_week === dayOfWeek && 
       slot.available &&
       slot.team_member_id === teamMemberId
     );
     
-    // Formata a data selecionada para comparação com o banco de dados
+    
     const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
     
-    // Obtém todos os slots reservados para esta data
+    
     const bookedAppointments = appointments.filter(app => 
       app.date === formattedSelectedDate && 
       app.status === 'scheduled' &&
       app.team_member_id === teamMemberId
     );
     
-    // Converte-os em slots de agendamento
+    
     const slots: AvailableSlot[] = [];
     const now = new Date();
     
     daySlotsData.forEach(slot => {
-      // Converte tempos para minutos para facilitar o cálculo
+      
       const startMinutes = timeToMinutes(slot.start_time);
       const endMinutes = timeToMinutes(slot.end_time);
       const duration = slot.appointment_duration_minutes || 60;
       
-      // Lida com pausas para almoço se presentes
+      
       const lunchStartMinutes = slot.lunch_break_start ? timeToMinutes(slot.lunch_break_start) : null;
       const lunchEndMinutes = slot.lunch_break_end ? timeToMinutes(slot.lunch_break_end) : null;
       
-      // Gera slots
+      
       for (let time = startMinutes; time + duration <= endMinutes; time += duration) {
-        // Pula slots que se sobrepõem com a pausa para almoço
+        
         if (
           lunchStartMinutes !== null && 
           lunchEndMinutes !== null && 
@@ -339,7 +340,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         const startTime = minutesToTime(time);
         const endTime = minutesToTime(time + duration);
         
-        // Verifica se o slot já está reservado
+        
         const isOverlapping = bookedAppointments.some(app => {
           return doTimeSlotsOverlap(
             startTime, 
@@ -349,7 +350,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           );
         });
         
-        // Só adiciona se não estiver reservado
+        
         if (!isOverlapping) {
           slots.push({
             date: new Date(date),
@@ -361,41 +362,42 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       }
     });
     
-    // Ordena por horário de início
+    
     slots.sort((a, b) => 
       timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
     );
     
     setAvailableSlots(slots);
     
-    // Redefine o slot de tempo selecionado quando a data muda
+    
     setSelectedTimeSlot(null);
-  }, [selectedDate, timeSlots, appointments, teamMemberId, serviceId]); // Adiciona serviceId às dependências
+  }, [selectedDate, timeSlots, appointments, teamMemberId]);
+  
   
   const handleTeamMemberChange = (value: string) => {
     setTeamMemberId(value);
-    setServiceId(undefined); // Limpa a seleção de serviço quando o profissional muda
+    setServiceId(undefined); 
     setInsurancePlanId(undefined);
     setInsuranceLimitError(null);
     setSelectedDate(null);
     setSelectedTimeSlot(null);
-    setCurrentStep(2); // Vai para a etapa de seleção de serviço
+    setCurrentStep(2); 
     
-    // Atualiza os serviços disponíveis para este membro da equipe
+    
     const memberServicesList = memberServices[value] || [];
     setAvailableServices(memberServicesList.length > 0 ? memberServicesList : services);
   };
   
+  
   const handleServiceChange = (value: string) => {
     setServiceId(value);
-    setInsurancePlanId(undefined); // Limpa a seleção de convênio quando o serviço muda
-    setCurrentStep(3); // Vai para a etapa de seleção de convênio
+    setCurrentStep(4); 
   };
   
   const handleInsurancePlanChange = (value: string) => {
     setInsurancePlanId(value === "none" ? undefined : value);
     setInsuranceLimitError(null);
-    setCurrentStep(4); // Avança para seleção de data
+    setCurrentStep(3); 
     
     if (value === "none") {
       return;
@@ -406,7 +408,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       return;
     }
     
-    // Verifica limitações específicas para este convênio e profissional
+    
     const memberPlan = teamMemberInsurancePlans.find(
       plan => plan.team_member_id === teamMemberId && plan.insurance_plan_id === value
     );
@@ -416,13 +418,13 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       return;
     }
     
-    // Verifica limite específico do profissional
+    
     if (memberPlan.limit_per_member !== null && memberPlan.current_appointments >= memberPlan.limit_per_member) {
       setInsuranceLimitError(`Este profissional atingiu o limite de atendimentos para este convênio.`);
       return;
     }
     
-    // Verifica limite global do convênio
+    
     const plan = insurancePlans.find(p => p.id === value);
     if (plan && plan.limit_per_plan !== null && plan.current_appointments >= plan.limit_per_plan) {
       setInsuranceLimitError(`Este convênio atingiu o limite global de ${plan.limit_per_plan} agendamentos.`);
@@ -438,10 +440,10 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   };
   
   const handleDateSelect = (date: Date) => {
-    // Garante que estamos trabalhando com uma cópia nova da data
+    
     setSelectedDate(new Date(date));
     setSelectedTimeSlot(null);
-    setCurrentStep(5); // Avança para seleção de horário
+    setCurrentStep(5); 
   };
   
   const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string) => {
@@ -451,7 +453,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       endTime,
       teamMemberId 
     });
-    setCurrentStep(6); // Avança para informações do cliente
+    setCurrentStep(6); 
   };
   
   const handleNextStep = () => {
@@ -471,7 +473,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       return;
     }
     
-    // Verifica limites do plano de seguro
+    
     if (insuranceLimitError) {
       return;
     }
@@ -486,7 +488,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       notes,
       teamMemberId,
       insurancePlanId,
-      serviceId // Adiciona serviceId ao envio
+      serviceId 
     });
   };
   
@@ -499,7 +501,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   return (
     <div className="max-h-[60vh] overflow-y-auto px-2">
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Indicador de etapas */}
+        
         <div className="flex justify-between mb-6 sticky top-0 bg-background z-10 py-2">
           <div className={`flex flex-col items-center ${getStepStatus(1) === "completed" ? "text-primary" : getStepStatus(1) === "current" ? "text-foreground" : "text-muted-foreground"}`}>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
@@ -522,7 +524,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
             }`}>
               {getStepStatus(2) === "completed" ? <CheckCircle className="w-5 h-5" /> : "2"}
             </div>
-            <span className="text-xs">Serviço</span>
+            <span className="text-xs">Convênio</span>
           </div>
           <div className="flex-1 flex items-center mx-1">
             <div className={`h-0.5 w-full ${currentStep > 2 ? "bg-primary" : "bg-muted"}`}></div>
@@ -535,7 +537,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
             }`}>
               {getStepStatus(3) === "completed" ? <CheckCircle className="w-5 h-5" /> : "3"}
             </div>
-            <span className="text-xs">Convênio</span>
+            <span className="text-xs">Serviço</span>
           </div>
           <div className="flex-1 flex items-center mx-1">
             <div className={`h-0.5 w-full ${currentStep > 3 ? "bg-primary" : "bg-muted"}`}></div>
@@ -578,7 +580,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           </div>
         </div>
 
-        {/* Etapa 1: Selecionar Profissional */}
+        
         {currentStep === 1 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha um profissional</h2>
@@ -610,48 +612,8 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           </div>
         )}
         
-        {/* Etapa 2: Selecionar Serviço */}
-        {currentStep === 2 && teamMemberId && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold mb-4">Escolha um serviço</h2>
-            
-            <div className="space-y-2">
-              <div className="grid grid-cols-1 gap-4">
-                {availableServices.map(service => (
-                  <Button
-                    key={service.id}
-                    variant="outline"
-                    className={`flex justify-between items-center p-4 h-auto ${serviceId === service.id ? "border-primary bg-primary/5" : ""}`}
-                    onClick={() => handleServiceChange(service.id)}
-                  >
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{service.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(service.price))}
-                      </span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </Button>
-                ))}
-                
-                {availableServices.length === 0 && (
-                  <div className="p-4 text-center border rounded-md">
-                    <p className="text-muted-foreground">Este profissional não possui serviços disponíveis</p>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex justify-between mt-4">
-              <Button variant="outline" onClick={() => setCurrentStep(1)}>
-                Voltar
-              </Button>
-            </div>
-          </div>
-        )}
         
-        {/* Etapa 3: Selecionar Plano de Seguro */}
-        {currentStep === 3 && teamMemberId && serviceId && (
+        {currentStep === 2 && teamMemberId && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha um convênio</h2>
             
@@ -710,6 +672,46 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
             </div>
             
             <div className="flex justify-between mt-4">
+              <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                Voltar
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        
+        {currentStep === 3 && teamMemberId && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold mb-4">Escolha um serviço</h2>
+            
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-4">
+                {availableServices.map(service => (
+                  <Button
+                    key={service.id}
+                    variant="outline"
+                    className={`flex justify-between items-center p-4 h-auto ${serviceId === service.id ? "border-primary bg-primary/5" : ""}`}
+                    onClick={() => handleServiceChange(service.id)}
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">{service.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(service.price))}
+                      </span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </Button>
+                ))}
+                
+                {availableServices.length === 0 && (
+                  <div className="p-4 text-center border rounded-md">
+                    <p className="text-muted-foreground">Este profissional não possui serviços disponíveis</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex justify-between mt-4">
               <Button variant="outline" onClick={() => setCurrentStep(2)}>
                 Voltar
               </Button>
@@ -717,7 +719,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           </div>
         )}
         
-        {/* Etapa 4: Selecionar Data */}
+        
         {currentStep === 4 && teamMemberId && serviceId && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha uma data</h2>
@@ -736,7 +738,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           </div>
         )}
         
-        {/* Etapa 5: Selecionar Horário */}
+        
         {currentStep === 5 && selectedDate && teamMemberId && serviceId && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha um horário</h2>
@@ -757,7 +759,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           </div>
         )}
         
-        {/* Etapa 6: Informações do Cliente */}
+        
         {currentStep === 6 && selectedTimeSlot && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Informações do cliente</h2>
@@ -845,7 +847,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
           </div>
         )}
         
-        {/* Resumo das opções selecionadas */}
+        
         {teamMemberId && currentStep < 6 && (
           <div className="mt-6 p-4 bg-accent/30 rounded-md">
             <h3 className="font-medium mb-2">Seleção atual:</h3>
@@ -853,50 +855,4 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Profissional:</span>
                 <span className="font-medium">
-                  {teamMembers.find(m => m.id === teamMemberId)?.name || ''}
-                  {teamMembers.find(m => m.id === teamMemberId)?.position ? 
-                    ` - ${teamMembers.find(m => m.id === teamMemberId)?.position}` : ''}
-                </span>
-              </div>
-              
-              {serviceId && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Serviço:</span>
-                  <span className="font-medium">
-                    {services.find(s => s.id === serviceId)?.name || ''}
-                  </span>
-                </div>
-              )}
-              
-              {insurancePlanId !== undefined && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Convênio:</span>
-                  <span className="font-medium">
-                    {insurancePlanId === undefined ? "Particular" : 
-                     insurancePlans.find(p => p.id === insurancePlanId)?.name || ''}
-                  </span>
-                </div>
-              )}
-              
-              {selectedDate && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Data:</span>
-                  <span className="font-medium">{format(selectedDate, 'dd/MM/yyyy')}</span>
-                </div>
-              )}
-              
-              {selectedTimeSlot && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Horário:</span>
-                  <span className="font-medium">{selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </form>
-    </div>
-  );
-};
-
-export default AppointmentCreationForm;
+                  {teamMembers.find(m => m.id === teamMemberId)?.name ||

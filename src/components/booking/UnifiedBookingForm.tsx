@@ -49,12 +49,12 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     checkInsuranceLimitReached,
   } = useUnifiedBooking();
 
-  // Se o modo de manutenção estiver ativado e não for visualização de administrador
+  // If maintenance mode is active and not an admin view
   if (maintenanceMode && !isAdminView) {
     return <MaintenanceNotice />;
   }
 
-  // Defina os passos do agendamento - Ordem atualizada: convênio antes do serviço
+  // Define booking steps - Updated order: Professional → Insurance → Service
   const steps: Step[] = [
     { id: 1, label: "Profissional" },
     { id: 2, label: "Convênio" },
@@ -63,7 +63,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     { id: 5, label: "Horário" },
   ];
 
-  // Filtra os serviços disponíveis para o profissional selecionado
+  // Filter services available for the selected team member
   const filteredServices = bookingData.teamMemberId
     ? getAvailableServicesForTeamMember(bookingData.teamMemberId)
     : services;
@@ -82,7 +82,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           />
         )}
 
-        {/* Indicador de passos */}
+        {/* Step indicator */}
         {showStepIndicator && (
           <div className="sticky top-0 bg-white z-10 pb-4">
             <BookingStepIndicator
@@ -96,7 +96,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           </div>
         )}
 
-        {/* Conteúdo do passo atual */}
+        {/* Current step content */}
         <div className="space-y-6">
           {currentStep === "team-member" && (
             <ProfessionalStep

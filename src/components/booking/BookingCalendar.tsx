@@ -52,7 +52,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     appointments
   });
   
-  // Define booking steps - Updated order: Convênio before Serviço
+  // Define booking steps - Updated order: Professional → Insurance → Service → Date → Time
   const steps = [
     { id: 1, label: 'Profissional' },
     { id: 2, label: 'Convênio' },
@@ -122,7 +122,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               />
             )}
             
-            {/* Step 2: Select Insurance Plan - Moved before service selection */}
+            {/* Step 2: Select Insurance (now correct order) */}
             {currentStep === 2 && selectedTeamMember && (
               <InsuranceStep
                 insurancePlans={insurancePlans}
@@ -132,7 +132,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
               />
             )}
             
-            {/* Step 3: Select Service - Moved after insurance selection */}
+            {/* Step 3: Select Service (after insurance selection) */}
             {currentStep === 3 && selectedInsurance && (
               <ServiceStep
                 services={teamMemberServices}

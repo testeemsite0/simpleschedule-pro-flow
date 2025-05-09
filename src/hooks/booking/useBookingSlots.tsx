@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { TimeSlot, Appointment } from '@/types';
 import { addDays, startOfDay, isBefore, format } from 'date-fns';
+// Import timeUtils properly instead of using require
+import { generateAvailableTimeSlots } from '../../booking/timeUtils';
 
 interface UseBookingSlotsProps {
   timeSlots: TimeSlot[];
@@ -38,9 +40,8 @@ export const useBookingSlots = ({
   
   // Generate available dates
   useEffect(() => {
-    // Fix: Only check for teamMember, not service (since we now select insurance before service)
-    // This allows dates to be generated as soon as a team member is selected
-    if (isOverLimit || !selectedTeamMember || currentStep < 4) {
+    // Only check for teamMember, not service
+    if (isOverLimit || !selectedTeamMember) {
       console.log("Not generating dates due to:", { isOverLimit, selectedTeamMember, currentStep });
       setAvailableDates([]);
       return;
@@ -91,13 +92,13 @@ export const useBookingSlots = ({
             const cacheKey = `${formattedDate}_${selectedTeamMember}`;
             
             if (!dateSlotCache[cacheKey]) {
-              const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
+              // Use the proper import instead of require
               dateSlotCache[cacheKey] = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
             }
             
             const availableTimeSlots = dateSlotCache[cacheKey];
             
-            // Explicitly check if there are slots available
+            // Add the date if there are available slots or if we're not checking slots yet
             if (availableTimeSlots && availableTimeSlots.length > 0) {
               dates.push(date);
               console.log(`Date ${formattedDate} has ${availableTimeSlots.length} available slots`);
@@ -149,8 +150,7 @@ export const useBookingSlots = ({
     );
     
     try {
-      // Import function from timeUtils.ts to generate available slots
-      const { generateAvailableTimeSlots } = require('../../booking/timeUtils');
+      // Use the imported function from timeUtils.ts
       const slots = generateAvailableTimeSlots(daySlots, bookedAppointments, selectedDate);
       
       if (slots && slots.length > 0) {

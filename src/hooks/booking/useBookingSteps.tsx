@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Service, TeamMember, InsurancePlan } from '@/types';
 
-export type BookingStep = 'team-member' | 'service' | 'insurance' | 'date' | 'time' | 'client-info' | 'confirmation';
+export type BookingStep = 'team-member' | 'insurance' | 'service' | 'date' | 'time' | 'client-info' | 'confirmation';
 
 interface UseBookingStepsProps {
   initialStep?: BookingStep;
@@ -32,7 +32,7 @@ export const useBookingSteps = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Funções para avançar e voltar nas etapas - ordem alterada: convênio antes do serviço
+  // Functions for navigating steps - correct order: team-member → insurance → service → date → time
   const goToNextStep = () => {
     const stepOrder: BookingStep[] = ['team-member', 'insurance', 'service', 'date', 'time', 'client-info', 'confirmation'];
     const currentIndex = stepOrder.indexOf(currentStep);
@@ -55,7 +55,7 @@ export const useBookingSteps = ({
     setCurrentStep(step);
   };
   
-  // Funções para atualizar os dados de agendamento
+  // Functions for updating booking data
   const updateBookingData = (data: Partial<BookingData>) => {
     setBookingData(prev => ({
       ...prev,
@@ -66,29 +66,29 @@ export const useBookingSteps = ({
   const setTeamMember = (teamMember: TeamMember | string) => {
     const teamMemberId = typeof teamMember === 'string' ? teamMember : teamMember.id;
     updateBookingData({ teamMemberId });
-    goToNextStep();
-  };
-  
-  const setService = (service: Service | string) => {
-    const serviceId = typeof service === 'string' ? service : service.id;
-    updateBookingData({ serviceId });
-    goToNextStep();
+    setCurrentStep('insurance'); // Go to insurance step first
   };
   
   const setInsurance = (insurance: InsurancePlan | string) => {
     const insuranceId = typeof insurance === 'string' ? insurance : insurance.id;
     updateBookingData({ insuranceId });
-    goToNextStep();
+    setCurrentStep('service'); // Then go to service step
+  };
+  
+  const setService = (service: Service | string) => {
+    const serviceId = typeof service === 'string' ? service : service.id;
+    updateBookingData({ serviceId });
+    setCurrentStep('date'); // Then date selection
   };
   
   const setDate = (date: Date) => {
     updateBookingData({ date });
-    goToNextStep();
+    setCurrentStep('time'); // Finally time selection
   };
   
   const setTime = (startTime: string, endTime: string) => {
     updateBookingData({ startTime, endTime });
-    goToNextStep();
+    setCurrentStep('client-info'); // Next is client info
   };
   
   const setClientInfo = (name: string, email: string, phone: string, notes?: string) => {
@@ -98,7 +98,7 @@ export const useBookingSteps = ({
       clientPhone: phone,
       notes: notes || '' 
     });
-    goToNextStep();
+    setCurrentStep('confirmation');
   };
   
   const completeBooking = async () => {
