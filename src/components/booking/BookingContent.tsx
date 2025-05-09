@@ -5,6 +5,8 @@ import { useBooking } from '@/context/BookingContext';
 import { BookingCalendarSection } from './sections/BookingCalendarSection';
 import { BookingFormSection } from './sections/BookingFormSection';
 import { BookingConfirmationSection } from './sections/BookingConfirmationSection';
+import { UnifiedBookingProvider } from '@/context/UnifiedBookingContext';
+import { UnifiedBookingForm } from './UnifiedBookingForm';
 
 const BookingContent: React.FC = () => {
   const { 
@@ -22,6 +24,9 @@ const BookingContent: React.FC = () => {
     setClientName,
     setAppointmentId,
   } = useBooking();
+  
+  // Use unified booking system for simpler flow
+  const useUnifiedSystem = true;
   
   // Debug log current state
   useEffect(() => {
@@ -87,6 +92,23 @@ const BookingContent: React.FC = () => {
     );
   }
   
+  // Use the unified booking system if enabled
+  if (useUnifiedSystem) {
+    return (
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle>Agendar com {professional.name}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <UnifiedBookingProvider professionalId={professional.id} initialStep="team-member">
+            <UnifiedBookingForm title={`Agendar com ${professional.name}`} />
+          </UnifiedBookingProvider>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // If not using unified system, use the original implementation
   return (
     <Card>
       <CardHeader className="border-b">

@@ -62,22 +62,21 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
     setSelectedSlot(slot);
     
     // Only call the parent component's onSelectSlot function if showConfirmButton is false
-    // This prevents immediately advancing to the next step
     if (!showConfirmButton) {
+      console.log("TimeSlotSelector: Immediately selecting slot", slot);
       onSelectSlot(slot.date, slot.startTime, slot.endTime, slot.teamMemberId);
     }
   };
   
   const handleConfirmSelection = () => {
     if (selectedSlot) {
-      // Make sure to pass the teamMemberId parameter!
+      console.log("TimeSlotSelector: Confirming slot selection", selectedSlot);
       onSelectSlot(
         selectedSlot.date, 
         selectedSlot.startTime, 
         selectedSlot.endTime, 
         selectedSlot.teamMemberId
       );
-      console.log("Confirmed time slot with teamMemberId:", selectedSlot.teamMemberId);
     }
   };
 

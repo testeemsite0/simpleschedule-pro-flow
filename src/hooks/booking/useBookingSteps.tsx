@@ -7,7 +7,7 @@ export type BookingStep = 'team-member' | 'insurance' | 'service' | 'date' | 'ti
 
 interface UseBookingStepsProps {
   initialStep?: BookingStep;
-  onCompleteBooking?: (bookingData: BookingData) => void;
+  onCompleteBooking?: (bookingData: BookingData) => Promise<void>;
 }
 
 export interface BookingData {
@@ -32,13 +32,14 @@ export const useBookingSteps = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Functions for navigating steps - correct order: team-member → insurance → service → date → time
+  // Functions for navigating steps - correct order: team-member → insurance → service → date → time → client-info → confirmation
   const goToNextStep = () => {
     const stepOrder: BookingStep[] = ['team-member', 'insurance', 'service', 'date', 'time', 'client-info', 'confirmation'];
     const currentIndex = stepOrder.indexOf(currentStep);
     
     if (currentIndex < stepOrder.length - 1) {
       setCurrentStep(stepOrder[currentIndex + 1]);
+      console.log(`Moving from step ${currentStep} to ${stepOrder[currentIndex + 1]}`);
     }
   };
   
@@ -48,11 +49,13 @@ export const useBookingSteps = ({
     
     if (currentIndex > 0) {
       setCurrentStep(stepOrder[currentIndex - 1]);
+      console.log(`Moving back from step ${currentStep} to ${stepOrder[currentIndex - 1]}`);
     }
   };
   
   const goToStep = (step: BookingStep) => {
     setCurrentStep(step);
+    console.log(`Directly setting step to ${step}`);
   };
   
   // Functions for updating booking data
@@ -61,6 +64,14 @@ export const useBookingSteps = ({
       ...prev,
       ...data
     }));
+    console.log("Updated booking data:", {...bookingData, ...data});
+  };
+  
+  const updateErrorState = (errorMessage: string | null) => {
+    setError(errorMessage);
+    if (errorMessage) {
+      console.error("Booking error:", errorMessage);
+    }
   };
   
   const setTeamMember = (teamMember: TeamMember | string) => {
@@ -89,6 +100,7 @@ export const useBookingSteps = ({
   const setTime = (startTime: string, endTime: string) => {
     updateBookingData({ startTime, endTime });
     setCurrentStep('client-info'); // Next is client info
+    console.log("Time selected, moving to client-info step");
   };
   
   const setClientInfo = (name: string, email: string, phone: string, notes?: string) => {
@@ -98,7 +110,7 @@ export const useBookingSteps = ({
       clientPhone: phone,
       notes: notes || '' 
     });
-    setCurrentStep('confirmation');
+    console.log("Client info set:", { name, email, phone });
   };
   
   const completeBooking = async () => {
@@ -111,6 +123,7 @@ export const useBookingSteps = ({
       }
       
       toast.success("Agendamento realizado com sucesso!");
+      setCurrentStep('confirmation');
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro ao finalizar agendamento";
@@ -126,6 +139,7 @@ export const useBookingSteps = ({
     setBookingData({});
     setCurrentStep(initialStep);
     setError(null);
+    console.log("Booking reset to initial state");
   };
   
   return {
@@ -137,6 +151,7 @@ export const useBookingSteps = ({
     goToPreviousStep,
     goToStep,
     updateBookingData,
+    updateErrorState,
     setTeamMember,
     setService,
     setInsurance,

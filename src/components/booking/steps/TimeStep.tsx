@@ -37,7 +37,7 @@ export const TimeStep: React.FC<TimeStepProps> = ({
       <TimeSlotSelector 
         availableSlots={availableSlots}
         onSelectSlot={handleSelectSlot}
-        showConfirmButton={true}
+        showConfirmButton={false}  // Changed to false to make selection immediate
       />
       
       <div className="flex justify-between mt-4">
@@ -48,4 +48,3 @@ export const TimeStep: React.FC<TimeStepProps> = ({
     </div>
   );
 };
-
