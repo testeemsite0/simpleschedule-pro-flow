@@ -71,7 +71,6 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(1);
   
   useEffect(() => {
-    
     const fetchTeamMembers = async () => {
       try {
         const { data, error } = await supabase
@@ -381,8 +380,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     setInsuranceLimitError(null);
     setSelectedDate(null);
     setSelectedTimeSlot(null);
-    setCurrentStep(2); 
-    
+    setCurrentStep(2); // Go to Insurance step first
     
     const memberServicesList = memberServices[value] || [];
     setAvailableServices(memberServicesList.length > 0 ? memberServicesList : services);
@@ -391,13 +389,13 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   
   const handleServiceChange = (value: string) => {
     setServiceId(value);
-    setCurrentStep(4); 
+    setCurrentStep(4); // Go to Date step
   };
   
   const handleInsurancePlanChange = (value: string) => {
     setInsurancePlanId(value === "none" ? undefined : value);
     setInsuranceLimitError(null);
-    setCurrentStep(3); 
+    setCurrentStep(3); // Go to Service step
     
     if (value === "none") {
       return;
@@ -440,10 +438,9 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
   };
   
   const handleDateSelect = (date: Date) => {
-    
     setSelectedDate(new Date(date));
     setSelectedTimeSlot(null);
-    setCurrentStep(5); 
+    setCurrentStep(5); // Go to Time step
   };
   
   const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string) => {
@@ -453,7 +450,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
       endTime,
       teamMemberId 
     });
-    setCurrentStep(6); 
+    setCurrentStep(6); // Go to Client info step
   };
   
   const handleNextStep = () => {
@@ -472,7 +469,6 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
     if (!selectedDate || !selectedTimeSlot || !clientName || !clientEmail || !serviceId) {
       return;
     }
-    
     
     if (insuranceLimitError) {
       return;
@@ -581,6 +577,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         </div>
 
         
+        {/* Step 1: Professional Selection */}
         {currentStep === 1 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha um profissional</h2>
@@ -613,6 +610,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         )}
         
         
+        {/* Step 2: Insurance Plan Selection */}
         {currentStep === 2 && teamMemberId && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha um convênio</h2>
@@ -680,6 +678,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         )}
         
         
+        {/* Step 3: Service Selection */}
         {currentStep === 3 && teamMemberId && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha um serviço</h2>
@@ -720,6 +719,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         )}
         
         
+        {/* Step 4: Date Selection */}
         {currentStep === 4 && teamMemberId && serviceId && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha uma data</h2>
@@ -739,6 +739,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         )}
         
         
+        {/* Step 5: Time Selection */}
         {currentStep === 5 && selectedDate && teamMemberId && serviceId && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Escolha um horário</h2>
@@ -760,6 +761,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         )}
         
         
+        {/* Step 6: Client Information */}
         {currentStep === 6 && selectedTimeSlot && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold mb-4">Informações do cliente</h2>
@@ -848,6 +850,7 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
         )}
         
         
+        {/* Current Selection Summary */}
         {teamMemberId && currentStep < 6 && (
           <div className="mt-6 p-4 bg-accent/30 rounded-md">
             <h3 className="font-medium mb-2">Seleção atual:</h3>
@@ -855,4 +858,44 @@ const AppointmentCreationForm: React.FC<AppointmentCreationFormProps> = ({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Profissional:</span>
                 <span className="font-medium">
-                  {teamMembers.find(m => m.id === teamMemberId)?.name ||
+                  {teamMembers.find(m => m.id === teamMemberId)?.name || ''}
+                </span>
+              </div>
+              
+              {insurancePlanId !== undefined && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Convênio:</span>
+                  <span className="font-medium">
+                    {insurancePlanId === undefined 
+                      ? "Particular" 
+                      : insurancePlans.find(p => p.id === insurancePlanId)?.name || ''}
+                  </span>
+                </div>
+              )}
+              
+              {serviceId && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Serviço:</span>
+                  <span className="font-medium">
+                    {services.find(s => s.id === serviceId)?.name || ''}
+                  </span>
+                </div>
+              )}
+              
+              {selectedDate && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Data:</span>
+                  <span className="font-medium">
+                    {format(selectedDate, 'dd/MM/yyyy')}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </form>
+    </div>
+  );
+};
+
+export default AppointmentCreationForm;
