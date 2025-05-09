@@ -27,15 +27,15 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
     );
   }
   
-  if (teamMembers.length === 0) {
+  if (!teamMembers || teamMembers.length === 0) {
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-semibold mb-4">
           Escolha um profissional
         </h2>
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
+        <Alert className="bg-amber-50 border-amber-300">
+          <Info className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-amber-800">
             Não há profissionais disponíveis para agendamento. Por favor, entre em contato diretamente para verificar a disponibilidade.
           </AlertDescription>
         </Alert>

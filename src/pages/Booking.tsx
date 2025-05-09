@@ -8,19 +8,42 @@ import { useBookingData } from '@/hooks/useBookingData';
 import BookingContent from '@/components/booking/BookingContent';
 import BookingLoadingState from '@/components/booking/BookingLoadingState';
 import { useBooking } from '@/context/BookingContext';
+import { UnifiedBookingProvider } from '@/context/UnifiedBookingContext';
+import { ErrorHandler } from '@/components/ui/error-handler';
+import { Alert } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 // Intermediate component that depends on the BookingContext
 const BookingContainer: React.FC = () => {
-  const { loading } = useBooking();
+  const { loading, professional } = useBooking();
   const { slug } = useParams<{ slug: string }>();
   
   // Initialize data fetching
   useBookingData(slug);
   
+  if (loading) {
+    return <BookingLoadingState />;
+  }
+  
+  if (!professional) {
+    return (
+      <main className="flex-1 py-8 px-4">
+        <div className="container max-w-4xl mx-auto">
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <div className="ml-2">
+              Profissional não encontrado. Verifique o link de agendamento.
+            </div>
+          </Alert>
+        </div>
+      </main>
+    );
+  }
+  
   return (
     <main className="flex-1 py-8 px-4">
       <div className="container max-w-4xl mx-auto">
-        {loading ? <BookingLoadingState /> : <BookingContent />}
+        <BookingContent />
       </div>
     </main>
   );

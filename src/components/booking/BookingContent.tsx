@@ -9,6 +9,7 @@ import { BookingFormSection } from './sections/BookingFormSection';
 import { BookingConfirmationSection } from './sections/BookingConfirmationSection';
 import { UnifiedBookingProvider } from '@/context/UnifiedBookingContext';
 import { UnifiedBookingForm } from './UnifiedBookingForm';
+import { ErrorHandler } from '@/components/ui/error-handler';
 
 const BookingContent: React.FC = () => {
   const { 
@@ -34,7 +35,7 @@ const BookingContent: React.FC = () => {
   // Debug log current state
   useEffect(() => {
     console.log("BookingContent rendered with state:", {
-      professional,
+      professionalId: professional?.id,
       currentStep,
       selectedDate: selectedDate?.toISOString(),
       selectedStartTime,

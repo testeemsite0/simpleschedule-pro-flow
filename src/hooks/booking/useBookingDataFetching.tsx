@@ -35,42 +35,7 @@ export const useBookingDataFetching = ({
       setDataError(null);
       
       try {
-        // Primeiro, verificamos se existem team members cadastrados
-        const { data: existingTeamMembers, error: teamMemberCheckError } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('professional_id', professionalId)
-          .eq('active', true);
-        
-        // Se não existem team members, criamos um padrão com o próprio profissional
-        if ((!existingTeamMembers || existingTeamMembers.length === 0) && !teamMemberCheckError) {
-          // Buscar os dados do profissional
-          const { data: professionalData, error: professionalError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', professionalId)
-            .single();
-            
-          if (professionalData && !professionalError) {
-            // Criar um team member baseado no próprio profissional
-            const { data: newTeamMember, error: createError } = await supabase
-              .from('team_members')
-              .insert([{
-                professional_id: professionalId,
-                name: professionalData.name,
-                position: professionalData.profession,
-                email: professionalData.email,
-                active: true
-              }])
-              .select();
-              
-            if (newTeamMember && !createError) {
-              console.log("Created default team member for professional:", newTeamMember);
-            }
-          }
-        }
-        
-        // Now fetch all data
+        // Now fetch all data directly without trying to create team members from profile
         const [
           teamMembersResult,
           servicesResult,

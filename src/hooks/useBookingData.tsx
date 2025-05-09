@@ -64,6 +64,7 @@ export const useBookingData = (slug: string | undefined) => {
         setProfessional(professionalData);
         console.log("Set professional in context:", professionalData);
         
+        // Now fetch appointments and time slots
         await fetchAppointmentsAndTimeSlots(professionalData.id);
       } catch (error) {
         console.error("Error fetching professional data:", error);
