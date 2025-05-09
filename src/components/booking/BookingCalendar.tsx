@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { TimeSlot, Appointment, Professional } from '@/types';
@@ -11,7 +10,7 @@ import { TimeStep } from './steps/TimeStep';
 import { BookingSelectionSummary } from './BookingSelectionSummary';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Info } from 'lucide-react';
 import { useBookingCalendar } from '@/hooks/useBookingCalendar';
 
 interface BookingCalendarProps {
@@ -39,7 +38,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     insurancePlans,
     isOverLimit,
     loading,
-    currentStep,
     error,
     handleTeamMemberChange,
     handleServiceChange,
@@ -85,6 +83,15 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
     );
   }
 
+  // Debug logging
+  console.log("Booking calendar rendering with:", { 
+    teamMembers, 
+    services,
+    insurancePlans,
+    selectedTeamMember,
+    error
+  });
+
   // Filter services for selected team member
   const teamMemberServices = services.filter(service => {
     // If no team member is selected, show all services
@@ -106,6 +113,16 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Debug info if there's no team members */}
+      {teamMembers.length === 0 && currentStep === 1 && !loading && (
+        <Alert variant="default" className="mb-4 border-amber-500 bg-amber-50 text-amber-800">
+          <Info className="h-4 w-4 text-amber-500" />
+          <AlertDescription>
+            Nenhum profissional disponível para agendamento. Por favor, entre em contato conosco para mais informações.
+          </AlertDescription>
         </Alert>
       )}
 

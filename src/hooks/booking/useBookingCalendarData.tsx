@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { TeamMember, Service, InsurancePlan } from '@/types';
@@ -24,7 +23,7 @@ export const useBookingCalendarData = ({ professionalId }: UseBookingCalendarDat
       try {
         console.log("Fetching team members for professional:", professionalId);
         
-        // Fetch team members
+        // Fetch team members - improved logging and error handling
         const { data: teamMembersData, error: teamMembersError } = await supabase
           .from('team_members')
           .select('*')
@@ -37,7 +36,11 @@ export const useBookingCalendarData = ({ professionalId }: UseBookingCalendarDat
           throw teamMembersError;
         }
         
+        // Debug logs
+        console.log("Team members query response:", teamMembersData);
         console.log("Team members loaded:", teamMembersData?.length || 0);
+        
+        // Set team members with fallback to empty array
         setTeamMembers(teamMembersData || []);
         
         // Fetch services
@@ -73,13 +76,18 @@ export const useBookingCalendarData = ({ professionalId }: UseBookingCalendarDat
         
       } catch (error) {
         console.error("Error fetching data:", error);
+        // Keep error state set from the specific error handlers above
       } finally {
         setLoading(false);
       }
     };
     
     if (professionalId) {
+      console.log("Initiating data fetch for professional ID:", professionalId);
       fetchData();
+    } else {
+      console.warn("No professional ID provided for data fetching");
+      setLoading(false);
     }
   }, [professionalId]);
   
