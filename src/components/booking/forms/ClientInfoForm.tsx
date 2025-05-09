@@ -40,6 +40,8 @@ export const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
       <BookingFormActions 
         onBack={onBack}
         isLoading={isLoading}
+        onSubmit={handleSubmit}
+        submitLabel="Finalizar Agendamento"
       />
     </form>
   );

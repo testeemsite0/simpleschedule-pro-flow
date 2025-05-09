@@ -9,7 +9,7 @@ interface ServiceStepProps {
   selectedService: string;
   onServiceChange: (serviceId: string) => void;
   onBack: () => void;
-  insuranceId?: string; // Adicionado o ID do convênio selecionado
+  insuranceId?: string; // Added the ID of the selected insurance plan
 }
 
 export const ServiceStep: React.FC<ServiceStepProps> = ({
@@ -17,11 +17,11 @@ export const ServiceStep: React.FC<ServiceStepProps> = ({
   selectedService,
   onServiceChange,
   onBack,
-  insuranceId = "none" // Default para "particular"
+  insuranceId = "none" // Default to "none" for private payment
 }) => {
-  // Função para exibir o preço com base no tipo de convênio
+  // Function to display the price based on the type of insurance
   const renderPrice = (service: Service) => {
-    // Se for particular (none), mostra o preço normal
+    // If it's private payment (none), show the normal price
     if (insuranceId === "none") {
       return new Intl.NumberFormat('pt-BR', { 
         style: 'currency', 
@@ -29,7 +29,7 @@ export const ServiceStep: React.FC<ServiceStepProps> = ({
       }).format(Number(service.price));
     }
     
-    // Se for convênio, mostra "Valor conforme plano"
+    // If it's insurance, show "Valor conforme plano"
     return <span className="text-xs text-muted-foreground">Valor conforme plano</span>;
   };
 
