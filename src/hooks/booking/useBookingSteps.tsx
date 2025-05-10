@@ -86,8 +86,8 @@ export const useBookingSteps = ({
     const teamMemberId = typeof teamMember === 'string' ? teamMember : teamMember.id;
     const professionalName = typeof teamMember === 'string' ? undefined : teamMember.name;
     const professionalEmail = typeof teamMember === 'string' ? undefined : teamMember.email;
-    const professionalRole = typeof teamMember === 'string' ? undefined : teamMember.role || 'Profissional';
-    const professionalSlug = typeof teamMember === 'string' ? undefined : teamMember.slug || 'professional';
+    const professionalRole = typeof teamMember === 'string' ? undefined : teamMember.position || 'Profissional';
+    const professionalSlug = typeof teamMember === 'string' ? undefined : undefined; // TeamMember doesn't have a slug property
     
     updateBookingData({ 
       teamMemberId, 
