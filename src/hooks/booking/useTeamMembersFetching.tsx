@@ -6,7 +6,7 @@ import { TeamMember } from '@/types';
 interface UseTeamMembersFetchingProps {
   professionalId?: string;
   setIsLoading: (loading: boolean) => void;
-  handleError: (errorMessage: string) => void;
+  handleError: (errorMessage: string, errorObject?: any) => void;
 }
 
 export const useTeamMembersFetching = ({
@@ -20,7 +20,10 @@ export const useTeamMembersFetching = ({
     const fetchTeamMembers = async () => {
       if (!professionalId) return;
       
+      setIsLoading(true);
+      
       try {
+        console.log("Fetching team members for professional:", professionalId);
         const { data, error } = await supabase
           .from('team_members')
           .select('*')
@@ -28,19 +31,16 @@ export const useTeamMembersFetching = ({
           .eq('active', true);
           
         if (error) {
-          handleError(`Error loading team members: ${error.message}`);
+          handleError(`Error loading team members: ${error.message}`, error);
           return;
         }
         
-        if (data && data.length === 0) {
-          console.warn("No team members found for professional ID:", professionalId);
-        } else {
-          console.log("Team members loaded:", data);
-        }
-        
+        console.log("Team members fetched successfully:", data?.length || 0);
         setTeamMembers(data || []);
       } catch (error) {
-        handleError(`Error loading team members: ${error}`);
+        handleError(`Error loading team members: ${error}`, error);
+      } finally {
+        setIsLoading(false);
       }
     };
     

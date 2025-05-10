@@ -6,7 +6,7 @@ import { Appointment } from '@/types';
 interface UseAppointmentsFetchingProps {
   professionalId?: string;
   setIsLoading: (loading: boolean) => void;
-  handleError: (errorMessage: string) => void;
+  handleError: (errorMessage: string, errorObject?: any) => void;
 }
 
 export const useAppointmentsFetching = ({
@@ -20,16 +20,21 @@ export const useAppointmentsFetching = ({
     const fetchAppointments = async () => {
       if (!professionalId) return;
       
+      setIsLoading(true);
+      
       try {
+        console.log("Fetching appointments for professional:", professionalId);
         const { data, error } = await supabase
           .from('appointments')
           .select('*')
           .eq('professional_id', professionalId);
           
         if (error) {
-          handleError(`Error loading appointments: ${error.message}`);
+          handleError(`Error loading appointments: ${error.message}`, error);
           return;
         }
+        
+        console.log("Appointments fetched successfully:", data?.length || 0);
         
         // Type assertion to ensure appointment status is one of the allowed values
         if (data) {
@@ -50,7 +55,9 @@ export const useAppointmentsFetching = ({
           setAppointments([]);
         }
       } catch (error) {
-        handleError(`Error loading appointments: ${error}`);
+        handleError(`Error loading appointments: ${error}`, error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
