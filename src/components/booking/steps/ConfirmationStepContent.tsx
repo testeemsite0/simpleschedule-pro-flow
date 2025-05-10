@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { ConfirmationStep } from '../steps/ConfirmationStep';
+import { ConfirmationStep } from './ConfirmationStep';
 import { BookingData } from '@/hooks/booking/useBookingSteps';
+import BookingConfirmation from '@/components/booking/BookingConfirmation';
 
 interface ConfirmationStepContentProps {
   bookingData: BookingData;
@@ -16,6 +17,22 @@ export const ConfirmationStepContent: React.FC<ConfirmationStepContentProps> = (
   onEdit,
   isLoading
 }) => {
+  // Check if we're in the completed state (has appointmentId)
+  if (bookingData.appointmentId) {
+    return (
+      <BookingConfirmation
+        professional={{ name: bookingData.professionalName || 'Profissional', id: '', address: '' }}
+        clientName={bookingData.clientName || ''}
+        date={bookingData.date || new Date()}
+        startTime={bookingData.startTime || ''}
+        endTime={bookingData.endTime || ''}
+        appointmentId={bookingData.appointmentId}
+        onClose={() => onConfirm()}
+      />
+    );
+  }
+
+  // Show regular confirmation step if still confirming
   return (
     <ConfirmationStep
       bookingData={bookingData}

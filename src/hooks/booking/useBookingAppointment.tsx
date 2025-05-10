@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BookingData } from './useBookingSteps';
@@ -135,13 +136,11 @@ export const useBookingAppointment = ({
           onSuccess();
         }
         
-        // Wait 3 seconds before resetting to show the confirmation
-        setTimeout(() => {
-          if (resetBooking) {
-            console.log("Resetting booking form after successful appointment");
-            resetBooking(); // Reset the booking form after success
-          }
-        }, 3000);
+        // Reset booking immediately without timeout
+        if (resetBooking) {
+          console.log("Resetting booking form after successful appointment");
+          resetBooking(); // Reset the booking form after success
+        }
         
         return true;
       } else {

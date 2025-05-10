@@ -9,6 +9,7 @@ interface BookingNavigationButtonsProps {
   goToPreviousStep: () => void;
   goToNextStep: () => void;
   handleCompleteBooking: () => void;
+  showNextButton?: boolean;
 }
 
 export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> = ({
@@ -16,11 +17,19 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
   isLoading,
   goToPreviousStep,
   goToNextStep,
-  handleCompleteBooking
+  handleCompleteBooking,
+  showNextButton = false
 }) => {
+  // Don't show buttons for steps that auto-advance (team-member, insurance, service)
+  const shouldShowNextButton = showNextButton || 
+    ['date', 'time', 'client-info'].includes(currentStep);
+    
+  // Only show confirmation button in confirmation step
+  const showConfirmButton = currentStep === 'confirmation';
+
   return (
     <div className="flex justify-between">
-      {currentStep !== 'team-member' && currentStep !== 'confirmation' && (
+      {currentStep !== 'team-member' && (
         <Button
           onClick={goToPreviousStep}
           variant="outline"
@@ -29,21 +38,25 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
           Voltar
         </Button>
       )}
-      {currentStep !== 'confirmation' ? (
+      
+      {shouldShowNextButton && !showConfirmButton && (
         <Button
           onClick={goToNextStep}
           disabled={isLoading}
+          className="ml-auto"
         >
           Avançar
         </Button>
-      ) : (
+      )}
+      
+      {showConfirmButton && (
         <Button
           onClick={handleCompleteBooking}
           variant="default"
-          className="bg-green-500 hover:bg-green-700"
+          className="bg-green-500 hover:bg-green-700 ml-auto"
           disabled={isLoading}
         >
-          Confirmar Agendamento
+          {isLoading ? 'Processando...' : 'Confirmar Agendamento'}
         </Button>
       )}
     </div>

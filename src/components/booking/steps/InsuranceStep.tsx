@@ -78,7 +78,7 @@ export const InsuranceStep: React.FC<InsuranceStepProps> = ({
         </div>
       </RadioGroup>
       
-      <div className="flex justify-between mt-6">
+      <div className="flex w-full justify-start">
         <Button variant="outline" onClick={onBack} disabled={isLoading}>
           Voltar
         </Button>
