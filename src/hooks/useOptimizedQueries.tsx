@@ -80,7 +80,7 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
     const cachedData = queryCache.get(cacheKey);
     if (cachedData && (Date.now() - cachedData.timestamp) < cachedData.ttl) {
       console.log(`Using cached data for ${type}`);
-      return cachedData.data;
+      return cachedData.data as T[];
     }
     
     // Create a new promise for this request
@@ -88,8 +88,7 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
       try {
         console.log(`Fetching ${type} for professional:`, professionalId);
         // Execute the query function - note that we need to await it here
-        const query = queryFn();
-        const response = await query;
+        const response = await queryFn();
         
         if (response.error) {
           console.error(`Error fetching ${type}:`, response.error);
@@ -104,9 +103,9 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
               // Clear pending request reference so we can retry
               pendingRequestsRef.current.delete(cacheKey);
               // Retry the fetch
-              fetchWithCache(type, queryFn, ttl)
-                .then(resolve)
-                .catch(reject);
+              fetchWithCache<T>(type, queryFn, ttl)
+                .then(data => resolve(data))
+                .catch(err => reject(err));
             }, delay);
             return;
           }
@@ -127,7 +126,7 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
         });
         
         console.log(`${type} fetched successfully:`, resultData.length);
-        resolve(resultData);
+        resolve(resultData as T[]);
       } catch (error) {
         console.error(`Error in fetchWithCache for ${type}:`, error);
         reject(error);
@@ -181,43 +180,43 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
         timeSlotsResult,
         appointmentsResult
       ] = await Promise.allSettled([
-        fetchWithCache<any>('teamMembers', () => {
+        fetchWithCache<any>('teamMembers', async () => {
           checkAborted();
-          return supabase
+          return await supabase
             .from('team_members')
             .select('*')
             .eq('professional_id', professionalId)
             .eq('active', true);
         }),
         
-        fetchWithCache<any>('services', () => {
+        fetchWithCache<any>('services', async () => {
           checkAborted();
-          return supabase
+          return await supabase
             .from('services')
             .select('*')
             .eq('professional_id', professionalId)
             .eq('active', true);
         }),
         
-        fetchWithCache<any>('insurancePlans', () => {
+        fetchWithCache<any>('insurancePlans', async () => {
           checkAborted();
-          return supabase
+          return await supabase
             .from('insurance_plans')
             .select('*')
             .eq('professional_id', professionalId);
         }),
         
-        fetchWithCache<any>('timeSlots', () => {
+        fetchWithCache<any>('timeSlots', async () => {
           checkAborted();
-          return supabase
+          return await supabase
             .from('time_slots')
             .select('*')
             .eq('professional_id', professionalId);
         }),
         
-        fetchWithCache<any>('appointments', () => {
+        fetchWithCache<any>('appointments', async () => {
           checkAborted();
-          return supabase
+          return await supabase
             .from('appointments')
             .select('*')
             .eq('professional_id', professionalId)
