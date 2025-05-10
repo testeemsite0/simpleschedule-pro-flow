@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ProfessionalStep } from './steps/ProfessionalStep';
 import { ServiceStep } from './steps/ServiceStep';
@@ -167,11 +168,11 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       )}
       {maintenanceMode && <MaintenanceNotice />}
 
-      {/* Fix: Ensure we're using the correct props for BookingErrorHandler */}
+      {/* Fix: Use the correct BookingErrorHandler component and props */}
       {error && (
         <BookingErrorHandler 
           error={error} 
-          resetError={resetBooking} 
+          onRetry={resetBooking} 
         />
       )}
       
