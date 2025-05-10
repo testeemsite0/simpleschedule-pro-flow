@@ -20,10 +20,16 @@ export const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
 
+  const validateEmail = (email: string): boolean => {
+    // Basic email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
+    // Enhanced validation
     if (!name.trim()) {
       setError("Nome é obrigatório");
       return;
@@ -33,11 +39,17 @@ export const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
       setError("Email é obrigatório");
       return;
     }
+
+    if (!validateEmail(email)) {
+      setError("Por favor, insira um email válido");
+      return;
+    }
     
     // Clear any previous errors
     setError("");
     
     // Call the onSubmit callback with form data
+    console.log("Submitting client info:", { name, email, phone, notes });
     onSubmit(name, email, phone, notes);
   };
 
@@ -50,8 +62,8 @@ export const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
   return (
     <form onSubmit={handleSubmit}>
       {error && (
-        <div className="mb-4 p-2 bg-red-50 text-red-600 rounded border border-red-200">
-          {error}
+        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded border border-red-200">
+          <p className="text-sm font-medium">{error}</p>
         </div>
       )}
       

@@ -29,11 +29,14 @@ export const useBookingAppointment = ({
     setIsLoading(true);
     
     try {
+      // Log the current booking data for debugging
+      console.log("Starting booking process with data:", JSON.stringify(bookingData, null, 2));
+      
       if (!professionalId) {
         throw new Error("ID do profissional não encontrado");
       }
       
-      // Validate required fields
+      // Enhanced validation with detailed error messages
       if (!bookingData.teamMemberId) {
         throw new Error("Selecione um profissional");
       }
@@ -46,13 +49,23 @@ export const useBookingAppointment = ({
         throw new Error("Selecione um horário");
       }
       
-      if (!bookingData.clientName || !bookingData.clientEmail) {
-        throw new Error("Informações do cliente incompletas");
+      if (!bookingData.clientName) {
+        throw new Error("Nome do cliente é obrigatório");
+      }
+      
+      if (!bookingData.clientEmail) {
+        throw new Error("Email do cliente é obrigatório");
+      }
+      
+      // Extra validation for email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(bookingData.clientEmail)) {
+        throw new Error("Email do cliente em formato inválido");
       }
       
       const formattedDate = format(bookingData.date, 'yyyy-MM-dd');
       
-      // Log complete data for debugging
+      // Log complete data right before creating the appointment
       console.log("Creating appointment with validated data:", {
         professionalId,
         teamMemberId: bookingData.teamMemberId,
@@ -65,6 +78,7 @@ export const useBookingAppointment = ({
         insuranceId: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null
       });
       
+      // Create appointmentData object with all required fields
       const appointmentData = {
         professional_id: professionalId,
         team_member_id: bookingData.teamMemberId,
@@ -81,11 +95,17 @@ export const useBookingAppointment = ({
         service_id: bookingData.serviceId || null
       };
       
+      console.log("Sending final appointment data to API:", JSON.stringify(appointmentData, null, 2));
+      
       const { data, error } = await createAppointment(appointmentData);
       
-      if (error) throw error;
+      if (error) {
+        console.error("API returned error:", error);
+        throw error;
+      }
       
       if (data && data.length > 0) {
+        console.log("Appointment created successfully:", data[0]);
         toast.success("Agendamento realizado com sucesso!");
         goToStep("confirmation");
         
@@ -94,13 +114,17 @@ export const useBookingAppointment = ({
         }
         
         return true;
+      } else {
+        console.error("No data returned from API");
+        throw new Error("Erro ao criar agendamento: Nenhum dado retornado");
       }
       
       return false;
     } catch (error: any) {
       console.error("Error creating appointment:", error);
-      updateErrorState(error.message || "Erro ao processar agendamento");
-      toast.error(error.message || "Erro ao processar agendamento");
+      const errorMessage = error.message || "Erro ao processar agendamento";
+      updateErrorState(errorMessage);
+      toast.error(errorMessage);
       return false;
     } finally {
       setIsLoading(false);

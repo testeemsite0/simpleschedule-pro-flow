@@ -50,10 +50,18 @@ export const createAppointment = async (appointmentData: any) => {
   }
   
   try {
-    return await supabase
+    const { data, error } = await supabase
       .from('appointments')
       .insert([appointmentData])
       .select();
+      
+    if (error) {
+      console.error("Supabase error:", error);
+      throw new Error(`Erro ao criar agendamento: ${error.message}`);
+    }
+    
+    console.log("Appointment created successfully:", data);
+    return { data, error };
   } catch (error: any) {
     console.error("Error in Supabase call:", error);
     throw error;

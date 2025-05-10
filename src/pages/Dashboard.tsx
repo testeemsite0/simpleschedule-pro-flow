@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { CalendarIcon, ClipboardListIcon, UsersIcon, SettingsIcon, TrendingUpIcon, UserPlusIcon, CheckIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, UsersIcon, TrendingUpIcon, CheckIcon, XIcon } from 'lucide-react';
 import { FullPageLoadingState } from '@/components/ui/loading-states';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -124,7 +124,7 @@ const Dashboard = () => {
   return (
     <DashboardLayout title="Visão Geral">
       <div className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Appointment Stats Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -143,8 +143,7 @@ const Dashboard = () => {
                   <div className="grid grid-cols-3 gap-1 mt-4">
                     <div className="flex flex-col items-center p-2 bg-primary/10 rounded">
                       <span className="text-xs text-muted-foreground">Agendados</span>
-                      <div className="font-bold mt-1 flex items-center gap-1">
-                        <ClipboardListIcon className="h-3 w-3" />
+                      <div className="font-bold mt-1">
                         {stats.scheduledAppointments}
                       </div>
                     </div>
@@ -194,10 +193,7 @@ const Dashboard = () => {
                   <div className="mt-4 space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Novos este mês</span>
-                      <div className="font-medium flex items-center gap-1">
-                        <UserPlusIcon className="h-4 w-4 text-primary" />
-                        {stats.newClientsThisMonth}
-                      </div>
+                      <div className="font-medium">{stats.newClientsThisMonth}</div>
                     </div>
                   </div>
                 </>
@@ -246,48 +242,12 @@ const Dashboard = () => {
               </Link>
             </CardFooter>
           </Card>
-
-          {/* Quick Actions Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-0.5">
-                <CardTitle className="text-base">Ações Rápidas</CardTitle>
-                <CardDescription>Acesso rápido</CardDescription>
-              </div>
-              <SettingsIcon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Link 
-                to="/dashboard/unified-booking?action=new" 
-                className="flex items-center justify-between p-2 bg-primary/10 rounded hover:bg-primary/20 transition-colors"
-              >
-                <span className="text-sm font-medium">Novo Agendamento</span>
-                <CalendarIcon className="h-4 w-4 text-primary" />
-              </Link>
-              
-              <Link 
-                to="/dashboard/team/new" 
-                className="flex items-center justify-between p-2 bg-primary/10 rounded hover:bg-primary/20 transition-colors"
-              >
-                <span className="text-sm font-medium">Adicionar Profissional</span>
-                <UsersIcon className="h-4 w-4 text-primary" />
-              </Link>
-              
-              <Link 
-                to="/dashboard/reports" 
-                className="flex items-center justify-between p-2 bg-primary/10 rounded hover:bg-primary/20 transition-colors"
-              >
-                <span className="text-sm font-medium">Ver Relatórios</span>
-                <TrendingUpIcon className="h-4 w-4 text-primary" />
-              </Link>
-            </CardContent>
-          </Card>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center">
-              <SettingsIcon className="mr-2 h-5 w-5 text-primary" />
+              <TrendingUpIcon className="mr-2 h-5 w-5 text-primary" />
               Link de Agendamento
             </CardTitle>
             <CardDescription>
