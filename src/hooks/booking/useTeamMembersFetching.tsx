@@ -22,15 +22,20 @@ export const useTeamMembersFetching = ({
   
   const fetchData = useCallback(async (signal?: AbortSignal) => {
     if (!professionalId || !enabled) {
+      console.log("Team members fetching skipped - no professionalId or disabled");
       return [];
     }
     
     setIsLoading(true);
     
     try {
+      console.log("Fetching team members for professional:", professionalId);
       const result = await fetchTeamMembers(professionalId, signal);
-      // Type assertion to ensure we're setting the right type
-      const typedMembers = Array.isArray(result) ? result as TeamMember[] : [];
+      
+      // Ensure we have a valid array of team members
+      const typedMembers = Array.isArray(result) ? result : [];
+      
+      console.log(`Fetched ${typedMembers.length} team members:`, typedMembers);
       setTeamMembers(typedMembers);
       
       // Call onSuccess callback if provided
@@ -40,6 +45,7 @@ export const useTeamMembersFetching = ({
       
       return typedMembers;
     } catch (error) {
+      console.error("Error fetching team members:", error);
       handleError('team members', error);
       return [];
     } finally {
@@ -49,6 +55,7 @@ export const useTeamMembersFetching = ({
   
   useEffect(() => {
     if (enabled && professionalId) {
+      console.log("Initializing team members fetch for professional:", professionalId);
       // Create AbortController for cleanup
       const controller = new AbortController();
       

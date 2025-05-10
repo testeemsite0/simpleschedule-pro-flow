@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import { TeamMember } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProfessionalStepProps {
   teamMembers: TeamMember[];
@@ -21,13 +22,25 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="text-center p-4">
-        <p className="text-muted-foreground">Carregando profissionais...</p>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold mb-4">
+          Escolha um profissional
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+        <p className="text-center text-sm text-muted-foreground">Carregando profissionais...</p>
       </div>
     );
   }
   
-  if (!teamMembers || teamMembers.length === 0) {
+  console.log("ProfessionalStep render with teamMembers:", teamMembers);
+  
+  if (!teamMembers || !Array.isArray(teamMembers) || teamMembers.length === 0) {
+    console.warn("No team members available:", teamMembers);
+    
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-semibold mb-4">

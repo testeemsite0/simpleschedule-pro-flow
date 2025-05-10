@@ -31,7 +31,10 @@ export const fetchData = async <T>(
   } = options;
   
   // Return empty array if no professionalId
-  if (!professionalId) return [] as T[];
+  if (!professionalId) {
+    console.log(`No professionalId provided for ${type}, returning empty array`);
+    return [] as T[];
+  }
   
   // Check if the request was aborted
   if (signal?.aborted) {
@@ -134,7 +137,10 @@ export const fetchData = async <T>(
         return [] as T[];
       }
       
-      const resultData = response.data || [];
+      // Ensure response.data is always an array
+      const resultData = Array.isArray(response.data) ? response.data : [];
+      
+      console.log(`${type} fetched successfully with ${resultData.length} items`);
       
       // Cache the successful result in memory
       QueryCache.set(cacheKey, resultData, ttl);
@@ -144,7 +150,6 @@ export const fetchData = async <T>(
         StorageCache.set(cacheKey, resultData, ttl * 2); // Use double TTL for localStorage
       }
       
-      console.log(`${type} fetched successfully:`, resultData.length);
       return resultData as T[];
     } catch (error) {
       if (signal?.aborted) {
@@ -183,6 +188,8 @@ export const unifiedDataFetch = async <T>(
 ): Promise<Record<string, T[]>> => {
   if (!professionalId) return {} as Record<string, T[]>;
   
+  console.log(`Starting unifiedDataFetch for professional ${professionalId} with data types:`, dataTypes);
+  
   const results: Record<string, T[]> = {};
   const fetchPromises: Promise<void>[] = [];
   
@@ -195,6 +202,7 @@ export const unifiedDataFetch = async <T>(
     // Check cache first
     const cachedData = QueryCache.get<T[]>(cacheKey);
     if (cachedData) {
+      console.log(`Using cached data for ${type}`);
       results[type] = cachedData;
       continue;
     }
@@ -212,6 +220,7 @@ export const unifiedDataFetch = async <T>(
         };
         
         const data = await fetchData<T>(options, queryFns[type]);
+        console.log(`Setting ${type} result with ${data.length} items`);
         results[type] = data;
       } catch (error) {
         console.error(`Error fetching ${type}:`, error);
@@ -226,6 +235,10 @@ export const unifiedDataFetch = async <T>(
   if (fetchPromises.length > 0) {
     await Promise.all(fetchPromises);
   }
+  
+  console.log("UnifiedDataFetch results summary:", 
+    Object.entries(results).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.length : 'not array'} items`).join(', ')
+  );
   
   return results;
 };

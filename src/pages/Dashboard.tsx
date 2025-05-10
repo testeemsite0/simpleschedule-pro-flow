@@ -243,34 +243,6 @@ const Dashboard = () => {
             </CardFooter>
           </Card>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <TrendingUpIcon className="mr-2 h-5 w-5 text-primary" />
-              Link de Agendamento
-            </CardTitle>
-            <CardDescription>
-              Compartilhe seu link personalizado para receber agendamentos online
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="p-3 bg-accent/30 rounded-md border border-accent">
-              <p className="text-sm text-muted-foreground mb-2">Seu link para agendamentos:</p>
-              <p className="font-medium break-all">
-                {window.location.origin}/booking/{user?.slug || ''}
-              </p>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Link 
-              to="/dashboard/booking-link" 
-              className="text-sm text-primary hover:underline w-full text-center"
-            >
-              Configurar Link de Agendamento
-            </Link>
-          </CardFooter>
-        </Card>
       </div>
     </DashboardLayout>
   );
