@@ -3,7 +3,7 @@ import React from "react";
 import { ErrorHandler } from "@/components/ui/error-handler";
 
 interface BookingErrorHandlerProps {
-  error: string | null;
+  error: string | Error | null;
   resetError: () => void;
 }
 
@@ -13,9 +13,12 @@ export const BookingErrorHandler: React.FC<BookingErrorHandlerProps> = ({
 }) => {
   if (!error) return null;
   
+  // Convert Error object to string if needed
+  const errorMessage = error instanceof Error ? error.message : error;
+  
   return (
     <ErrorHandler
-      error={error}
+      error={errorMessage}
       resetError={resetError}
       title="Erro no agendamento"
     />

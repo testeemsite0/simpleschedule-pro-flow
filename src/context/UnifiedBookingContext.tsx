@@ -17,7 +17,7 @@ interface UnifiedBookingContextType {
   currentStep: BookingStep;
   bookingData: BookingData;
   isLoading: boolean;
-  error: string | null;
+  error: string | Error | null;  // Update this type to accept Error objects as well
   maintenanceMode: boolean;
   
   // Dados
