@@ -13,7 +13,6 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Booking from './pages/Booking';
 import Pricing from './pages/Pricing';
-import DashboardAppointments from './pages/DashboardAppointments';
 import DashboardSchedules from './pages/DashboardSchedules';
 import DashboardTeam from './pages/DashboardTeam';
 import TeamMemberSchedules from './pages/TeamMemberSchedules';
@@ -56,14 +55,7 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/dashboard/appointments"
-              element={
-                <ProtectedRoute>
-                  <DashboardAppointments />
-                </ProtectedRoute>
-              }
-            />
+            {/* Removed the /dashboard/appointments route */}
             <Route
               path="/dashboard/unified-booking"
               element={

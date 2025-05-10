@@ -28,7 +28,7 @@ export function DashboardSidebarContent() {
             label="Dashboard"
           />
           <SidebarLink
-            to="/dashboard/appointments"
+            to="/dashboard/unified-booking"
             icon={<Calendar className="mr-2 h-4 w-4" />}
             label="Agendamentos"
           />
@@ -86,7 +86,7 @@ export function DashboardSidebarContent() {
             label="Link de Agendamento"
           />
           <SidebarLink
-            to="/dashboard/settings"
+            to="/dashboard/preferences"
             icon={<Settings className="mr-2 h-4 w-4" />}
             label="Preferências"
           />
