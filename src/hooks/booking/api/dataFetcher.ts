@@ -8,10 +8,35 @@ import { QueryCache, generateCacheKey, DEFAULT_CACHE_TTL } from '../cache/queryC
 // Maximum number of retries
 const MAX_RETRIES = 2; // Reduced from 3 to 2
 
-// Global concurrency control
-const CONCURRENT_REQUESTS_LIMIT = 2;
+// Global concurrency control - increased from 2 to 4 to allow more concurrent requests
+const CONCURRENT_REQUESTS_LIMIT = 4;
 let activeRequests = 0;
 const requestQueue: Array<() => Promise<any>> = [];
+
+// Rate limiting settings - adjusted for better performance
+const RATE_LIMIT_WINDOW = 10000; // 10 seconds window
+const RATE_LIMIT_MAX_REQUESTS = 10; // Max 10 requests per window
+let requestsInWindow = 0;
+let windowStartTime = Date.now();
+
+// Reset rate limiting window
+const resetRateLimitingWindow = () => {
+  requestsInWindow = 0;
+  windowStartTime = Date.now();
+};
+
+// Check if we can make a new request within rate limits
+const canMakeRequest = (): boolean => {
+  const now = Date.now();
+  
+  // Reset window if needed
+  if (now - windowStartTime > RATE_LIMIT_WINDOW) {
+    resetRateLimitingWindow();
+    return true;
+  }
+  
+  return requestsInWindow < RATE_LIMIT_MAX_REQUESTS;
+};
 
 // Process queue function to manage concurrent requests
 const processQueue = async () => {
@@ -19,9 +44,19 @@ const processQueue = async () => {
     return;
   }
   
+  // Check rate limiting
+  if (!canMakeRequest()) {
+    // If we're rate limited, wait until the window resets
+    const timeToWait = RATE_LIMIT_WINDOW - (Date.now() - windowStartTime) + 50;
+    console.log(`Rate limited, waiting for ${timeToWait}ms before processing next request`);
+    setTimeout(processQueue, timeToWait);
+    return;
+  }
+  
   const nextRequest = requestQueue.shift();
   if (nextRequest) {
     activeRequests++;
+    requestsInWindow++;
     try {
       await nextRequest();
     } catch (error) {
@@ -29,13 +64,13 @@ const processQueue = async () => {
     } finally {
       activeRequests--;
       // Process next item in queue
-      processQueue();
+      setTimeout(processQueue, 50); // Add small delay between requests
     }
   }
 };
 
 // Add request to queue
-const queueRequest = <T>(request: () => Promise<T>): Promise<T> => {
+const queueRequest = <T>(request: () => Promise<T>, priority: 'high' | 'medium' | 'low' = 'medium'): Promise<T> => {
   return new Promise((resolve, reject) => {
     const wrappedRequest = async () => {
       try {
@@ -46,7 +81,14 @@ const queueRequest = <T>(request: () => Promise<T>): Promise<T> => {
       }
     };
     
-    requestQueue.push(wrappedRequest);
+    if (priority === 'high') {
+      // High priority goes to the front of the queue
+      requestQueue.unshift(wrappedRequest);
+    } else {
+      // Others go to the back
+      requestQueue.push(wrappedRequest);
+    }
+    
     processQueue();
   });
 };
@@ -125,6 +167,7 @@ export const fetchData = async <T>(
   // Check in-memory cache first
   const cachedData = QueryCache.get<T[]>(cacheKey);
   if (cachedData) {
+    console.log(`Using in-memory cache for ${type}`);
     return cachedData;
   }
   
@@ -155,9 +198,9 @@ export const fetchData = async <T>(
       if (response.error) {
         console.error(`Error fetching ${type}:`, response.error);
         
-        // Implement exponential backoff for retries
+        // Implement exponential backoff for retries with decreased delays
         if (retryCount < MAX_RETRIES) {
-          const delay = Math.pow(2, retryCount) * 500; // Reduced from 1000ms to 500ms
+          const delay = Math.pow(2, retryCount) * 300; // Reduced from 500ms to 300ms 
           console.log(`Retrying ${type} in ${delay}ms (attempt ${retryCount + 1})`);
           
           // Wait and retry
@@ -173,7 +216,9 @@ export const fetchData = async <T>(
           });
         }
         
-        throw response.error;
+        // Return empty array instead of throwing to prevent cascading failures
+        console.warn(`Failed to fetch ${type} after ${retryCount + 1} attempts. Returning empty array.`);
+        return [] as T[];
       }
       
       const resultData = response.data || [];
@@ -195,7 +240,8 @@ export const fetchData = async <T>(
       }
       
       console.error(`Error in fetchData for ${type}:`, error);
-      throw error;
+      // Return empty array instead of throwing
+      return [] as T[];
     }
   };
   
@@ -204,7 +250,7 @@ export const fetchData = async <T>(
   
   // Use queue system or direct execution based on priority and config
   if (!skipQueue) {
-    return queueRequest<T[]>(fetchProcess);
+    return queueRequest<T[]>(fetchProcess, priority);
   } else {
     return fetchProcess();
   }
@@ -219,7 +265,8 @@ export const fetchTeamMembers = (professionalId: string, signal?: AbortSignal) =
     professionalId,
     signal,
     priority: 'high',
-    skipQueue: true // Don't queue team members, they're essential
+    skipQueue: true, // Don't queue team members, they're essential
+    ttl: DEFAULT_CACHE_TTL * 2 // Cache team members for longer
   }, async () => {
     return await supabase
       .from('team_members')
@@ -237,7 +284,8 @@ export const fetchServices = (professionalId: string, signal?: AbortSignal) =>
     professionalId,
     signal,
     priority: 'high',
-    skipQueue: true // Don't queue services, they're essential
+    skipQueue: true, // Don't queue services, they're essential
+    ttl: DEFAULT_CACHE_TTL * 2 // Cache services for longer
   }, async () => {
     return await supabase
       .from('services')
@@ -254,7 +302,8 @@ export const fetchInsurancePlans = (professionalId: string, signal?: AbortSignal
     type: 'insurancePlans',
     professionalId,
     signal,
-    priority: 'medium'
+    priority: 'medium',
+    ttl: DEFAULT_CACHE_TTL * 1.5 // Cache insurance plans for longer
   }, async () => {
     return await supabase
       .from('insurance_plans')
@@ -270,7 +319,8 @@ export const fetchTimeSlots = (professionalId: string, signal?: AbortSignal) =>
     type: 'timeSlots',
     professionalId,
     signal,
-    priority: 'medium'
+    priority: 'medium',
+    ttl: DEFAULT_CACHE_TTL * 1.5 // Cache time slots for longer
   }, async () => {
     return await supabase
       .from('time_slots')
@@ -300,7 +350,7 @@ export const fetchAppointments = (professionalId: string, signal?: AbortSignal) 
       .order('date', { ascending: true });
   });
 
-// Function to pre-warm cache for essential data
+// Function to pre-warm cache for essential data with improved performance
 export const prewarmBookingDataCache = async (professionalId: string) => {
   if (!professionalId) return;
   
@@ -310,18 +360,20 @@ export const prewarmBookingDataCache = async (professionalId: string) => {
   try {
     console.log("Pre-warming booking data cache");
     
-    // Fetch critical data first in parallel
+    // Fetch critical data first in parallel with immediate execution
     await Promise.all([
       fetchTeamMembers(professionalId, signal),
       fetchServices(professionalId, signal)
     ]);
     
-    // Then fetch non-critical data sequentially
-    await fetchTimeSlots(professionalId, signal);
-    await fetchInsurancePlans(professionalId, signal);
-    await fetchAppointments(professionalId, signal);
+    // Then fetch non-critical data in parallel but with lower priority
+    Promise.all([
+      fetchTimeSlots(professionalId, signal),
+      fetchInsurancePlans(professionalId, signal),
+      fetchAppointments(professionalId, signal)
+    ]).catch(e => console.warn("Non-critical data pre-warming had errors:", e));
     
-    console.log("Cache pre-warming complete");
+    console.log("Cache pre-warming complete for critical data");
   } catch (error) {
     console.error("Error pre-warming cache:", error);
   }

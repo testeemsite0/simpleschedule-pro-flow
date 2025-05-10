@@ -52,10 +52,12 @@ export const useBookingAppointment = ({
         end_time: bookingData.endTime,
         notes: bookingData.notes || '',
         status: 'scheduled',
-        source: isAdminView ? 'admin' : 'client',
+        source: isAdminView ? 'manual' : 'client',  // Changed from 'admin' to 'manual' to match expected values
         insurance_plan_id: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null,
         service_id: bookingData.serviceId || null
       };
+      
+      console.log("Creating appointment with data:", JSON.stringify(appointmentData));
       
       const { data, error } = await supabase
         .from('appointments')
