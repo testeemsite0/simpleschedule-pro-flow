@@ -68,7 +68,8 @@ export const useUnifiedBookingFlow = ({
   // Calculate availability when professional, team member or time slots change
   useEffect(() => {
     // Only calculate if we have a team member selected and time slots
-    if (!bookingSteps.bookingData.teamMemberId || !timeSlots.length) {
+    if (!bookingSteps.bookingData.teamMemberId || timeSlots.length === 0) {
+      console.log("No team member or time slots, clearing availableDates");
       setAvailableDates([]);
       return;
     }
@@ -77,15 +78,20 @@ export const useUnifiedBookingFlow = ({
     
     const now = startOfDay(new Date());
     const dates: Date[] = [];
-    const dateSlotCache: Record<string, boolean> = {};
     
     // Filter time slots for the selected team member
     const teamMemberTimeSlots = timeSlots.filter(slot => 
-      (!slot.team_member_id || slot.team_member_id === bookingSteps.bookingData.teamMemberId) &&
+      slot.team_member_id === bookingSteps.bookingData.teamMemberId && 
       slot.available === true
     );
     
     console.log(`Found ${teamMemberTimeSlots.length} time slots for team member`);
+    
+    if (teamMemberTimeSlots.length === 0) {
+      console.log("No time slots found for team member, clearing availableDates");
+      setAvailableDates([]);
+      return;
+    }
     
     // Get unique days of week with available slots
     const availableDaysOfWeek = Array.from(
@@ -100,18 +106,23 @@ export const useUnifiedBookingFlow = ({
       const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay(); // Convert Sunday (0) to 7 for our system
       
       // Skip past dates
-      if (isBefore(date, now)) continue;
+      if (isBefore(date, now) && !isSameDay(date, now)) {
+        continue;
+      }
       
       // Skip days without slots
-      if (!availableDaysOfWeek.includes(dayOfWeek)) continue;
+      if (!availableDaysOfWeek.includes(dayOfWeek)) {
+        continue;
+      }
       
       // Format selected date for filtering appointments
       const formattedDate = format(date, 'yyyy-MM-dd');
       
-      // Find bookings for this date
+      // Find bookings for this date and this team member
       const bookedAppointments = appointments.filter(app => 
-        app.date === formattedDate && app.status === 'scheduled' &&
-        (!app.team_member_id || app.team_member_id === bookingSteps.bookingData.teamMemberId)
+        app.date === formattedDate && 
+        app.status === 'scheduled' &&
+        app.team_member_id === bookingSteps.bookingData.teamMemberId
       );
       
       // Get all slots for this day
@@ -119,19 +130,13 @@ export const useUnifiedBookingFlow = ({
       
       if (daySlots.length > 0) {
         try {
-          // Check if there are available time slots on this day
-          const cacheKey = `${formattedDate}_${bookingSteps.bookingData.teamMemberId}`;
-          
-          if (dateSlotCache[cacheKey] === undefined) {
-            // Calculate available slots for this day
-            const availableTimeSlots = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
-            dateSlotCache[cacheKey] = availableTimeSlots.length > 0;
-          }
+          // Calculate available slots for this day
+          const availableTimeSlots = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
           
           // Add date if there are available slots
-          if (dateSlotCache[cacheKey]) {
+          if (availableTimeSlots.length > 0) {
             dates.push(date);
-            console.log(`Date ${formattedDate} has available slots`);
+            console.log(`Date ${formattedDate} has ${availableTimeSlots.length} available slots`);
           } else {
             console.log(`Date ${formattedDate} has no available slots`);
           }
@@ -158,7 +163,7 @@ export const useUnifiedBookingFlow = ({
     
     // Filter time slots for selected team member and day of week
     const teamMemberTimeSlots = timeSlots.filter(slot => 
-      (!slot.team_member_id || slot.team_member_id === bookingSteps.bookingData.teamMemberId) &&
+      slot.team_member_id === bookingSteps.bookingData.teamMemberId &&
       slot.day_of_week === dayOfWeek &&
       slot.available === true
     );
@@ -171,10 +176,11 @@ export const useUnifiedBookingFlow = ({
     // Format the selected date for filtering appointments
     const formattedDate = format(bookingSteps.bookingData.date, 'yyyy-MM-dd');
     
-    // Find bookings for this date
+    // Find bookings for this date and team member
     const bookedAppointments = appointments.filter(app => 
-      app.date === formattedDate && app.status === 'scheduled' &&
-      (!app.team_member_id || app.team_member_id === bookingSteps.bookingData.teamMemberId)
+      app.date === formattedDate && 
+      app.status === 'scheduled' &&
+      app.team_member_id === bookingSteps.bookingData.teamMemberId
     );
     
     try {

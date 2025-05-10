@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUnifiedBooking } from "@/context/UnifiedBookingContext";
 import { ProfessionalStep } from "./steps/ProfessionalStep";
@@ -14,6 +14,7 @@ import { BookingErrorHandler } from "./forms/BookingErrorHandler";
 import { InsuranceLimitWarning } from "./forms/InsuranceLimitWarning";
 import { WalkInButton } from "./forms/WalkInButton";
 import { getBookingSteps, getCurrentStepNumber } from "./forms/BookingStepsDefinition";
+import { toast } from "sonner";
 
 interface UnifiedBookingFormProps {
   title?: string;
@@ -39,6 +40,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     maintenanceMode,
     bookingData,
     isLoading,
+    goToStep,
     goToPreviousStep,
     setTeamMember,
     setService,
@@ -51,14 +53,28 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     getAvailableServicesForTeamMember,
   } = useUnifiedBooking();
 
+  console.log("UnifiedBookingForm rendering with isAdminView:", isAdminView, "allowWalkIn:", allowWalkIn);
+  console.log("Current booking data:", bookingData);
+
   // Handle Walk-in appointment
   const handleWalkIn = () => {
-    if (currentStep === "team-member" && allowWalkIn && isAdminView) {
+    console.log("Walk-in button clicked");
+    if (currentStep === "team-member" && allowWalkIn && isAdminView && bookingData.teamMemberId) {
       // Set current date and time for immediate appointment
       const now = new Date();
       setDate(now);
+      
+      // Set default values for immediate appointment
+      if (insurancePlans.length > 0) {
+        // Default to "none" for private payment
+        setInsurance("none");
+      }
+      
       // Skip to client info step
-      // This is a special case for walk-ins
+      toast.info("Configurando agendamento imediato");
+      goToStep("client-info");
+    } else {
+      toast.error("Selecione um profissional primeiro para agendamento imediato");
     }
   };
 
@@ -82,13 +98,16 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     ? getAvailableServicesForTeamMember(bookingData.teamMemberId)
     : services;
 
+  // Determine if walk-in button should be shown
+  const showWalkIn = allowWalkIn && isAdminView && currentStep === "team-member" && !!bookingData.teamMemberId;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex justify-between items-center">
           <span>{title}</span>
           <WalkInButton
-            show={allowWalkIn && isAdminView && currentStep === "team-member"}
+            show={showWalkIn}
             onClick={handleWalkIn}
           />
         </CardTitle>

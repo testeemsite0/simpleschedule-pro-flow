@@ -9,7 +9,7 @@ interface ServiceStepProps {
   selectedService: string;
   onServiceChange: (serviceId: string) => void;
   onBack: () => void;
-  insuranceId?: string; // Added the ID of the selected insurance plan
+  insuranceId?: string;
 }
 
 export const ServiceStep: React.FC<ServiceStepProps> = ({
@@ -21,6 +21,8 @@ export const ServiceStep: React.FC<ServiceStepProps> = ({
 }) => {
   // Function to display the price based on the type of insurance
   const renderPrice = (service: Service) => {
+    console.log("ServiceStep rendering price with insuranceId:", insuranceId);
+    
     // If it's private payment (none), show the normal price
     if (insuranceId === "none") {
       return new Intl.NumberFormat('pt-BR', { 

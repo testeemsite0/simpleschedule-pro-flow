@@ -18,21 +18,43 @@ export const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!name.trim()) {
+      setError("Nome é obrigatório");
+      return;
+    }
+    
+    if (!email.trim()) {
+      setError("Email é obrigatório");
+      return;
+    }
+    
+    // Clear any previous errors
+    setError("");
+    
+    // Call the onSubmit callback with form data
     onSubmit(name, email, phone, notes);
   };
 
-  // Create a wrapper function that takes no arguments
+  // Create a wrapper function for the BookingFormActions component
   const handleSubmitButtonClick = () => {
-    // This function doesn't need to do anything because the form submission
-    // will be handled by the form's onSubmit event handler
-    // The button inside BookingFormActions already has type="submit"
+    // This function is empty because form submission is handled by the form's onSubmit
+    // The button inside BookingFormActions has type="submit" which triggers the form's onSubmit
   };
 
   return (
     <form onSubmit={handleSubmit}>
+      {error && (
+        <div className="mb-4 p-2 bg-red-50 text-red-600 rounded border border-red-200">
+          {error}
+        </div>
+      )}
+      
       <ClientInfoStep
         name={name}
         setName={setName}
