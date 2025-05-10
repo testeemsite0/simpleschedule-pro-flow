@@ -82,6 +82,19 @@ export const createUserProfile = async (userId: string, userData: any): Promise<
           details: createError.details,
           hint: createError.hint
         });
+        
+        // Verificar se é um erro de violação de política RLS
+        if (createError.code === '42501' || createError.message.includes('new row violates row-level security policy')) {
+          console.warn("RLS policy violation detected. This might be because the profile is being created by a trigger");
+          
+          // Tentar buscar o perfil novamente, pois pode ter sido criado pelo trigger
+          const checkProfile = await fetchUserProfile(userId);
+          if (checkProfile) {
+            console.log("Profile was created by trigger:", checkProfile.id);
+            return checkProfile;
+          }
+        }
+        
         return null;
       }
       
