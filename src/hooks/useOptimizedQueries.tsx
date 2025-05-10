@@ -1,21 +1,15 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
-
-// Create a simple in-memory cache
-const queryCache = new Map<string, {
-  data: any;
-  timestamp: number;
-  ttl: number;
-}>();
-
-// Default TTL (time to live) for cached data in milliseconds
-const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Utility function to generate cache keys
-const generateCacheKey = (type: string, professionalId: string): string => `${type}:${professionalId}`;
+import {
+  fetchTeamMembers,
+  fetchServices,
+  fetchInsurancePlans,
+  fetchTimeSlots,
+  fetchAppointments
+} from './booking/api/dataFetcher';
+import { QueryCache, generateCacheKey } from './booking/cache/queryCache';
 
 // Hook para buscar múltiplos tipos de dados relacionados em uma única chamada
 export const useOptimizedQueries = (professionalId: string | undefined) => {
@@ -37,110 +31,9 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
     error: null
   });
 
-  // Use refs for tracking ongoing requests to prevent duplicate calls
-  const pendingRequestsRef = useRef<Map<string, Promise<any>>>(new Map());
+  // Abort controller for canceling requests
   const abortControllerRef = useRef<AbortController | null>(null);
-  
-  // Track retry counts to implement exponential backoff
-  const retryCountsRef = useRef<Record<string, number>>({
-    teamMembers: 0,
-    services: 0,
-    insurancePlans: 0,
-    timeSlots: 0,
-    appointments: 0
-  });
-  
-  // Maximum number of retries
-  const MAX_RETRIES = 3;
-  
   const { toast } = useToast();
-
-  // Helper function to get data with caching
-  const fetchWithCache = useCallback(async <T,>(
-    type: string,
-    queryFn: () => Promise<any>,
-    ttl = DEFAULT_CACHE_TTL
-  ): Promise<T[]> => {
-    if (!professionalId) return [];
-    
-    const cacheKey = generateCacheKey(type, professionalId);
-    
-    // Check if we already have a pending request for this data
-    if (pendingRequestsRef.current.has(cacheKey)) {
-      console.log(`Using pending request for ${type}`);
-      try {
-        return await pendingRequestsRef.current.get(cacheKey)!;
-      } catch (error) {
-        // If the pending request fails, we'll continue below to retry
-        console.error(`Pending request for ${type} failed:`, error);
-      }
-    }
-    
-    // Check cache first
-    const cachedData = queryCache.get(cacheKey);
-    if (cachedData && (Date.now() - cachedData.timestamp) < cachedData.ttl) {
-      console.log(`Using cached data for ${type}`);
-      return cachedData.data as T[];
-    }
-    
-    // Create a new promise for this request
-    const fetchPromise = new Promise<T[]>(async (resolve, reject) => {
-      try {
-        console.log(`Fetching ${type} for professional:`, professionalId);
-        // Execute the query function - note that we need to await it here
-        const response = await queryFn();
-        
-        if (response.error) {
-          console.error(`Error fetching ${type}:`, response.error);
-          
-          // Track retries with exponential backoff
-          if (retryCountsRef.current[type] < MAX_RETRIES) {
-            const delay = Math.pow(2, retryCountsRef.current[type]) * 1000;
-            console.log(`Retrying ${type} in ${delay}ms (attempt ${retryCountsRef.current[type] + 1})`);
-            
-            retryCountsRef.current[type]++;
-            setTimeout(() => {
-              // Clear pending request reference so we can retry
-              pendingRequestsRef.current.delete(cacheKey);
-              // Retry the fetch
-              fetchWithCache<T>(type, queryFn, ttl)
-                .then(data => resolve(data))
-                .catch(err => reject(err));
-            }, delay);
-            return;
-          }
-          
-          throw response.error;
-        }
-        
-        // Reset retry count on success
-        retryCountsRef.current[type] = 0;
-        
-        const resultData = response.data || [];
-        
-        // Cache the result
-        queryCache.set(cacheKey, {
-          data: resultData,
-          timestamp: Date.now(),
-          ttl
-        });
-        
-        console.log(`${type} fetched successfully:`, resultData.length);
-        resolve(resultData as T[]);
-      } catch (error) {
-        console.error(`Error in fetchWithCache for ${type}:`, error);
-        reject(error);
-      } finally {
-        // Remove this promise from pending requests
-        pendingRequestsRef.current.delete(cacheKey);
-      }
-    });
-    
-    // Store the promise in pending requests
-    pendingRequestsRef.current.set(cacheKey, fetchPromise);
-    
-    return fetchPromise;
-  }, [professionalId]);
 
   const fetchAllData = useCallback(async () => {
     if (!professionalId) {
@@ -165,13 +58,6 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
         appointments: any[];
       }> = {};
       
-      // Helper function to check if request has been aborted
-      const checkAborted = () => {
-        if (signal.aborted) {
-          throw new Error("Request aborted");
-        }
-      };
-
       // Fetch all data types in parallel with proper error handling
       const [
         teamMembersResult,
@@ -180,48 +66,11 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
         timeSlotsResult,
         appointmentsResult
       ] = await Promise.allSettled([
-        fetchWithCache<any>('teamMembers', async () => {
-          checkAborted();
-          return await supabase
-            .from('team_members')
-            .select('*')
-            .eq('professional_id', professionalId)
-            .eq('active', true);
-        }),
-        
-        fetchWithCache<any>('services', async () => {
-          checkAborted();
-          return await supabase
-            .from('services')
-            .select('*')
-            .eq('professional_id', professionalId)
-            .eq('active', true);
-        }),
-        
-        fetchWithCache<any>('insurancePlans', async () => {
-          checkAborted();
-          return await supabase
-            .from('insurance_plans')
-            .select('*')
-            .eq('professional_id', professionalId);
-        }),
-        
-        fetchWithCache<any>('timeSlots', async () => {
-          checkAborted();
-          return await supabase
-            .from('time_slots')
-            .select('*')
-            .eq('professional_id', professionalId);
-        }),
-        
-        fetchWithCache<any>('appointments', async () => {
-          checkAborted();
-          return await supabase
-            .from('appointments')
-            .select('*')
-            .eq('professional_id', professionalId)
-            .order('date', { ascending: true });
-        })
+        fetchTeamMembers(professionalId, signal),
+        fetchServices(professionalId, signal),
+        fetchInsurancePlans(professionalId, signal),
+        fetchTimeSlots(professionalId, signal),
+        fetchAppointments(professionalId, signal)
       ]);
 
       // Process results and collect errors
@@ -309,7 +158,7 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
         });
       }
     }
-  }, [professionalId, fetchWithCache, toast]);
+  }, [professionalId, toast]);
 
   // Effect to fetch data when professionalId changes
   useEffect(() => {
@@ -333,14 +182,9 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
     // Clear all cache entries related to this professional
     if (professionalId) {
       ['teamMembers', 'services', 'insurancePlans', 'timeSlots', 'appointments'].forEach(type => {
-        queryCache.delete(generateCacheKey(type, professionalId));
+        QueryCache.invalidate(generateCacheKey(type, professionalId));
       });
     }
-    
-    // Reset retry counts
-    Object.keys(retryCountsRef.current).forEach(key => {
-      retryCountsRef.current[key as keyof typeof retryCountsRef.current] = 0;
-    });
     
     setData(prev => ({ ...prev, isLoading: true }));
     fetchAllData();
@@ -352,11 +196,11 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
     
     if (type) {
       // Invalidate specific data type
-      queryCache.delete(generateCacheKey(type, professionalId));
+      QueryCache.invalidate(generateCacheKey(type, professionalId));
     } else {
       // Invalidate all data types for this professional
       ['teamMembers', 'services', 'insurancePlans', 'timeSlots', 'appointments'].forEach(t => {
-        queryCache.delete(generateCacheKey(t, professionalId));
+        QueryCache.invalidate(generateCacheKey(t, professionalId));
       });
     }
   }, [professionalId]);

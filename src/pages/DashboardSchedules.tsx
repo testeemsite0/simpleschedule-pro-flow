@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import TimeSlotsList from '@/components/dashboard/timeslots/TimeSlotsList';
 import TeamSchedulesManager from '@/components/dashboard/TeamSchedulesManager';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TimeSlotDialog from '@/components/dashboard/timeslots/TimeSlotDialog';
 import { useTimeSlots } from '@/hooks/useTimeSlots';
