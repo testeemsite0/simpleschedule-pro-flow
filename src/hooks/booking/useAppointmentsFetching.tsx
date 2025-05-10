@@ -1,70 +1,72 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from 'react';
 import { Appointment } from '@/types';
+import { fetchAppointments } from './api/dataFetcher';
 
 interface UseAppointmentsFetchingProps {
   professionalId?: string;
   setIsLoading: (loading: boolean) => void;
-  handleError: (errorMessage: string, errorObject?: any) => void;
+  handleError: (context: string, error: any) => void;
+  enabled?: boolean;
 }
 
 export const useAppointmentsFetching = ({
   professionalId,
   setIsLoading,
-  handleError
+  handleError,
+  enabled = true
 }: UseAppointmentsFetchingProps) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      if (!professionalId) return;
-      
-      setIsLoading(true);
-      
-      try {
-        console.log("Fetching appointments for professional:", professionalId);
-        const { data, error } = await supabase
-          .from('appointments')
-          .select('*')
-          .eq('professional_id', professionalId);
-          
-        if (error) {
-          handleError(`Error loading appointments: ${error.message}`, error);
-          return;
-        }
-        
-        console.log("Appointments fetched successfully:", data?.length || 0);
-        
-        // Type assertion to ensure appointment status is one of the allowed values
-        if (data) {
-          const typedAppointments = data.map(appointment => {
-            // Ensure status is one of the allowed types
-            const status = ['scheduled', 'completed', 'canceled'].includes(appointment.status) 
-              ? appointment.status as 'scheduled' | 'completed' | 'canceled' 
-              : 'scheduled'; // Default to 'scheduled' if invalid status
-            
-            return {
-              ...appointment,
-              status
-            } as Appointment;
-          });
-          
-          setAppointments(typedAppointments);
-        } else {
-          setAppointments([]);
-        }
-      } catch (error) {
-        handleError(`Error loading appointments: ${error}`, error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    if (professionalId) {
-      fetchAppointments();
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
+    if (!professionalId || !enabled) {
+      return [];
     }
-  }, [professionalId, handleError, setIsLoading]);
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await fetchAppointments(professionalId, signal);
+      
+      // Validate and ensure the status is correctly typed
+      const typedAppointments: Appointment[] = result.map(app => {
+        // Validate and ensure the status is one of the allowed values
+        let status: "scheduled" | "completed" | "canceled" = "scheduled";
+        if (app.status === "completed") status = "completed";
+        else if (app.status === "canceled") status = "canceled";
+        
+        return {
+          ...app,
+          status
+        } as Appointment;
+      });
+      
+      setAppointments(typedAppointments);
+      return typedAppointments;
+    } catch (error) {
+      handleError('appointments', error);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [professionalId, setIsLoading, handleError, enabled]);
   
-  return { appointments };
+  useEffect(() => {
+    if (enabled && professionalId) {
+      // Create AbortController for cleanup
+      const controller = new AbortController();
+      
+      fetchData(controller.signal);
+      
+      // Cleanup function
+      return () => {
+        controller.abort();
+      };
+    }
+  }, [professionalId, fetchData, enabled]);
+  
+  return {
+    appointments,
+    fetchAppointments: fetchData
+  };
 };

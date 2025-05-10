@@ -1,62 +1,84 @@
 
 /**
- * Simple in-memory cache for query results
+ * In-memory cache implementation for query results
  */
 
-// Cache type definition
-type CacheEntry<T> = {
+// Default cache TTL in milliseconds (5 minutes)
+export const DEFAULT_CACHE_TTL = 5 * 60 * 1000;
+
+// Cache entry interface
+interface CacheEntry<T> {
   data: T;
-  timestamp: number;
-  ttl: number;
-};
+  expiry: number;
+}
 
-// Default TTL (time to live) for cached data in milliseconds
-export const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
-
-// The cache instance
-const queryCache = new Map<string, CacheEntry<any>>();
-
-/**
- * Utility function to generate cache keys
- */
-export const generateCacheKey = (type: string, professionalId: string): string => 
-  `${type}:${professionalId}`;
-
-/**
- * Cache utility functions
- */
-export const QueryCache = {
-  /**
-   * Check if data for a key exists in cache and is still valid
-   */
-  get: <T>(key: string): T | null => {
-    const cached = queryCache.get(key);
-    if (cached && (Date.now() - cached.timestamp) < cached.ttl) {
-      console.log(`Using cached data for ${key}`);
-      return cached.data as T;
+// Simple cache store
+class Cache {
+  private store: Map<string, CacheEntry<any>>;
+  
+  constructor() {
+    this.store = new Map();
+  }
+  
+  // Get item from cache
+  get<T>(key: string): T | null {
+    const entry = this.store.get(key);
+    
+    if (!entry) {
+      return null;
     }
-    return null;
-  },
-
-  /**
-   * Store data in cache
-   */
-  set: <T>(key: string, data: T, ttl = DEFAULT_CACHE_TTL): void => {
-    queryCache.set(key, {
-      data,
-      timestamp: Date.now(),
-      ttl
-    });
-  },
-
-  /**
-   * Clear a specific cache entry or all entries
-   */
-  invalidate: (key?: string): void => {
-    if (key) {
-      queryCache.delete(key);
+    
+    // Check if entry has expired
+    if (Date.now() > entry.expiry) {
+      this.store.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  }
+  
+  // Set item in cache with TTL
+  set<T>(key: string, data: T, ttl: number): void {
+    const expiry = Date.now() + ttl;
+    this.store.set(key, { data, expiry });
+  }
+  
+  // Remove item from cache
+  remove(key: string): void {
+    this.store.delete(key);
+  }
+  
+  // Clear the entire cache or by prefix
+  clear(prefix?: string): void {
+    if (prefix) {
+      Array.from(this.store.keys())
+        .filter(key => key.startsWith(prefix))
+        .forEach(key => this.store.delete(key));
     } else {
-      queryCache.clear();
+      this.store.clear();
     }
   }
+  
+  // Get all keys
+  keys(): string[] {
+    return Array.from(this.store.keys());
+  }
+  
+  // Check if cache has key
+  has(key: string): boolean {
+    return this.store.has(key);
+  }
+  
+  // Get cache size
+  get size(): number {
+    return this.store.size;
+  }
+}
+
+// Export singleton cache instance
+export const QueryCache = new Cache();
+
+// Helper function to generate consistent cache keys
+export const generateCacheKey = (type: string, professionalId: string): string => {
+  return `${type}:${professionalId}`;
 };

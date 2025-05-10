@@ -1,52 +1,58 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from 'react';
 import { TimeSlot } from '@/types';
+import { fetchTimeSlots } from './api/dataFetcher';
 
 interface UseTimeSlotsFetchingProps {
   professionalId?: string;
   setIsLoading: (loading: boolean) => void;
-  handleError: (errorMessage: string, errorObject?: any) => void;
+  handleError: (context: string, error: any) => void;
+  enabled?: boolean;
 }
 
 export const useTimeSlotsFetching = ({
   professionalId,
   setIsLoading,
-  handleError
+  handleError,
+  enabled = true
 }: UseTimeSlotsFetchingProps) => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   
-  useEffect(() => {
-    const fetchTimeSlots = async () => {
-      if (!professionalId) return;
-      
-      setIsLoading(true);
-      
-      try {
-        console.log("Fetching time slots for professional:", professionalId);
-        const { data, error } = await supabase
-          .from('time_slots')
-          .select('*')
-          .eq('professional_id', professionalId);
-          
-        if (error) {
-          handleError(`Error loading time slots: ${error.message}`, error);
-          return;
-        }
-        
-        console.log("Time slots fetched successfully:", data?.length || 0);
-        setTimeSlots(data || []);
-      } catch (error) {
-        handleError(`Error loading time slots: ${error}`, error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    if (professionalId) {
-      fetchTimeSlots();
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
+    if (!professionalId || !enabled) {
+      return [];
     }
-  }, [professionalId, handleError, setIsLoading]);
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await fetchTimeSlots(professionalId, signal);
+      setTimeSlots(result);
+      return result;
+    } catch (error) {
+      handleError('time slots', error);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [professionalId, setIsLoading, handleError, enabled]);
   
-  return { timeSlots };
+  useEffect(() => {
+    if (enabled && professionalId) {
+      // Create AbortController for cleanup
+      const controller = new AbortController();
+      
+      fetchData(controller.signal);
+      
+      // Cleanup function
+      return () => {
+        controller.abort();
+      };
+    }
+  }, [professionalId, fetchData, enabled]);
+  
+  return {
+    timeSlots,
+    fetchTimeSlots: fetchData
+  };
 };

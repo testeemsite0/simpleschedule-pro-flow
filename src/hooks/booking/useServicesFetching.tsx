@@ -1,53 +1,58 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from 'react';
 import { Service } from '@/types';
+import { fetchServices } from './api/dataFetcher';
 
 interface UseServicesFetchingProps {
   professionalId?: string;
   setIsLoading: (loading: boolean) => void;
-  handleError: (errorMessage: string, errorObject?: any) => void;
+  handleError: (context: string, error: any) => void;
+  enabled?: boolean;
 }
 
 export const useServicesFetching = ({
   professionalId,
   setIsLoading,
-  handleError
+  handleError,
+  enabled = true
 }: UseServicesFetchingProps) => {
   const [services, setServices] = useState<Service[]>([]);
   
-  useEffect(() => {
-    const fetchServices = async () => {
-      if (!professionalId) return;
-      
-      setIsLoading(true);
-      
-      try {
-        console.log("Fetching services for professional:", professionalId);
-        const { data, error } = await supabase
-          .from('services')
-          .select('*')
-          .eq('professional_id', professionalId)
-          .eq('active', true);
-          
-        if (error) {
-          handleError(`Error loading services: ${error.message}`, error);
-          return;
-        }
-        
-        console.log("Services fetched successfully:", data?.length || 0);
-        setServices(data || []);
-      } catch (error) {
-        handleError(`Error loading services: ${error}`, error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    if (professionalId) {
-      fetchServices();
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
+    if (!professionalId || !enabled) {
+      return [];
     }
-  }, [professionalId, handleError, setIsLoading]);
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await fetchServices(professionalId, signal);
+      setServices(result);
+      return result;
+    } catch (error) {
+      handleError('services', error);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [professionalId, setIsLoading, handleError, enabled]);
   
-  return { services };
+  useEffect(() => {
+    if (enabled && professionalId) {
+      // Create AbortController for cleanup
+      const controller = new AbortController();
+      
+      fetchData(controller.signal);
+      
+      // Cleanup function
+      return () => {
+        controller.abort();
+      };
+    }
+  }, [professionalId, fetchData, enabled]);
+  
+  return {
+    services,
+    fetchServices: fetchData
+  };
 };

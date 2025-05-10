@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
 import { useBookingSteps, BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
 import { useUnifiedBookingFlow } from '@/hooks/booking/useUnifiedBookingFlow';
 import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
@@ -88,6 +88,36 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
     unifiedBookingFlow.insurancePlans,
     unifiedBookingFlow.availableDates,
     unifiedBookingFlow.availableSlots
+  ]);
+
+  // Add a debugging effect to help track render cycles
+  useEffect(() => {
+    console.log("UnifiedBookingContext rendered with professionalId:", professionalId);
+    
+    // Log data status to help with debugging
+    const logDataStatus = () => {
+      console.log("Current booking data state:", {
+        teamMembers: contextValue.teamMembers.length,
+        services: contextValue.services.length,
+        insurancePlans: contextValue.insurancePlans.length,
+        timeSlots: contextValue.timeSlots.length,
+        isLoading: contextValue.isLoading,
+        error: contextValue.error
+      });
+    };
+    
+    // Log status after a slight delay to ensure the latest data is captured
+    const logTimeout = setTimeout(logDataStatus, 1000);
+    
+    return () => {
+      clearTimeout(logTimeout);
+    };
+  }, [
+    professionalId, 
+    contextValue.teamMembers.length, 
+    contextValue.services.length,
+    contextValue.isLoading, 
+    contextValue.error
   ]);
 
   return (

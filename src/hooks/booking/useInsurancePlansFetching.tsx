@@ -1,52 +1,58 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect, useCallback } from 'react';
 import { InsurancePlan } from '@/types';
+import { fetchInsurancePlans } from './api/dataFetcher';
 
 interface UseInsurancePlansFetchingProps {
   professionalId?: string;
   setIsLoading: (loading: boolean) => void;
-  handleError: (errorMessage: string, errorObject?: any) => void;
+  handleError: (context: string, error: any) => void;
+  enabled?: boolean;
 }
 
 export const useInsurancePlansFetching = ({
   professionalId,
   setIsLoading,
-  handleError
+  handleError,
+  enabled = true
 }: UseInsurancePlansFetchingProps) => {
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   
-  useEffect(() => {
-    const fetchInsurancePlans = async () => {
-      if (!professionalId) return;
-      
-      setIsLoading(true);
-      
-      try {
-        console.log("Fetching insurance plans for professional:", professionalId);
-        const { data, error } = await supabase
-          .from('insurance_plans')
-          .select('*')
-          .eq('professional_id', professionalId);
-          
-        if (error) {
-          handleError(`Error loading insurance plans: ${error.message}`, error);
-          return;
-        }
-        
-        console.log("Insurance plans fetched successfully:", data?.length || 0);
-        setInsurancePlans(data || []);
-      } catch (error) {
-        handleError(`Error loading insurance plans: ${error}`, error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    if (professionalId) {
-      fetchInsurancePlans();
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
+    if (!professionalId || !enabled) {
+      return [];
     }
-  }, [professionalId, handleError, setIsLoading]);
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await fetchInsurancePlans(professionalId, signal);
+      setInsurancePlans(result);
+      return result;
+    } catch (error) {
+      handleError('insurance plans', error);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, [professionalId, setIsLoading, handleError, enabled]);
   
-  return { insurancePlans };
+  useEffect(() => {
+    if (enabled && professionalId) {
+      // Create AbortController for cleanup
+      const controller = new AbortController();
+      
+      fetchData(controller.signal);
+      
+      // Cleanup function
+      return () => {
+        controller.abort();
+      };
+    }
+  }, [professionalId, fetchData, enabled]);
+  
+  return {
+    insurancePlans,
+    fetchInsurancePlans: fetchData
+  };
 };

@@ -7,6 +7,7 @@ import { useInsurancePlansFetching } from './useInsurancePlansFetching';
 import { useTimeSlotsFetching } from './useTimeSlotsFetching';
 import { useAppointmentsFetching } from './useAppointmentsFetching';
 import { useMaintenanceMode } from './useMaintenanceMode';
+import { prewarmBookingDataCache } from './api/dataFetcher'; 
 
 interface UseBookingDataFetchingProps {
   professionalId?: string;
@@ -28,8 +29,8 @@ export const useBookingDataFetching = ({
     cleanup: cleanupLoadingState
   } = useDataLoadingState({ 
     showToast: true,
-    maxRetries: 3,
-    loadingTimeout: 45000 // 45 seconds timeout
+    maxRetries: 2,
+    loadingTimeout: 15000 // 15 seconds timeout, reduced from 45
   });
   
   const { maintenanceMode, setMaintenanceMode } = useMaintenanceMode();
@@ -62,37 +63,86 @@ export const useBookingDataFetching = ({
     }
   }, [setIsLoading]);
   
+  // Sequential loading flag to control loading order
+  const [loadingStage, setLoadingStage] = useState<number>(0);
+  
   // Initialize data fetching hooks with customized loading setters
-  // Note: We've removed the 'enabled' property as it doesn't exist in the prop types
-  const { teamMembers } = useTeamMembersFetching({ 
+  const { teamMembers, fetchTeamMembers } = useTeamMembersFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('teamMembers', loading),
-    handleError
+    handleError,
+    enabled: loadingStage === 0 // First stage
   });
   
-  const { services } = useServicesFetching({ 
+  const { services, fetchServices } = useServicesFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('services', loading),
-    handleError
+    handleError,
+    enabled: loadingStage === 0 // First stage
   });
   
-  const { insurancePlans } = useInsurancePlansFetching({ 
-    professionalId, 
-    setIsLoading: (loading) => setTypeLoading('insurancePlans', loading),
-    handleError
-  });
-  
-  const { timeSlots } = useTimeSlotsFetching({ 
+  const { timeSlots, fetchTimeSlots } = useTimeSlotsFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('timeSlots', loading),
-    handleError
+    handleError,
+    enabled: loadingStage === 1 // Second stage
   });
   
-  const { appointments } = useAppointmentsFetching({ 
+  const { insurancePlans, fetchInsurancePlans } = useInsurancePlansFetching({ 
+    professionalId, 
+    setIsLoading: (loading) => setTypeLoading('insurancePlans', loading),
+    handleError,
+    enabled: loadingStage === 1 // Second stage
+  });
+  
+  const { appointments, fetchAppointments } = useAppointmentsFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('appointments', loading),
-    handleError
+    handleError,
+    enabled: loadingStage === 2 // Last stage
   });
+
+  // Progress to next loading stage
+  const moveToNextLoadingStage = useCallback(() => {
+    setLoadingStage(prev => Math.min(prev + 1, 3)); // Max 3 stages (0-2)
+  }, []);
+
+  // Sequential loading logic - first load essential data, then secondary data
+  useEffect(() => {
+    if (!professionalId || !dataFetchingEnabledRef.current) {
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        if (loadingStage === 0) {
+          // Stage 0: Load essential data in parallel (team members and services)
+          await Promise.all([
+            fetchTeamMembers(abortControllerRef.current?.signal),
+            fetchServices(abortControllerRef.current?.signal)
+          ]);
+          moveToNextLoadingStage();
+        }
+        else if (loadingStage === 1) {
+          // Stage 1: Load secondary data in parallel
+          await Promise.all([
+            fetchTimeSlots(abortControllerRef.current?.signal),
+            fetchInsurancePlans(abortControllerRef.current?.signal)
+          ]);
+          moveToNextLoadingStage();
+        }
+        else if (loadingStage === 2) {
+          // Stage 2: Load non-critical data
+          await fetchAppointments(abortControllerRef.current?.signal);
+          moveToNextLoadingStage();
+        }
+      } catch (error) {
+        console.error(`Error in sequential loading stage ${loadingStage}:`, error);
+      }
+    };
+
+    loadData();
+  }, [professionalId, loadingStage, dataFetchingEnabledRef.current, fetchTeamMembers, fetchServices, fetchTimeSlots, fetchInsurancePlans, fetchAppointments, moveToNextLoadingStage]);
 
   // Only trigger data fetching once per professionalId and prevent unwanted re-initialization
   useEffect(() => {
@@ -113,6 +163,9 @@ export const useBookingDataFetching = ({
       // Clear any previous errors 
       clearError();
       
+      // Reset loading stage to start at the beginning
+      setLoadingStage(0);
+      
       // Cancel any ongoing requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -123,6 +176,9 @@ export const useBookingDataFetching = ({
       
       // Enable data fetching
       dataFetchingEnabledRef.current = true;
+      
+      // Try to pre-warm cache
+      prewarmBookingDataCache(professionalId);
       
       // Only log and perform initialization once per professional ID change
       if (!initializedRef.current) {
@@ -160,6 +216,12 @@ export const useBookingDataFetching = ({
     setMaintenanceMode,
     isLoading,
     dataError,
-    setDataError
+    setDataError,
+    // Add refresh methods to manually trigger data refetching if needed
+    refreshTeamMembers: () => fetchTeamMembers(),
+    refreshServices: () => fetchServices(),
+    refreshTimeSlots: () => fetchTimeSlots(),
+    refreshInsurancePlans: () => fetchInsurancePlans(),
+    refreshAppointments: () => fetchAppointments()
   };
 };
