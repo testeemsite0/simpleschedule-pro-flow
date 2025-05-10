@@ -3,6 +3,9 @@
  * Simple cache implementation for query results
  */
 
+// Default TTL (Time To Live) for cache entries - 5 minutes
+export const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes default TTL
+
 type CacheEntry = {
   data: any;
   timestamp: number;
@@ -11,7 +14,7 @@ type CacheEntry = {
 
 class Cache {
   private cache: Record<string, CacheEntry> = {};
-  private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes default TTL
+  private readonly defaultTTL = DEFAULT_CACHE_TTL; // Use the exported constant
 
   /**
    * Get data from cache

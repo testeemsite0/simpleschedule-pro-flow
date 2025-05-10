@@ -1,4 +1,3 @@
-
 /**
  * API layer for fetching different types of data
  */
@@ -104,7 +103,7 @@ export const fetchData = async <T>(
   const { 
     type, 
     professionalId, 
-    ttl = DEFAULT_CACHE_TTL, 
+    ttl = DEFAULT_CACHE_TTL, // This now uses the imported constant
     signal,
     priority = 'medium',
     useStorageCache = true,
