@@ -94,10 +94,6 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     handleRefresh();
   };
 
-  // Determine if next button should be shown based on step
-  // Hide next button for steps that advance automatically
-  const showNextButton = !['team-member', 'insurance', 'service'].includes(currentStep);
-  
   return (
     <div className="space-y-6">
       {title && <h2 className="text-xl font-semibold">{title}</h2>}
@@ -158,7 +154,6 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
         goToPreviousStep={goToPreviousStep}
         goToNextStep={goToNextStep}
         handleCompleteBooking={handleCompleteBooking}
-        showNextButton={showNextButton}
       />
     </div>
   );

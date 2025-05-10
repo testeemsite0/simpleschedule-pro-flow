@@ -23,11 +23,11 @@ export const ConfirmationStepContent: React.FC<ConfirmationStepContentProps> = (
       <BookingConfirmation
         professional={{ 
           name: bookingData.professionalName || 'Profissional', 
-          id: '', 
+          id: bookingData.teamMemberId || '',
           address: '',
-          email: 'email@example.com', // Adding required email property
-          profession: 'Profissional', // Adding required profession property
-          slug: 'professional-slug' // Adding required slug property
+          email: bookingData.professionalEmail || 'email@example.com', // Added email property
+          profession: bookingData.professionalRole || 'Profissional', // Added profession property
+          slug: bookingData.professionalSlug || 'professional-slug' // Added slug property
         }}
         clientName={bookingData.clientName || ''}
         date={bookingData.date || new Date()}

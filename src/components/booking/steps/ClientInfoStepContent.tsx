@@ -26,6 +26,7 @@ export const ClientInfoStepContent: React.FC<ClientInfoStepContentProps> = ({
       isLoading={isLoading}
       onBack={onBack}
       defaultValues={defaultValues}
+      hideButtons={true} // Hide buttons since UnifiedBookingForm provides navigation
     />
   );
 };

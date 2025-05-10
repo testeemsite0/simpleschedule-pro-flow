@@ -20,12 +20,14 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
   handleCompleteBooking,
   showNextButton = false
 }) => {
-  // Don't show buttons for steps that auto-advance (team-member, insurance, service)
-  const shouldShowNextButton = showNextButton || 
-    ['date', 'time', 'client-info'].includes(currentStep);
+  // Only show next button on client-info step, which is the final step before confirmation
+  const shouldShowNextButton = currentStep === 'client-info';
     
   // Only show confirmation button in confirmation step
   const showConfirmButton = currentStep === 'confirmation';
+  
+  // Auto-advancing steps should not show the next button
+  const isAutoAdvancingStep = ['team-member', 'insurance', 'service'].includes(currentStep);
 
   return (
     <div className="flex justify-between">
@@ -39,7 +41,7 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
         </Button>
       )}
       
-      {shouldShowNextButton && !showConfirmButton && (
+      {!isAutoAdvancingStep && shouldShowNextButton && !showConfirmButton && (
         <Button
           onClick={goToNextStep}
           disabled={isLoading}

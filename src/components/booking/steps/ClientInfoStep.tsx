@@ -15,13 +15,15 @@ interface ClientInfoStepProps {
     phone?: string;
     notes?: string;
   };
+  hideButtons?: boolean; // Add this prop to hide buttons when used in UnifiedBookingForm
 }
 
 export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
   onClientInfoSubmit,
   isLoading = false,
   onBack,
-  defaultValues = {}
+  defaultValues = {},
+  hideButtons = false // Default to showing buttons for backward compatibility
 }) => {
   const [name, setName] = useState(defaultValues.name || '');
   const [email, setEmail] = useState(defaultValues.email || '');
@@ -91,7 +93,7 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
         />
       </div>
       
-      {onBack && (
+      {!hideButtons && onBack && (
         <div className="flex justify-between mt-4">
           <Button variant="outline" onClick={onBack} disabled={isLoading}>
             Voltar

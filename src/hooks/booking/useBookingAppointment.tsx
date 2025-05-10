@@ -73,8 +73,13 @@ export const useBookingAppointment = ({
       if (!isAdminView) {
         // Only check limits for client-initiated bookings
         const withinFreeLimit = await isWithinFreeLimit(professionalId);
+        console.log("Free limit check result:", withinFreeLimit);
+        
         if (!withinFreeLimit) {
-          throw new Error("Limite de agendamentos gratuitos atingido. Entre em contato com o profissional.");
+          // This is a critical error - very important to show to users
+          const limitErrorMessage = "Limite de agendamentos gratuitos atingido. Entre em contato com o profissional diretamente.";
+          toast.error(limitErrorMessage);
+          throw new Error(limitErrorMessage);
         }
         
         // Check insurance plan limits if using one
@@ -113,7 +118,8 @@ export const useBookingAppointment = ({
         status: 'scheduled',
         source: isAdminView ? 'manual' : 'client',
         insurance_plan_id: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null,
-        service_id: bookingData.serviceId || null
+        service_id: bookingData.serviceId || null,
+        free_tier_used: !isAdminView // Track that this counts against free tier limits
       };
       
       console.log("Sending final appointment data to API:", JSON.stringify(appointmentData, null, 2));
@@ -129,19 +135,13 @@ export const useBookingAppointment = ({
         console.log("Appointment created successfully:", data[0]);
         toast.success("Agendamento realizado com sucesso!");
         
-        // Show confirmation step before resetting
+        // Update bookingData with the real appointmentId from the API
+        const newAppointmentId = data[0].id;
+        
+        // Move to confirmation step and update with appointment ID
         goToStep("confirmation");
         
-        if (onSuccess) {
-          onSuccess();
-        }
-        
-        // Reset booking immediately without timeout
-        if (resetBooking) {
-          console.log("Resetting booking form after successful appointment");
-          resetBooking(); // Reset the booking form after success
-        }
-        
+        // Return successful completion
         return true;
       } else {
         console.error("No data returned from API");

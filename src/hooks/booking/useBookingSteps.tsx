@@ -23,6 +23,10 @@ export interface BookingData {
   notes?: string;
   appointmentId?: string;
   professionalName?: string;
+  professionalEmail?: string;
+  professionalRole?: string;
+  professionalSlug?: string;
+  usedFreeSlot?: boolean;
 }
 
 export const useBookingSteps = ({ 
@@ -81,7 +85,18 @@ export const useBookingSteps = ({
   const setTeamMember = (teamMember: TeamMember | string) => {
     const teamMemberId = typeof teamMember === 'string' ? teamMember : teamMember.id;
     const professionalName = typeof teamMember === 'string' ? undefined : teamMember.name;
-    updateBookingData({ teamMemberId, professionalName });
+    const professionalEmail = typeof teamMember === 'string' ? undefined : teamMember.email;
+    const professionalRole = typeof teamMember === 'string' ? undefined : teamMember.role || 'Profissional';
+    const professionalSlug = typeof teamMember === 'string' ? undefined : teamMember.slug || 'professional';
+    
+    updateBookingData({ 
+      teamMemberId, 
+      professionalName,
+      professionalEmail,
+      professionalRole,
+      professionalSlug
+    });
+    
     setCurrentStep('insurance'); // Go to insurance step first
     console.log(`Team member set to ${teamMemberId}, moving to insurance step`);
   };
@@ -134,9 +149,12 @@ export const useBookingSteps = ({
       
       toast.success("Agendamento realizado com sucesso!");
       
-      // Generate a mock appointment ID for testing/display purposes
-      const appointmentId = `appt-${Date.now().toString(36)}`;
-      updateBookingData({ appointmentId });
+      // Generate a mock appointment ID for testing/display purposes if not already set
+      const appointmentId = bookingData.appointmentId || `appt-${Date.now().toString(36)}`;
+      updateBookingData({ 
+        appointmentId,
+        usedFreeSlot: true // Track that we used a free slot to enforce limits
+      });
       
       return true;
     } catch (err) {
