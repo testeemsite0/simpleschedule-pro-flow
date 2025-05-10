@@ -1,4 +1,3 @@
-
 /**
  * API layer for fetching different types of data
  */
@@ -7,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { QueryCache, generateCacheKey, DEFAULT_CACHE_TTL } from '../cache/queryCache';
 import { queueRequest } from './requestQueue';
 import { StorageCache } from './storageCache';
+import { MAX_RETRIES } from './constants';
 
 /**
  * Generic data fetching function with caching and retry logic
@@ -72,7 +72,7 @@ export const fetchData = async <T>(
         console.error(`Error fetching ${type}:`, response.error);
         
         // Implement exponential backoff for retries with decreased delays
-        if (retryCount < import('./constants').MAX_RETRIES) {
+        if (retryCount < MAX_RETRIES) {
           const delay = Math.pow(2, retryCount) * 300; // Reduced from 500ms to 300ms 
           console.log(`Retrying ${type} in ${delay}ms (attempt ${retryCount + 1})`);
           

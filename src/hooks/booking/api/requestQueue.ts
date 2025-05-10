@@ -1,14 +1,10 @@
-// Maximum number of retries
-const MAX_RETRIES = 2; // Reduced from 3 to 2
+import { CONCURRENT_REQUESTS_LIMIT, MAX_RETRIES, RATE_LIMIT_WINDOW, RATE_LIMIT_MAX_REQUESTS } from './constants';
 
-// Global concurrency control - increased from 2 to 4 to allow more concurrent requests
-const CONCURRENT_REQUESTS_LIMIT = 4;
+// Global concurrency control
 let activeRequests = 0;
 const requestQueue: Array<() => Promise<any>> = [];
 
-// Rate limiting settings - adjusted for better performance
-const RATE_LIMIT_WINDOW = 10000; // 10 seconds window
-const RATE_LIMIT_MAX_REQUESTS = 10; // Max 10 requests per window
+// Rate limiting settings
 let requestsInWindow = 0;
 let windowStartTime = Date.now();
 
