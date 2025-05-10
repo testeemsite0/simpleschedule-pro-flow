@@ -1,24 +1,25 @@
 
 import React from 'react';
 import { BookingStepIndicator } from './BookingStepIndicator';
+import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface BookingStepsHeaderProps {
-  currentStep: number;
+  currentStep: BookingStep;
 }
 
 export const BookingStepsHeader: React.FC<BookingStepsHeaderProps> = ({ currentStep }) => {
   // Define booking steps
   const steps = [
-    { id: 1, label: 'Profissional' },
-    { id: 2, label: 'Convênio' },
-    { id: 3, label: 'Serviço' },
-    { id: 4, label: 'Data' },
-    { id: 5, label: 'Horário' }
+    { id: 1, key: 'team-member', label: 'Profissional' },
+    { id: 2, key: 'insurance', label: 'Convênio' },
+    { id: 3, key: 'service', label: 'Serviço' },
+    { id: 4, key: 'date', label: 'Data' },
+    { id: 5, key: 'time', label: 'Horário' }
   ];
   
   return (
     <div className="sticky top-0 bg-white pb-4 z-10">
-      <BookingStepIndicator steps={steps} currentStep={currentStep} />
+      <BookingStepIndicator currentStep={currentStep} />
     </div>
   );
 };

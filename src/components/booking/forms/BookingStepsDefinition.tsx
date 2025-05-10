@@ -3,17 +3,18 @@ import { BookingStep } from "@/hooks/booking/useBookingSteps";
 
 interface Step {
   id: number;
+  key: string;
   label: string;
 }
 
 export const getBookingSteps = (): Step[] => {
   return [
-    { id: 1, label: "Profissional" },
-    { id: 2, label: "Convênio" },
-    { id: 3, label: "Serviço" },
-    { id: 4, label: "Data" },
-    { id: 5, label: "Horário" },
-    { id: 6, label: "Cliente" },
+    { id: 1, key: "team-member", label: "Profissional" },
+    { id: 2, key: "insurance", label: "Convênio" },
+    { id: 3, key: "service", label: "Serviço" },
+    { id: 4, key: "date", label: "Data" },
+    { id: 5, key: "time", label: "Horário" },
+    { id: 6, key: "client-info", label: "Cliente" },
   ];
 };
 

@@ -1,15 +1,17 @@
 
 import React from "react";
 import { BookingStepIndicator } from "../BookingStepIndicator";
+import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface Step {
   id: number;
+  key: string;
   label: string;
 }
 
 interface BookingStepContainerProps {
   title: string;
-  currentStep: number;
+  currentStep: BookingStep;
   steps: Step[];
   children: React.ReactNode;
   showStepIndicator?: boolean;
@@ -33,7 +35,6 @@ export const BookingStepContainer: React.FC<BookingStepContainerProps> = ({
       {showStepIndicator && (
         <div className="sticky top-0 bg-white z-10 pb-4">
           <BookingStepIndicator
-            steps={steps}
             currentStep={currentStep}
           />
         </div>

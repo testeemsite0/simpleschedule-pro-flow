@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { BookingStepIndicator } from '../BookingStepIndicator';
+import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface StepIndicatorWrapperProps {
-  currentStep: number;
-  steps: { id: number; label: string }[];
+  currentStep: BookingStep;
+  steps: { id: number; key: string; label: string }[];
 }
 
 export const StepIndicatorWrapper: React.FC<StepIndicatorWrapperProps> = ({
@@ -15,7 +16,6 @@ export const StepIndicatorWrapper: React.FC<StepIndicatorWrapperProps> = ({
     <div className="sticky top-0 bg-white pb-4 z-10">
       <BookingStepIndicator 
         currentStep={currentStep} 
-        steps={steps} 
       />
     </div>
   );
