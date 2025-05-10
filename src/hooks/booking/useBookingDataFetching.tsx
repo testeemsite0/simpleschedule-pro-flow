@@ -171,4 +171,4 @@ export const useBookingDataFetching = ({
     setMaintenanceMode,
     refreshAllData
   };
-}, []);
+};
