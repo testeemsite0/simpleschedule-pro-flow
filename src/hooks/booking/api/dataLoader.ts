@@ -7,6 +7,7 @@ import { fetchServices } from './services/serviceService';
 import { fetchInsurancePlans } from './services/insuranceService';
 import { fetchTimeSlots } from './services/timeSlotService';
 import { fetchAppointments } from './services/appointmentService';
+import { unifiedDataFetch } from './dataFetcherCore';
 
 // Function to pre-warm cache for essential data with improved performance
 export const prewarmBookingDataCache = async (professionalId: string) => {
@@ -43,5 +44,6 @@ export {
   fetchServices,
   fetchInsurancePlans,
   fetchTimeSlots,
-  fetchAppointments
+  fetchAppointments,
+  unifiedDataFetch
 };
