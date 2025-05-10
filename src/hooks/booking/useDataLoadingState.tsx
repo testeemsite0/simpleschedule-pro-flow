@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 interface UseDataLoadingStateProps {
@@ -14,7 +14,8 @@ export const useDataLoadingState = ({
   const [isLoading, setIsLoading] = useState(initialLoading);
   const [dataError, setDataError] = useState<string | null>(null);
   
-  const handleError = (errorMessage: string, errorObject?: any) => {
+  // Use useCallback to prevent function recreation on each render
+  const handleError = useCallback((errorMessage: string, errorObject?: any) => {
     console.error(`Error in data loading: ${errorMessage}`, errorObject);
     setDataError(errorMessage);
     
@@ -24,11 +25,13 @@ export const useDataLoadingState = ({
     
     // Make sure loading is set to false to prevent UI from hanging
     setIsLoading(false);
-  };
+  }, [showToast]);
   
-  const clearError = () => {
-    setDataError(null);
-  };
+  const clearError = useCallback(() => {
+    if (dataError !== null) {
+      setDataError(null);
+    }
+  }, [dataError]);
   
   return {
     isLoading,

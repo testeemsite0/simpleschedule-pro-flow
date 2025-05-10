@@ -26,7 +26,7 @@ export const useBookingDataFetching = ({
   
   const { maintenanceMode, setMaintenanceMode } = useMaintenanceMode();
   
-  // Track individual data loading states
+  // Track individual data loading states to prevent update loops
   const [loadingStates, setLoadingStates] = useState({
     teamMembers: false,
     services: false,
@@ -37,7 +37,11 @@ export const useBookingDataFetching = ({
   
   // Custom loading setter for each data type
   const setTypeLoading = (type: keyof typeof loadingStates, loading: boolean) => {
-    setLoadingStates(prev => ({ ...prev, [type]: loading }));
+    setLoadingStates(prev => {
+      // Only update if the value is actually changing to prevent loops
+      if (prev[type] === loading) return prev;
+      return { ...prev, [type]: loading };
+    });
   };
   
   // Initialize data fetching hooks with customized loading setters
@@ -74,36 +78,29 @@ export const useBookingDataFetching = ({
   // Update overall loading state based on individual states
   useEffect(() => {
     const anyLoading = Object.values(loadingStates).some(state => state === true);
-    setIsLoading(anyLoading);
-  }, [loadingStates, setIsLoading]);
-
-  // Combined fetch for all data - initialize the process
-  useEffect(() => {
-    const initiateFetching = async () => {
-      if (!professionalId) {
-        console.error("No professional ID provided for booking flow");
-        setIsLoading(false);
-        return;
-      }
-      
-      // Clear any previous errors when starting a new fetch
-      clearError();
-      
-      try {
-        console.log("Booking data fetching: Data loading initiated for professional ID:", professionalId);
-        // Individual hooks will handle their own data fetching
-      } catch (error) {
-        console.error("Error initializing unified booking data:", error);
-        handleError("Erro ao iniciar carregamento de dados para agendamento", error);
-      }
-    };
     
-    if (professionalId) {
-      initiateFetching();
-    } else {
-      setIsLoading(false);
+    // Avoid unnecessary re-renders that could cause infinite loading
+    if (isLoading !== anyLoading) {
+      setIsLoading(anyLoading);
     }
-  }, [professionalId, setIsLoading, clearError, handleError]);
+  }, [loadingStates, setIsLoading, isLoading]);
+
+  // Combined fetch for all data - initialize the process but don't create a render loop
+  useEffect(() => {
+    // Skip if no professional ID is provided
+    if (!professionalId) {
+      console.log("No professional ID provided, skipping data fetching");
+      setIsLoading(false);
+      return;
+    }
+    
+    // Clear any previous errors when starting a new fetch
+    clearError();
+    
+    console.log("Booking data fetching: Data loading initiated for professional ID:", professionalId);
+    // Each individual hook handles its own data fetching
+    
+  }, [professionalId, clearError]);  // Removed setIsLoading from dependencies
 
   // Public interface
   return {

@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useBookingSteps, BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
 import { useUnifiedBookingFlow } from '@/hooks/booking/useUnifiedBookingFlow';
 import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
@@ -58,7 +58,7 @@ interface UnifiedBookingProviderProps {
   children: ReactNode;
   professionalId?: string;
   isAdminView?: boolean;
-  initialStep?: BookingStep; // Updated type here as well
+  initialStep?: BookingStep;
 }
 
 export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
@@ -67,14 +67,31 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
   isAdminView = false,
   initialStep,
 }) => {
+  // Log when the provider mounts to help debug re-renders
+  console.log("UnifiedBookingProvider mounted/updated with professionalId:", professionalId);
+  
   const unifiedBookingFlow = useUnifiedBookingFlow({
     professionalId,
     isAdminView,
     initialStep
   });
+  
+  // Use useMemo to prevent unnecessary context value recreation
+  const contextValue = useMemo(() => unifiedBookingFlow, [
+    // List all dependencies that should trigger a context update
+    unifiedBookingFlow.currentStep,
+    unifiedBookingFlow.bookingData,
+    unifiedBookingFlow.isLoading,
+    unifiedBookingFlow.error,
+    unifiedBookingFlow.teamMembers,
+    unifiedBookingFlow.services,
+    unifiedBookingFlow.insurancePlans,
+    unifiedBookingFlow.availableDates,
+    unifiedBookingFlow.availableSlots
+  ]);
 
   return (
-    <UnifiedBookingContext.Provider value={unifiedBookingFlow}>
+    <UnifiedBookingContext.Provider value={contextValue}>
       {children}
     </UnifiedBookingContext.Provider>
   );
