@@ -119,28 +119,22 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
             insurancePlans={insurancePlans}
             selectedInsurance={bookingData.insuranceId || ''}
             onInsuranceChange={handleInsuranceChange}
-            teamMemberId={bookingData.teamMemberId}
-            checkInsuranceLimitReached={checkInsuranceLimitReached}
-            isLoading={isLoading}
             onBack={goToPreviousStep}
           />
         );
       case 'time':
         return (
           <TimeStep
-            availableDates={availableDates}
             availableSlots={availableSlots}
             selectedDate={bookingData.date}
             selectedStartTime={bookingData.startTime}
             selectedEndTime={bookingData.endTime}
-            onDateChange={handleDateChange}
-            onTimeChange={handleTimeChange}
-            isLoading={isLoading}
-            onBack={goToPreviousStep}
             onTimeSlotSelect={(date, startTime, endTime) => {
               handleDateChange(date);
               handleTimeChange(startTime, endTime);
             }}
+            isLoading={isLoading}
+            onBack={goToPreviousStep}
           />
         );
       case 'client-info':
@@ -167,6 +161,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
   
   return (
     <div className="space-y-6">
+      {title && <h2 className="text-xl font-semibold">{title}</h2>}
+      
       {showStepIndicator && (
         <BookingStepIndicator currentStep={currentStep} />
       )}
