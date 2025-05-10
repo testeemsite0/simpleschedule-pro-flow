@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ProfessionalStep } from './steps/ProfessionalStep';
 import { ServiceStep } from './steps/ServiceStep';
