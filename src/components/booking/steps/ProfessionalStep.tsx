@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -23,12 +23,29 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
   onRefresh
 }) => {
   // Enhanced debug information
-  console.log("ProfessionalStep render with data:", { 
-    teamMembersCount: teamMembers?.length || 0,
-    teamMembersData: teamMembers,
-    selectedTeamMember,
-    isLoading
-  });
+  useEffect(() => {
+    console.log("ProfessionalStep mounted with data:", { 
+      teamMembersCount: teamMembers?.length || 0,
+      teamMembersData: teamMembers,
+      selectedTeamMember,
+      isLoading
+    });
+    
+    if (!teamMembers || teamMembers.length === 0) {
+      console.warn("ProfessionalStep: No team members available");
+    }
+    
+    return () => {
+      console.log("ProfessionalStep unmounted");
+    };
+  }, [teamMembers, selectedTeamMember, isLoading]);
+  
+  const handleRefresh = () => {
+    console.log("ProfessionalStep: Refresh button clicked");
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
   
   if (isLoading) {
     return (
@@ -48,7 +65,7 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
   
   // Improved error handling for missing or empty team members
   if (!teamMembers || !Array.isArray(teamMembers) || teamMembers.length === 0) {
-    console.warn("No team members available:", teamMembers);
+    console.warn("ProfessionalStep: No team members available:", teamMembers);
     
     return (
       <div className="space-y-4">
@@ -60,7 +77,7 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={onRefresh} 
+              onClick={handleRefresh} 
               className="flex items-center gap-1"
             >
               <RefreshCw className="h-4 w-4" />
@@ -72,7 +89,7 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
         <Alert className="bg-amber-50 border-amber-300">
           <Info className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-amber-800">
-            Não há profissionais disponíveis para agendamento. Por favor, entre em contato diretamente para verificar a disponibilidade.
+            Não há profissionais disponíveis para agendamento. Por favor, tente atualizar a página ou entre em contato diretamente para verificar a disponibilidade.
           </AlertDescription>
         </Alert>
       </div>
@@ -89,7 +106,7 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={onRefresh} 
+            onClick={handleRefresh} 
             className="flex items-center gap-1"
           >
             <RefreshCw className="h-4 w-4" />
@@ -105,7 +122,10 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
               key={member.id} 
               variant="outline"
               className={`flex justify-between items-center p-4 h-auto ${selectedTeamMember === member.id ? "border-primary bg-primary/5" : ""}`}
-              onClick={() => onTeamMemberChange(member.id)}
+              onClick={() => {
+                console.log(`ProfessionalStep: Selected team member ${member.id} - ${member.name}`);
+                onTeamMemberChange(member.id);
+              }}
             >
               <div className="flex flex-col items-start">
                 <span className="font-medium">{member.name}</span>

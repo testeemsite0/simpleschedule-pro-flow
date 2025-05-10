@@ -1,244 +1,144 @@
 
-/**
- * Core data fetching functionality with optimized performance
- */
-
 import { QueryCache, generateCacheKey, DEFAULT_CACHE_TTL, isRequestPending, trackRequest } from '../cache/queryCache';
-import { queueRequest } from './requestQueue';
-import { StorageCache } from './storageCache';
-import { MAX_RETRIES } from './constants';
-import { FetchDataOptions } from './types';
 
-// Track last request time by type to implement rate limiting
-const lastRequestTime: Record<string, number> = {};
-const MIN_REQUEST_INTERVAL = 5000; // Minimum 5 seconds between requests of the same type
+// Types for data fetching
+export type DataType = 'teamMembers' | 'services' | 'insurancePlans' | 'timeSlots' | 'appointments';
+export type Priority = 'high' | 'medium' | 'low';
 
-/**
- * Generic data fetching function with caching and retry logic
- */
-export const fetchData = async <T>(
+interface FetchDataOptions {
+  type: DataType;
+  professionalId: string;
+  signal?: AbortSignal;
+  priority?: Priority;
+  skipQueue?: boolean;
+  ttl?: number;
+}
+
+interface QueryFunctions<T> {
+  [key: string]: () => Promise<T>;
+}
+
+// Main data fetching utility function with cache handling
+export async function fetchData<T>(
   options: FetchDataOptions,
-  queryFn: () => Promise<any>
-): Promise<T[]> => {
-  const { 
-    type, 
-    professionalId, 
-    ttl = DEFAULT_CACHE_TTL, 
-    signal,
-    priority = 'medium',
-    useStorageCache = true,
-    skipQueue = false
-  } = options;
+  queryFn: () => Promise<{ data: T; error: any } | T>
+): Promise<T> {
+  const { type, professionalId, signal, priority = 'medium', skipQueue = false, ttl = DEFAULT_CACHE_TTL } = options;
   
-  // Return empty array if no professionalId
-  if (!professionalId) {
-    console.log(`No professionalId provided for ${type}, returning empty array`);
-    return [] as T[];
-  }
+  // Log fetch request
+  console.log(`dataFetcherCore: Fetching ${type} for ${professionalId}, priority: ${priority}, skipQueue: ${skipQueue}`);
   
-  // Check if the request was aborted
-  if (signal?.aborted) {
-    console.log(`Request for ${type} was aborted`);
-    return [] as T[];
-  }
-  
-  // Generate cache key
+  // Generate unique cache key
   const cacheKey = generateCacheKey(type, professionalId);
   
-  // Rate limiting check - prevent hammering the same endpoint
-  const now = Date.now();
-  const lastFetch = lastRequestTime[type] || 0;
-  
-  if (now - lastFetch < MIN_REQUEST_INTERVAL) {
-    console.log(`Rate limiting fetch for ${type}, using cache or waiting`);
-    const cachedData = QueryCache.get<T[]>(cacheKey);
-    if (cachedData) return cachedData;
-  }
-  
-  // Check if there's already a pending request for this data
-  const pendingRequest = isRequestPending(cacheKey);
-  if (pendingRequest) {
-    console.log(`Reusing in-flight request for ${type}`);
-    return pendingRequest as Promise<T[]>;
-  }
-  
-  // Check in-memory cache first
-  const cachedData = QueryCache.get<T[]>(cacheKey);
-  if (cachedData) {
-    console.log(`Using in-memory cache for ${type}`);
-    
-    // If data is available but getting old, refresh in background
-    const cacheEntry = QueryCache.get<any>(cacheKey);
-    const cacheAge = now - lastFetch;
-    
-    if (cacheAge > ttl / 2) {
-      console.log(`Cache for ${type} is aging, refreshing in background`);
-      QueryCache.markAsStale(cacheKey);
-      
-      // Non-blocking background refresh
-      setTimeout(() => {
-        executeFetch().catch(err => {
-          console.error(`Background refresh for ${type} failed:`, err);
-        });
-      }, 100);
-    }
-    
+  // Check if already in cache
+  const cachedData = QueryCache.get<T>(cacheKey);
+  if (cachedData !== null) {
+    console.log(`dataFetcherCore: Cache hit for ${cacheKey}`);
     return cachedData;
   }
   
-  // Check localStorage cache if in-memory cache missed
-  if (useStorageCache) {
-    const storedData = StorageCache.get<T[]>(cacheKey);
-    if (storedData) {
-      // Still store in memory cache for faster access
-      QueryCache.set(cacheKey, storedData, ttl);
-      console.log(`Using localStorage cache for ${type}`);
-      return storedData;
-    }
+  // Check if a request is already in progress
+  const pendingRequest = isRequestPending(cacheKey);
+  if (pendingRequest && !skipQueue) {
+    console.log(`dataFetcherCore: Request already in progress for ${cacheKey}, joining pending request`);
+    return pendingRequest as Promise<T>;
   }
   
-  // Utility function for fetch execution with retries
-  const executeFetch = async (retryCount = 0): Promise<T[]> => {
+  // Abort handler
+  if (signal?.aborted) {
+    console.log(`dataFetcherCore: Request for ${cacheKey} was aborted`);
+    throw new Error('Request aborted');
+  }
+  
+  // Create fetch promise
+  const fetchPromise = async (): Promise<T> => {
     try {
-      console.log(`Fetching ${type} for professional: ${professionalId} (attempt: ${retryCount + 1})`);
-      lastRequestTime[type] = Date.now(); // Update last request time
+      console.log(`dataFetcherCore: Starting actual fetch for ${cacheKey}`);
+      const result = await queryFn();
       
-      if (signal?.aborted) {
-        console.log(`Request for ${type} was aborted during retry`);
-        return [] as T[];
-      }
-      
-      // Execute the query function
-      const response = await queryFn();
-      
-      if (response.error) {
-        console.error(`Error fetching ${type}:`, response.error);
-        
-        // Implement exponential backoff for retries with decreased delays
-        if (retryCount < MAX_RETRIES) {
-          const delay = Math.pow(2, retryCount) * 300; // Reduced from 500ms to 300ms 
-          console.log(`Retrying ${type} in ${delay}ms (attempt ${retryCount + 1})`);
-          
-          // Wait and retry
-          return new Promise(resolve => {
-            setTimeout(() => {
-              // Only retry if not aborted
-              if (!signal?.aborted) {
-                resolve(executeFetch(retryCount + 1));
-              } else {
-                resolve([] as T[]);
-              }
-            }, delay);
-          });
+      // Different response formats from queryFn
+      let data: T;
+      if (result && typeof result === 'object' && 'data' in result) {
+        data = result.data;
+        if (result.error) {
+          console.error(`dataFetcherCore: Error in query response for ${cacheKey}:`, result.error);
+          throw result.error;
         }
-        
-        // Return empty array instead of throwing to prevent cascading failures
-        console.warn(`Failed to fetch ${type} after ${retryCount + 1} attempts. Returning empty array.`);
-        return [] as T[];
+      } else {
+        data = result as T;
       }
       
-      // Ensure response.data is always an array
-      const resultData = Array.isArray(response.data) ? response.data : [];
-      
-      console.log(`${type} fetched successfully with ${resultData.length} items`);
-      
-      // Cache the successful result in memory
-      QueryCache.set(cacheKey, resultData, ttl);
-      
-      // Also cache in localStorage for persistent storage
-      if (useStorageCache) {
-        StorageCache.set(cacheKey, resultData, ttl * 2); // Use double TTL for localStorage
+      // Log the data size/shape
+      if (Array.isArray(data)) {
+        console.log(`dataFetcherCore: Fetched ${data.length} items for ${cacheKey}`);
+      } else {
+        console.log(`dataFetcherCore: Fetched data for ${cacheKey}:`, data ? 'data exists' : 'data is null/undefined');
       }
       
-      return resultData as T[];
+      // Cache the result
+      QueryCache.set(cacheKey, data, ttl);
+      return data;
     } catch (error) {
-      if (signal?.aborted) {
-        console.log(`Request for ${type} was aborted during error handling`);
-        return [] as T[];
-      }
+      console.error(`dataFetcherCore: Error fetching ${cacheKey}:`, error);
       
-      console.error(`Error in fetchData for ${type}:`, error);
-      // Return empty array instead of throwing
-      return [] as T[];
+      // Mark as stale but usable in emergency
+      QueryCache.markAsStale(cacheKey);
+      throw error;
     }
   };
   
-  // Create a fetch promise and track it to avoid duplicates
-  const fetchPromise = executeFetch();
-  const trackedPromise = trackRequest(cacheKey, fetchPromise);
-  
-  // Start the fetching process
-  // Use queue system or direct execution based on priority and config
-  if (!skipQueue) {
-    return queueRequest<T[]>(() => trackedPromise, priority);
-  } else {
-    return trackedPromise;
-  }
-};
+  // Track this request to prevent duplications
+  return trackRequest(cacheKey, fetchPromise());
+}
 
-/**
- * Unified data loader that fetches multiple data types in a single logical operation
- * to avoid redundant requests and unnecessary re-renders
- */
-export const unifiedDataFetch = async <T>(
+// Parallel data fetching with dependency resolution
+export async function unifiedDataFetch<T>(
   professionalId: string,
   dataTypes: string[],
-  queryFns: Record<string, () => Promise<any>>,
+  queryFns: QueryFunctions<T>,
   signal?: AbortSignal
-): Promise<Record<string, T[]>> => {
-  if (!professionalId) return {} as Record<string, T[]>;
+): Promise<Record<string, T>> {
+  console.log(`unifiedDataFetch: Starting unified fetch for ${professionalId}, data types: [${dataTypes.join(', ')}]`);
   
-  console.log(`Starting unifiedDataFetch for professional ${professionalId} with data types:`, dataTypes);
+  // Helper function to map type to priority
+  const getPriority = (type: string): Priority => {
+    if (type === 'teamMembers' || type === 'services') return 'high';
+    if (type === 'insurancePlans') return 'medium';
+    return 'low';
+  };
   
-  const results: Record<string, T[]> = {};
-  const fetchPromises: Promise<void>[] = [];
-  
-  // Prepare all requests but execute critical ones first
-  for (const type of dataTypes) {
-    if (!queryFns[type]) continue;
-    
-    const cacheKey = generateCacheKey(type, professionalId);
-    
-    // Check cache first
-    const cachedData = QueryCache.get<T[]>(cacheKey);
-    if (cachedData) {
-      console.log(`Using cached data for ${type}`);
-      results[type] = cachedData;
-      continue;
-    }
-    
-    // If not in cache, prepare to fetch but don't execute yet
-    const fetchPromise = async () => {
-      try {
-        const isPriority = ['teamMembers', 'services'].includes(type);
-        const options: FetchDataOptions = {
-          type,
-          professionalId,
-          signal,
-          priority: isPriority ? 'high' : 'medium',
-          skipQueue: isPriority
-        };
-        
-        const data = await fetchData<T>(options, queryFns[type]);
-        console.log(`Setting ${type} result with ${data.length} items`);
-        results[type] = data;
-      } catch (error) {
-        console.error(`Error fetching ${type}:`, error);
-        results[type] = [] as unknown as T[];
+  try {
+    // Execute all requests in parallel
+    const promises = dataTypes.map(async type => {
+      if (!queryFns[type]) {
+        console.warn(`unifiedDataFetch: No query function for ${type}`);
+        return { type, data: null };
       }
-    };
+      
+      try {
+        console.log(`unifiedDataFetch: Starting fetch for ${type}`);
+        const data = await queryFns[type]();
+        console.log(`unifiedDataFetch: Completed fetch for ${type}`);
+        return { type, data };
+      } catch (error) {
+        console.error(`unifiedDataFetch: Error fetching ${type}:`, error);
+        return { type, data: null, error };
+      }
+    });
     
-    fetchPromises.push(fetchPromise());
+    const results = await Promise.all(promises);
+    
+    // Convert results to record
+    const resultRecord: Record<string, T> = {};
+    results.forEach(({ type, data }) => {
+      resultRecord[type] = data;
+    });
+    
+    console.log(`unifiedDataFetch: All data fetched for ${professionalId}`);
+    return resultRecord;
+  } catch (error) {
+    console.error(`unifiedDataFetch: Critical error in unified fetch for ${professionalId}:`, error);
+    throw error;
   }
-  
-  // Execute all prepared requests in parallel
-  if (fetchPromises.length > 0) {
-    await Promise.all(fetchPromises);
-  }
-  
-  console.log("UnifiedDataFetch results summary:", 
-    Object.entries(results).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.length : 'not array'} items`).join(', ')
-  );
-  
-  return results;
-};
+}

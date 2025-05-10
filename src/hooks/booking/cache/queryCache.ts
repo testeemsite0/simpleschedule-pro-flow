@@ -4,7 +4,7 @@
  */
 
 // Increased TTL (Time To Live) to reduce frequency of requests
-export const DEFAULT_CACHE_TTL = 15 * 60 * 1000; // 15 minutes (was 5 minutes)
+export const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes (was previously 15 minutes)
 
 // Add a debounce interval to prevent excessive fetches
 export const FETCH_DEBOUNCE_MS = 2000; // 2 seconds minimum between identical requests
@@ -30,19 +30,24 @@ class Cache {
   get<T>(key: string): T | null {
     const entry = this.cache[key];
     
-    if (!entry) return null;
+    if (!entry) {
+      console.log(`Cache: Miss for key ${key}`);
+      return null;
+    }
     
     // If data is expired but marked as stale, we can still use it
     // while a refresh happens in the background
     if (Date.now() > entry.expiry) {
       if (!entry.stale) {
+        console.log(`Cache: Entry expired for ${key}, removing from cache`);
         this.delete(key);
         return null;
       }
       // Data is stale but still usable temporarily
-      console.log(`Using stale cache data for ${key} while refreshing`);
+      console.log(`Cache: Using stale cache data for ${key} while refreshing`);
     }
     
+    console.log(`Cache: Hit for key ${key}`);
     return entry.data as T;
   }
 
@@ -50,6 +55,8 @@ class Cache {
    * Set data in cache
    */
   set<T>(key: string, data: T, ttl: number = this.defaultTTL): void {
+    console.log(`Cache: Setting data for ${key}, TTL: ${ttl}ms`);
+    
     const timestamp = Date.now();
     const expiry = timestamp + ttl;
     
@@ -71,6 +78,7 @@ class Cache {
    */
   markAsStale(key: string): boolean {
     if (this.has(key)) {
+      console.log(`Cache: Marking ${key} as stale`);
       this.cache[key].stale = true;
       
       // Extend expiry to allow stale data to be used for a short time
@@ -85,6 +93,7 @@ class Cache {
    */
   delete(key: string): boolean {
     if (this.has(key)) {
+      console.log(`Cache: Deleting ${key}`);
       delete this.cache[key];
       return true;
     }
@@ -114,6 +123,7 @@ class Cache {
     Object.keys(this.cache).forEach(key => {
       // Only delete entries that are expired and not marked as stale
       if (this.cache[key].expiry < now && !this.cache[key].stale) {
+        console.log(`Cache: Purging expired entry ${key}`);
         this.delete(key);
       }
     });
@@ -140,6 +150,7 @@ class Cache {
    * Clear all cache entries
    */
   clear(): void {
+    console.log(`Cache: Clearing all cache entries`);
     this.cache = {};
   }
 }
@@ -162,6 +173,7 @@ export function trackRequest<T>(key: string, promise: Promise<T>): Promise<T> {
   
   // Remove from pending when complete
   return promise.finally(() => {
+    console.log(`Cache: Request for ${key} completed, removing from pending`);
     delete pendingRequests[key];
   });
 }
@@ -170,5 +182,8 @@ export function trackRequest<T>(key: string, promise: Promise<T>): Promise<T> {
  * Check if a request for the given key is already in progress
  */
 export function isRequestPending(key: string): Promise<any> | null {
+  if (pendingRequests[key]) {
+    console.log(`Cache: Request already pending for ${key}`);
+  }
   return pendingRequests[key] || null;
 }

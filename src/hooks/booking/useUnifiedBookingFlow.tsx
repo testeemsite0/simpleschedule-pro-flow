@@ -8,6 +8,7 @@ import { useAvailabilityCalculation } from './useAvailabilityCalculation';
 import { useMaintenanceMode } from './useMaintenanceMode';
 import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
 import { MIN_REFRESH_INTERVAL } from './api/constants';
+import { clearBookingCache } from './api/dataLoader';
 
 interface UseUnifiedBookingFlowProps {
   professionalId?: string;
@@ -33,7 +34,7 @@ export const useUnifiedBookingFlow = ({
   // Function to handle errors consistently
   const handleDataError = useCallback((error: Error | null) => {
     if (error) {
-      console.error("Booking data error:", error);
+      console.error("useUnifiedBookingFlow: Booking data error:", error);
       bookingSteps.updateErrorState(error.message || "Erro ao carregar dados");
     }
   }, [bookingSteps]);
@@ -98,11 +99,15 @@ export const useUnifiedBookingFlow = ({
     }
     
     // Track the new professional ID
+    console.log(`useUnifiedBookingFlow: Professional ID changed from ${professionalIdRef.current} to ${professionalId}`);
     professionalIdRef.current = professionalId;
     isInitialized.current = false;
     
-    // Clear error state when changing professional
+    // Clear error state and cache when changing professional
     bookingSteps.updateErrorState(null);
+    if (professionalId) {
+      clearBookingCache(professionalId);
+    }
   }, [professionalId, bookingSteps]);
   
   // Initial data loading - with optimization to prevent excessive loading
@@ -116,10 +121,12 @@ export const useUnifiedBookingFlow = ({
     
     // Prevent excessive refreshes (throttle)
     if (now - lastUpdate.current < MIN_REFRESH_INTERVAL) {
+      console.log("useUnifiedBookingFlow: Skipping refresh - too soon since last update");
       return;
     }
     
     // Otherwise proceed with initialization
+    console.log(`useUnifiedBookingFlow: Initializing flow for professional ${professionalId}`);
     isInitialized.current = true;
     lastUpdate.current = now;
     
@@ -129,18 +136,27 @@ export const useUnifiedBookingFlow = ({
     }
   }, [professionalId, dataError, handleDataError]);
   
-  // Optimized data refresh function
+  // Monitor the teamMembers data
+  useEffect(() => {
+    if (teamMembers) {
+      console.log(`useUnifiedBookingFlow: Team members updated, count: ${teamMembers.length}`);
+    }
+  }, [teamMembers]);
+  
+  // Optimized data refresh function with force refresh option
   const refreshData = useCallback(() => {
     const now = Date.now();
     
     // Prevent excessive refreshes
     if (now - lastUpdate.current < MIN_REFRESH_INTERVAL) {
-      console.log("Skipping refresh - too soon since last update");
+      console.log("useUnifiedBookingFlow: Skipping refresh - too soon since last update");
       toast("Aguarde", {
         description: "Atualização já está em andamento",
       });
       return;
     }
+    
+    console.log("useUnifiedBookingFlow: Forcing data refresh");
     
     toast("Atualizando dados", {
       description: "Recarregando informações do sistema",
@@ -148,12 +164,22 @@ export const useUnifiedBookingFlow = ({
     
     lastUpdate.current = now;
     bookingSteps.updateErrorState(null);
-    refreshAllData();
-  }, [bookingSteps, refreshAllData]);
+    
+    // Clear the cache for the current professional
+    if (professionalId) {
+      clearBookingCache(professionalId);
+    }
+    
+    // Force refresh all data
+    refreshAllData(true);
+  }, [bookingSteps, refreshAllData, professionalId]);
   
-  const resetBooking = () => {
+  const resetBooking = useCallback(() => {
+    console.log("useUnifiedBookingFlow: Resetting booking state");
     bookingSteps.resetBooking();
-  };
+    // Force data refresh when resetting
+    refreshData();
+  }, [bookingSteps, refreshData]);
 
   // Unified loading indicator
   const isLoading = dataLoading || appointmentLoading;

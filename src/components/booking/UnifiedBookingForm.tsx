@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BookingStepIndicator } from './BookingStepIndicator';
 import { MaintenanceNotice } from './MaintenanceNotice';
 import { BookingErrorHandler } from './BookingErrorHandler';
@@ -68,6 +68,31 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     refreshData
   });
   
+  // Log component rendering and data
+  useEffect(() => {
+    console.log("UnifiedBookingForm: Rendered with data:", {
+      title,
+      showStepIndicator,
+      isAdminView,
+      currentStep,
+      teamMembersCount: teamMembers?.length || 0,
+      servicesCount: services?.length || 0,
+      isLoading,
+      hasError: !!error
+    });
+    
+    // Force refresh if no team members are available but we're not loading
+    if ((!teamMembers || teamMembers.length === 0) && !isLoading) {
+      console.log("UnifiedBookingForm: No team members available but not loading, forcing refresh");
+      handleRefresh();
+    }
+  }, [teamMembers, isLoading, error]);
+  
+  const handleForceRefresh = () => {
+    console.log("UnifiedBookingForm: Force refreshing data");
+    handleRefresh();
+  };
+  
   return (
     <div className="space-y-6">
       {title && <h2 className="text-xl font-semibold">{title}</h2>}
@@ -75,6 +100,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       {showStepIndicator && (
         <BookingStepIndicator currentStep={currentStep} />
       )}
+      
       {maintenanceMode && <MaintenanceNotice />}
 
       {error && (
@@ -84,6 +110,18 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           title="Erro no agendamento"
         />
       )}
+      
+      {!teamMembers || teamMembers.length === 0 ? (
+        <div className="py-4 flex justify-center">
+          <Button 
+            onClick={handleForceRefresh}
+            variant="outline"
+            disabled={isLoading}
+          >
+            {isLoading ? "Carregando..." : "Forçar atualização de dados"}
+          </Button>
+        </div>
+      ) : null}
       
       <div className="mt-4">
         <BookingStepContent 

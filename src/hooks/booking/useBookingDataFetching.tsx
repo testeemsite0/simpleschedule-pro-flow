@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { prewarmBookingDataCache, unifiedDataFetch } from './api/dataLoader';
+import { prewarmBookingDataCache, unifiedDataFetch, clearBookingCache } from './api/dataLoader';
 import { TeamMember, Service, InsurancePlan, TimeSlot, Appointment } from '@/types';
 import { useMaintenanceMode } from './useMaintenanceMode';
 import { fetchTeamMembers, fetchServices, fetchInsurancePlans, fetchTimeSlots, fetchAppointments } from './api/dataLoader';
@@ -30,6 +30,7 @@ export const useBookingDataFetching = ({
   const isFetchingRef = useRef(false);
   const loadAttempted = useRef(false);
   const activeFetchId = useRef<string>('');
+  const professionalIdRef = useRef<string | undefined>(professionalId);
   
   // Maintenance mode state
   const { maintenanceMode, setMaintenanceMode } = useMaintenanceMode();
@@ -44,15 +45,23 @@ export const useBookingDataFetching = ({
   }, [onError]);
   
   // Unified data loading function that loads all data types at once
-  const loadAllData = useCallback(async () => {
-    if (!professionalId || isFetchingRef.current) {
+  const loadAllData = useCallback(async (forceRefresh: boolean = false) => {
+    if (!professionalId) {
+      console.log("useBookingDataFetching: No professionalId provided, skipping data load");
+      setIsLoading(false);
       return;
     }
     
     // Prevent concurrent fetches
     if (isFetchingRef.current) {
-      console.log("Already fetching data, skipping redundant request");
+      console.log("useBookingDataFetching: Already fetching data, skipping redundant request");
       return;
+    }
+    
+    // Log if professional ID changed
+    if (professionalIdRef.current !== professionalId) {
+      console.log(`useBookingDataFetching: Professional ID changed from ${professionalIdRef.current} to ${professionalId}`);
+      professionalIdRef.current = professionalId;
     }
     
     // Generate a unique fetch ID to detect stale loads
@@ -64,8 +73,14 @@ export const useBookingDataFetching = ({
     setDataError(null);
     loadAttempted.current = true;
     
+    // Force cache refresh if requested
+    if (forceRefresh) {
+      console.log("useBookingDataFetching: Forcing cache refresh");
+      clearBookingCache(professionalId);
+    }
+    
     try {
-      console.log("Starting unified data load for professional:", professionalId);
+      console.log("useBookingDataFetching: Starting unified data load for professional:", professionalId);
       const controller = new AbortController();
       const signal = controller.signal;
       
@@ -88,12 +103,25 @@ export const useBookingDataFetching = ({
       
       // If this load was superseded by another, discard results
       if (activeFetchId.current !== fetchId) {
-        console.log("Discarding stale fetch results");
+        console.log("useBookingDataFetching: Discarding stale fetch results");
         return;
       }
       
+      // Debug log for each data type
+      console.log("useBookingDataFetching: Results received:", {
+        teamMembers: results.teamMembers ? `${results.teamMembers.length} items` : 'undefined',
+        services: results.services ? `${results.services.length} items` : 'undefined',
+        insurancePlans: results.insurancePlans ? `${results.insurancePlans.length} items` : 'undefined',
+        timeSlots: results.timeSlots ? `${results.timeSlots.length} items` : 'undefined',
+        appointments: results.appointments ? `${results.appointments.length} items` : 'undefined'
+      });
+      
       // Update state with all fetched data
-      if (results.teamMembers) setTeamMembers(results.teamMembers);
+      if (results.teamMembers) {
+        console.log(`useBookingDataFetching: Setting ${results.teamMembers.length} team members`);
+        setTeamMembers(results.teamMembers);
+      }
+      
       if (results.services) setServices(results.services);
       if (results.insurancePlans) setInsurancePlans(results.insurancePlans);
       if (results.timeSlots) setTimeSlots(results.timeSlots);
@@ -102,6 +130,7 @@ export const useBookingDataFetching = ({
       setAllDataLoaded(true);
       
       if (onDataLoaded) {
+        console.log("useBookingDataFetching: Calling onDataLoaded callback");
         onDataLoaded();
       }
       
@@ -115,6 +144,7 @@ export const useBookingDataFetching = ({
       if (activeFetchId.current === fetchId) {
         setIsLoading(false);
         isFetchingRef.current = false;
+        console.log("useBookingDataFetching: Data loading complete");
       }
     }
   }, [professionalId, handleError, onDataLoaded]);
@@ -122,14 +152,11 @@ export const useBookingDataFetching = ({
   // Initialize data fetching
   useEffect(() => {
     // Reset state when professional ID changes
-    if (professionalId !== undefined) {
-      // Only fetch if we haven't attempted yet for this professional
-      if (!loadAttempted.current) {
-        loadAllData();
-      }
-    } else {
-      // No professional ID provided
-      setIsLoading(false);
+    if (professionalId !== undefined && professionalId !== professionalIdRef.current) {
+      console.log(`useBookingDataFetching: Professional ID changed to ${professionalId}, resetting state`);
+      professionalIdRef.current = professionalId;
+      loadAttempted.current = false;
+      // Reset the data states
       setTeamMembers([]);
       setServices([]);
       setInsurancePlans([]);
@@ -137,21 +164,34 @@ export const useBookingDataFetching = ({
       setAppointments([]);
     }
     
-    // Cleanup function
-    return () => {
-      // Nothing to clean up here
-    };
+    if (professionalId !== undefined) {
+      // Only fetch if we haven't attempted yet for this professional
+      if (!loadAttempted.current) {
+        console.log(`useBookingDataFetching: First load for professional ${professionalId}`);
+        loadAllData(true); // Force refresh on first load
+      }
+    } else {
+      // No professional ID provided
+      console.log("useBookingDataFetching: No professionalId, clearing data");
+      setIsLoading(false);
+      setTeamMembers([]);
+      setServices([]);
+      setInsurancePlans([]);
+      setTimeSlots([]);
+      setAppointments([]);
+    }
   }, [professionalId, loadAllData]);
   
   // Function to refresh all data - exposed for manual refresh
-  const refreshAllData = useCallback(() => {
+  const refreshAllData = useCallback((forceRefresh: boolean = true) => {
     if (isFetchingRef.current) {
-      console.log("Skipping refresh as data is currently being fetched");
+      console.log("useBookingDataFetching: Skipping refresh as data is currently being fetched");
       return;
     }
     
+    console.log("useBookingDataFetching: Manually refreshing all data");
     loadAttempted.current = false; // Reset the load attempted flag
-    loadAllData();
+    loadAllData(forceRefresh);
   }, [loadAllData]);
   
   return {
