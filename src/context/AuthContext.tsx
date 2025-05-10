@@ -71,8 +71,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log("Fetching user profile for ID:", userId);
       
-      // Modificação: usar .select().eq().maybeSingle() em vez de .select().eq().single()
-      // para melhor tratamento quando nenhuma linha for encontrada
+      // Use .select().eq().maybeSingle() instead of .select().eq().single()
+      // for better handling when no row is found
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (error) {
         console.error("Error fetching user profile:", error);
-        // Log mais detalhado sobre o erro
+        // More detailed log about the error
         console.log("Error details:", {
           code: error.code,
           message: error.message,
@@ -93,31 +93,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else if (!profile) {
         console.log("No profile found for user ID:", userId);
         
-        // Se não houver perfil, vamos criar um com metadados do usuário
-        const { data: { user: authUser } } = await supabase.auth.getUser(userId);
-        
-        if (authUser && authUser.user_metadata) {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              name: authUser.user_metadata.name || authUser.email?.split('@')[0] || 'User',
-              email: authUser.email || '',
-              profession: authUser.user_metadata.profession || 'Não especificado',
-              slug: authUser.user_metadata.slug || authUser.email?.split('@')[0]?.toLowerCase() || 'user'
-            })
-            .select()
-            .single();
-            
-          if (createError) {
-            console.error("Error creating user profile:", createError);
-            setUser(null);
+        // If no profile exists, create one with user metadata
+        try {
+          const { data: { user: authUser } } = await supabase.auth.getUser(userId);
+          
+          if (authUser && authUser.user_metadata) {
+            const { data: newProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                name: authUser.user_metadata.name || authUser.email?.split('@')[0] || 'User',
+                email: authUser.email || '',
+                profession: authUser.user_metadata.profession || 'Não especificado',
+                slug: authUser.user_metadata.slug || authUser.email?.split('@')[0]?.toLowerCase() || 'user'
+              })
+              .select()
+              .single();
+              
+            if (createError) {
+              console.error("Error creating user profile:", createError);
+              setUser(null);
+            } else {
+              console.log("Created new profile for user:", newProfile);
+              setUser(newProfile);
+            }
           } else {
-            console.log("Created new profile for user:", newProfile);
-            setUser(newProfile);
+            console.error("Unable to retrieve auth user data for profile creation");
+            setUser(null);
           }
-        } else {
-          console.error("Unable to retrieve auth user data for profile creation");
+        } catch (getUserError) {
+          console.error("Error getting user data for profile creation:", getUserError);
           setUser(null);
         }
       } else {
@@ -158,6 +163,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
+  const validateEmail = (email: string): boolean => {
+    // Basic email validation with regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+  
   const register = async (
     name: string, 
     email: string, 
@@ -167,14 +178,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.signUp({
+      // Validate email format before sending to Supabase
+      if (!validateEmail(email)) {
+        throw new Error("O endereço de email fornecido não é válido");
+      }
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             name,
             profession,
-            slug: name.toLowerCase().replace(/\s+/g, '-'),
+            slug: name.toLowerCase().replace(/\s+/g, '-').normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
           },
         },
       });
@@ -182,14 +198,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) {
         console.error("Registration error:", error.message);
         setIsLoading(false);
-        return false;
+        throw error;
+      }
+      
+      // If we got a user ID, registration was successful
+      if (data.user?.id) {
+        console.log("Registration successful, user ID:", data.user.id);
+      } else {
+        // Supabase might return a 200 OK status but without a user ID in some cases
+        console.log("Registration potentially pending email confirmation:", data);
       }
       
       return true;
-    } catch (error) {
-      console.error("Unexpected registration error:", error);
+    } catch (error: any) {
+      console.error("Registration error:", error.message);
       setIsLoading(false);
-      return false;
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
   
