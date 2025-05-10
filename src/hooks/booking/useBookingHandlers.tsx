@@ -56,8 +56,7 @@ export const useBookingHandlers = ({
   
   const handleRefresh = useCallback(() => {
     refreshData();
-    toast({
-      title: "Atualizando",
+    toast.info("Atualizando", {
       description: "Recarregando dados do sistema"
     });
   }, [refreshData]);

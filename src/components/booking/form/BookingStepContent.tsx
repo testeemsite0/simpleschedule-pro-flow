@@ -1,16 +1,15 @@
 
 import React from 'react';
-import { ProfessionalStep } from '../steps/ProfessionalStep';
-import { ServiceStep } from '../steps/ServiceStep';
-import { InsuranceStep } from '../steps/InsuranceStep';
-import { TimeStep } from '../steps/TimeStep';
-import { ClientInfoStep } from '@/components/booking/steps/ClientInfoStep';
-import { ConfirmationStep } from '../steps/ConfirmationStep';
+import { TeamMemberStepContent } from '../steps/TeamMemberStepContent';
+import { ServiceStepContent } from '../steps/ServiceStepContent';
+import { InsuranceStepContent } from '../steps/InsuranceStepContent';
+import { TimeStepContent } from '../steps/TimeStepContent';
+import { ClientInfoStepContent } from '../steps/ClientInfoStepContent';
+import { ConfirmationStepContent } from '../steps/ConfirmationStepContent';
 import { BookingStep } from '@/hooks/booking/useBookingSteps';
 import { BookingData } from '@/hooks/booking/useBookingSteps';
 import { TeamMember, Service, InsurancePlan } from '@/types';
 import { RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface BookingStepContentProps {
   currentStep: BookingStep;
@@ -63,7 +62,7 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
   switch (currentStep) {
     case 'team-member':
       return (
-        <ProfessionalStep
+        <TeamMemberStepContent
           teamMembers={teamMembers}
           selectedTeamMember={bookingData.teamMemberId || ''}
           onTeamMemberChange={handleTeamMemberChange}
@@ -73,25 +72,29 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
       );
     case 'service':
       return (
-        <ServiceStep
-          services={getAvailableServicesForTeamMember(bookingData.teamMemberId || '')}
+        <ServiceStepContent
+          services={services}
           selectedService={bookingData.serviceId || ''}
           onServiceChange={handleServiceChange}
           onBack={goToPreviousStep}
+          getAvailableServicesForTeamMember={getAvailableServicesForTeamMember}
+          teamMemberId={bookingData.teamMemberId || ''}
         />
       );
     case 'insurance':
       return (
-        <InsuranceStep
+        <InsuranceStepContent
           insurancePlans={insurancePlans}
           selectedInsurance={bookingData.insuranceId || ''}
           onInsuranceChange={handleInsuranceChange}
           onBack={goToPreviousStep}
+          teamMemberId={bookingData.teamMemberId}
+          checkInsuranceLimitReached={checkInsuranceLimitReached}
         />
       );
     case 'time':
       return (
-        <TimeStep
+        <TimeStepContent
           availableSlots={availableSlots}
           selectedDate={bookingData.date}
           selectedStartTime={bookingData.startTime}
@@ -106,7 +109,7 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
       );
     case 'client-info':
       return (
-        <ClientInfoStep
+        <ClientInfoStepContent
           onClientInfoSubmit={handleClientInfoSubmit}
           isLoading={isLoading}
           onBack={goToPreviousStep}
@@ -114,7 +117,7 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
       );
     case 'confirmation':
       return (
-        <ConfirmationStep
+        <ConfirmationStepContent
           bookingData={bookingData}
           onConfirm={handleCompleteBooking}
           onEdit={goToPreviousStep}
