@@ -23,6 +23,7 @@ import DashboardClients from './pages/DashboardClients';
 import DashboardBookingLink from './pages/DashboardBookingLink';
 import DashboardPreferences from './pages/DashboardPreferences';
 import DashboardInsurance from './pages/DashboardInsurance';
+import DashboardUnifiedBooking from './pages/DashboardUnifiedBooking';
 import AdminPanel from './pages/AdminPanel';
 import Index from './pages/Index';
 
@@ -60,6 +61,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <DashboardAppointments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/unified-booking"
+              element={
+                <ProtectedRoute>
+                  <DashboardUnifiedBooking />
                 </ProtectedRoute>
               }
             />

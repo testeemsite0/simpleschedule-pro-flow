@@ -11,7 +11,8 @@ import {
   UserRound, 
   Link2, 
   BarChart2, 
-  Shield 
+  Shield,
+  CalendarDays
 } from 'lucide-react';
 
 export interface NavItem {
@@ -22,7 +23,7 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { title: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
-  { title: 'Agendamentos', icon: <Calendar size={20} />, path: '/dashboard/appointments' },
+  { title: 'Agendamentos', icon: <CalendarDays size={20} />, path: '/dashboard/unified-booking' },
   { title: 'Horários', icon: <Clock size={20} />, path: '/dashboard/schedules' },
   { title: 'Equipe', icon: <Users size={20} />, path: '/dashboard/team' },
   { title: 'Serviços', icon: <FileText size={20} />, path: '/dashboard/services' },
