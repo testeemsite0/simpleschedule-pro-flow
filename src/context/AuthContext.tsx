@@ -71,15 +71,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log("Fetching user profile for ID:", userId);
       
+      // Modificação: usar .select().eq().maybeSingle() em vez de .select().eq().single()
+      // para melhor tratamento quando nenhuma linha for encontrada
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (error) {
         console.error("Error fetching user profile:", error);
+        // Log mais detalhado sobre o erro
+        console.log("Error details:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
         setUser(null);
+      } else if (!profile) {
+        console.log("No profile found for user ID:", userId);
+        
+        // Se não houver perfil, vamos criar um com metadados do usuário
+        const { data: { user: authUser } } = await supabase.auth.getUser(userId);
+        
+        if (authUser && authUser.user_metadata) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              name: authUser.user_metadata.name || authUser.email?.split('@')[0] || 'User',
+              email: authUser.email || '',
+              profession: authUser.user_metadata.profession || 'Não especificado',
+              slug: authUser.user_metadata.slug || authUser.email?.split('@')[0]?.toLowerCase() || 'user'
+            })
+            .select()
+            .single();
+            
+          if (createError) {
+            console.error("Error creating user profile:", createError);
+            setUser(null);
+          } else {
+            console.log("Created new profile for user:", newProfile);
+            setUser(newProfile);
+          }
+        } else {
+          console.error("Unable to retrieve auth user data for profile creation");
+          setUser(null);
+        }
       } else {
         console.log("User profile fetched:", profile);
         setUser(profile);

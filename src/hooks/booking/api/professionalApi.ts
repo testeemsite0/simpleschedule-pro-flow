@@ -27,18 +27,37 @@ export const fetchProfessionalBySlug = async (
   // Check cache first
   const cachedData = ProfessionalCache.get(slug);
   if (cachedData) {
+    console.log("Found cached professional data for:", slug);
     return { data: cachedData, error: null };
   }
 
   try {
     console.log(`Fetching professional data for slug: ${slug}`);
 
-    // Query Supabase for the professional data
-    const { data, error } = await supabase
+    // Primeiro tenta uma correspondência exata
+    let { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('slug', slug)
       .maybeSingle();
+
+    // Se não encontrar, tenta uma busca insensível a maiúsculas e minúsculas
+    if (!data && !error) {
+      console.log(`No exact match found for slug '${slug}', trying case-insensitive search`);
+      
+      const { data: flexData, error: flexError } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('slug', slug)
+        .maybeSingle();
+        
+      if (flexError) {
+        console.error("Error in flexible slug search:", flexError);
+      } else if (flexData) {
+        console.log("Found via case-insensitive search:", flexData);
+        data = flexData;
+      }
+    }
 
     // Check if the request was aborted during the query
     if (signal?.aborted) {
@@ -53,7 +72,20 @@ export const fetchProfessionalBySlug = async (
         return { data: null, error: `Profissional não encontrado com slug: ${slug}` };
       } else if (error.code === 'PGRST116' || error.message?.includes('Results contain')) {
         console.error("Multiple profiles found with slug:", slug);
-        return { data: null, error: `Múltiplos profissionais encontrados com o mesmo slug. Por favor, contate o suporte.` };
+        
+        // Tentar pegar só o primeiro
+        const { data: multipleData, error: multipleError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('slug', slug)
+          .limit(1);
+          
+        if (multipleError || !multipleData || multipleData.length === 0) {
+          return { data: null, error: `Múltiplos profissionais encontrados com o mesmo slug. Por favor, contate o suporte.` };
+        }
+        
+        // Usar o primeiro resultado
+        data = multipleData[0];
       } else if (error.code === '429' || error.message?.includes('rate limit')) {
         return { data: null, error: 'RESOURCE_ERROR' };
       } else {
@@ -64,10 +96,24 @@ export const fetchProfessionalBySlug = async (
     // Handle no data case
     if (!data) {
       console.error("No professional found with slug:", slug);
-      return { data: null, error: `Profissional não encontrado com slug: ${slug}` };
+      
+      // Tentativa final: busca parcial
+      const { data: partialData, error: partialError } = await supabase
+        .from('profiles')
+        .select('*')
+        .ilike('slug', `%${slug}%`)
+        .limit(1);
+        
+      if (partialError || !partialData || partialData.length === 0) {
+        return { data: null, error: `Profissional não encontrado com slug: ${slug}` };
+      }
+      
+      // Usar o resultado parcial
+      data = partialData[0];
+      console.log("Found professional with partial slug match:", data);
+    } else {
+      console.log("Found professional:", data);
     }
-
-    console.log("Found professional:", data);
     
     // Map data to Professional type
     const professionalData: Professional = {
