@@ -58,7 +58,7 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
   // Helper function to get data with caching
   const fetchWithCache = useCallback(async <T,>(
     type: string,
-    queryFn: () => Promise<{ data: T[] | null; error: any }>,
+    queryFn: () => Promise<any>,
     ttl = DEFAULT_CACHE_TTL
   ): Promise<T[]> => {
     if (!professionalId) return [];
@@ -87,7 +87,9 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
     const fetchPromise = new Promise<T[]>(async (resolve, reject) => {
       try {
         console.log(`Fetching ${type} for professional:`, professionalId);
-        const response = await queryFn();
+        // Execute the query function - note that we need to await it here
+        const query = queryFn();
+        const response = await query;
         
         if (response.error) {
           console.error(`Error fetching ${type}:`, response.error);
