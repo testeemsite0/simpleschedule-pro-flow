@@ -2,8 +2,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { User, Session, Subscription, AuthChangeEvent } from '@supabase/supabase-js';
 
 // Mock Supabase client
 vi.mock('@/integrations/supabase/client', () => ({
@@ -15,7 +15,11 @@ vi.mock('@/integrations/supabase/client', () => ({
       getSession: vi.fn().mockReturnValue({ data: { session: null } }),
       getUser: vi.fn(),
       onAuthStateChange: vi.fn().mockReturnValue({ 
-        data: { subscription: { unsubscribe: vi.fn() } }
+        data: { subscription: { 
+          id: 'mock-subscription-id',
+          callback: vi.fn(),
+          unsubscribe: vi.fn() 
+        } }
       })
     }
   }
@@ -59,16 +63,43 @@ describe('AuthContext', () => {
     const { supabase } = await import('@/integrations/supabase/client');
     const { fetchUserProfile } = await import('@/services/profileService');
     
+    // Create a mock user with all required properties
+    const mockUser: Partial<User> = { 
+      id: '123', 
+      email: 'test@example.com',
+      app_metadata: {},
+      user_metadata: {},
+      aud: 'authenticated',
+      created_at: new Date().toISOString()
+    };
+    
+    // Create a mock session
+    const mockSession: Partial<Session> = {
+      user: mockUser as User,
+      access_token: 'mock-token',
+      refresh_token: 'mock-refresh',
+      expires_in: 3600,
+      expires_at: 9999999999,
+      token_type: 'bearer'
+    };
+    
     // Mock auth state change
     vi.mocked(supabase.auth.onAuthStateChange).mockImplementation((callback) => {
       // Simulate auth state change
       setTimeout(() => {
-        callback('SIGNED_IN', { 
-          user: { id: '123', email: 'test@example.com' } 
-        });
+        callback('SIGNED_IN', mockSession as Session);
       }, 0);
       
-      return { data: { subscription: { unsubscribe: vi.fn() } } };
+      // Return a mock subscription
+      return { 
+        data: { 
+          subscription: { 
+            id: 'mock-subscription-id',
+            callback: vi.fn(),
+            unsubscribe: vi.fn() 
+          } as Subscription
+        } 
+      };
     });
 
     // Mock profile fetch

@@ -1,5 +1,6 @@
 
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 
 // Mock console methods to avoid noisy logs during tests
 const originalConsoleError = console.error;
