@@ -1,9 +1,9 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { BookingData } from './useBookingSteps';
+import { createAppointment } from './api/dataFetcher';
 
 interface UseBookingAppointmentProps {
   professionalId?: string;
@@ -24,7 +24,7 @@ export const useBookingAppointment = ({
 }: UseBookingAppointmentProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
-  // Complete booking process
+  // Complete booking process with enhanced validation
   const completeBooking = async () => {
     setIsLoading(true);
     
@@ -33,13 +33,37 @@ export const useBookingAppointment = ({
         throw new Error("ID do profissional não encontrado");
       }
       
-      if (!bookingData.teamMemberId || !bookingData.date || 
-          !bookingData.startTime || !bookingData.endTime ||
-          !bookingData.clientName || !bookingData.clientEmail) {
-        throw new Error("Dados incompletos para agendamento");
+      // Validate required fields
+      if (!bookingData.teamMemberId) {
+        throw new Error("Selecione um profissional");
+      }
+      
+      if (!bookingData.date) {
+        throw new Error("Selecione uma data");
+      }
+      
+      if (!bookingData.startTime || !bookingData.endTime) {
+        throw new Error("Selecione um horário");
+      }
+      
+      if (!bookingData.clientName || !bookingData.clientEmail) {
+        throw new Error("Informações do cliente incompletas");
       }
       
       const formattedDate = format(bookingData.date, 'yyyy-MM-dd');
+      
+      // Log complete data for debugging
+      console.log("Creating appointment with validated data:", {
+        professionalId,
+        teamMemberId: bookingData.teamMemberId,
+        clientName: bookingData.clientName,
+        clientEmail: bookingData.clientEmail,
+        date: formattedDate,
+        startTime: bookingData.startTime,
+        endTime: bookingData.endTime,
+        serviceId: bookingData.serviceId || null,
+        insuranceId: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null
+      });
       
       const appointmentData = {
         professional_id: professionalId,
@@ -52,17 +76,12 @@ export const useBookingAppointment = ({
         end_time: bookingData.endTime,
         notes: bookingData.notes || '',
         status: 'scheduled',
-        source: isAdminView ? 'manual' : 'client',  // Changed from 'admin' to 'manual' to match expected values
+        source: isAdminView ? 'manual' : 'client',
         insurance_plan_id: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null,
         service_id: bookingData.serviceId || null
       };
       
-      console.log("Creating appointment with data:", JSON.stringify(appointmentData));
-      
-      const { data, error } = await supabase
-        .from('appointments')
-        .insert([appointmentData])
-        .select();
+      const { data, error } = await createAppointment(appointmentData);
       
       if (error) throw error;
       
