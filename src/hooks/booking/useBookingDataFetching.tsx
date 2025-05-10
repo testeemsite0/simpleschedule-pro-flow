@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDataLoadingState } from './useDataLoadingState';
 import { useTeamMembersFetching } from './useTeamMembersFetching';
 import { useServicesFetching } from './useServicesFetching';
@@ -21,10 +21,15 @@ export const useBookingDataFetching = ({
     dataError, 
     setDataError, 
     handleError,
-    clearError 
+    clearError,
+    cleanup: cleanupLoadingState
   } = useDataLoadingState({ showToast: true });
   
   const { maintenanceMode, setMaintenanceMode } = useMaintenanceMode();
+  
+  // Track if this hook has been initialized with the professionalId
+  const initializedRef = useRef(false);
+  const professionalIdRef = useRef<string | undefined>(undefined);
   
   // Track individual data loading states to prevent update loops
   const [loadingStates, setLoadingStates] = useState({
@@ -35,7 +40,7 @@ export const useBookingDataFetching = ({
     appointments: false
   });
   
-  // Custom loading setter for each data type
+  // Custom loading setter for each data type with debounce protection
   const setTypeLoading = (type: keyof typeof loadingStates, loading: boolean) => {
     setLoadingStates(prev => {
       // Only update if the value is actually changing to prevent loops
@@ -85,22 +90,33 @@ export const useBookingDataFetching = ({
     }
   }, [loadingStates, setIsLoading, isLoading]);
 
-  // Combined fetch for all data - initialize the process but don't create a render loop
+  // Only trigger data fetching once per professionalId and prevent unwanted re-initialization
   useEffect(() => {
-    // Skip if no professional ID is provided
-    if (!professionalId) {
-      console.log("No professional ID provided, skipping data fetching");
-      setIsLoading(false);
+    // Skip if no professional ID is provided or it hasn't changed
+    if (!professionalId || professionalId === professionalIdRef.current) {
       return;
     }
     
-    // Clear any previous errors when starting a new fetch
+    // Update the ref to track the current professionalId
+    professionalIdRef.current = professionalId;
+    
+    // Only log and perform initialization once per professional ID change
+    if (!initializedRef.current) {
+      console.log("Booking data fetching: Initial data loading for professional ID:", professionalId);
+      initializedRef.current = true;
+    }
+    
+    // Clear any previous errors when starting a new fetch with a different ID
     clearError();
     
-    console.log("Booking data fetching: Data loading initiated for professional ID:", professionalId);
-    // Each individual hook handles its own data fetching
-    
-  }, [professionalId, clearError]);  // Removed setIsLoading from dependencies
+  }, [professionalId, clearError]);
+
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      cleanupLoadingState();
+    };
+  }, [cleanupLoadingState]);
 
   // Public interface
   return {

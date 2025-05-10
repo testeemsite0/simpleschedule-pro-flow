@@ -1,24 +1,28 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, AlertCircle } from 'lucide-react';
 import { Professional } from '@/types';
 import { UnifiedBookingForm } from './UnifiedBookingForm';
 import { useUnifiedBooking } from '@/context/UnifiedBookingContext';
+import { ErrorHandler } from '@/components/ui/error-handler';
 
 interface BookingContentProps {
   professional: Professional;
 }
 
 const BookingContent: React.FC<BookingContentProps> = ({ professional }) => {
-  const { isLoading, error } = useUnifiedBooking();
+  const { isLoading, error, resetBooking } = useUnifiedBooking();
   
   if (isLoading) {
     return (
       <Card className="w-full">
         <CardContent className="pt-6">
-          <p className="text-center py-8">Carregando informações de agendamento...</p>
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <p className="text-center">Carregando informações de agendamento...</p>
+            <div className="h-2 w-32 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: '60%' }}></div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -28,12 +32,11 @@ const BookingContent: React.FC<BookingContentProps> = ({ professional }) => {
     return (
       <Card className="w-full">
         <CardContent className="pt-6">
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {error}
-            </AlertDescription>
-          </Alert>
+          <ErrorHandler
+            error={error}
+            resetError={resetBooking}
+            title="Erro no sistema de agendamento"
+          />
         </CardContent>
       </Card>
     );
@@ -45,7 +48,10 @@ const BookingContent: React.FC<BookingContentProps> = ({ professional }) => {
         <CardTitle>Agendar com {professional.name}</CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
-        <UnifiedBookingForm title={`Agendar com ${professional.name}`} />
+        <UnifiedBookingForm 
+          title={`Agendar com ${professional.name}`}
+          key={`booking-form-${professional.id}`}
+        />
       </CardContent>
     </Card>
   );
