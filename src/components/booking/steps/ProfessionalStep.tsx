@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import { TeamMember } from '@/types';
@@ -12,14 +12,24 @@ interface ProfessionalStepProps {
   selectedTeamMember: string;
   onTeamMemberChange: (teamMemberId: string) => void;
   isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
 export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
   teamMembers,
   selectedTeamMember,
   onTeamMemberChange,
-  isLoading = false
+  isLoading = false,
+  onRefresh
 }) => {
+  // Enhanced debug information
+  console.log("ProfessionalStep render with data:", { 
+    teamMembersCount: teamMembers?.length || 0,
+    teamMembersData: teamMembers,
+    selectedTeamMember,
+    isLoading
+  });
+  
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -36,16 +46,29 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
     );
   }
   
-  console.log("ProfessionalStep render with teamMembers:", teamMembers);
-  
+  // Improved error handling for missing or empty team members
   if (!teamMembers || !Array.isArray(teamMembers) || teamMembers.length === 0) {
     console.warn("No team members available:", teamMembers);
     
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold mb-4">
-          Escolha um profissional
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">
+            Escolha um profissional
+          </h2>
+          {onRefresh && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onRefresh} 
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Atualizar
+            </Button>
+          )}
+        </div>
+        
         <Alert className="bg-amber-50 border-amber-300">
           <Info className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-amber-800">
@@ -58,9 +81,23 @@ export const ProfessionalStep: React.FC<ProfessionalStepProps> = ({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold mb-4">
-        Escolha um profissional
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">
+          Escolha um profissional
+        </h2>
+        {onRefresh && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onRefresh} 
+            className="flex items-center gap-1"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Atualizar
+          </Button>
+        )}
+      </div>
+      
       <div className="space-y-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {teamMembers.map((member) => (

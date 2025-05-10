@@ -5,5 +5,6 @@
  * This file is now just a facade that re-exports functionality from the new modular files
  */
 
+export { fetchTeamMembers } from './services/teamMemberService';
 export * from './dataLoader';
 export * from './services/appointmentService';

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useBookingSteps, BookingStep } from './useBookingSteps';
@@ -136,8 +137,17 @@ export const useUnifiedBookingFlow = ({
     // Prevent excessive refreshes
     if (now - lastUpdate.current < MIN_REFRESH_INTERVAL) {
       console.log("Skipping refresh - too soon since last update");
+      toast({
+        title: "Aguarde",
+        description: "Atualização já está em andamento",
+      });
       return;
     }
+    
+    toast({
+      title: "Atualizando dados",
+      description: "Recarregando informações do sistema",
+    });
     
     lastUpdate.current = now;
     bookingSteps.updateErrorState(null);
@@ -150,6 +160,15 @@ export const useUnifiedBookingFlow = ({
 
   // Unified loading indicator
   const isLoading = dataLoading || appointmentLoading;
+  
+  // Debug logging
+  console.log("useUnifiedBookingFlow state:", {
+    teamMembersCount: teamMembers?.length || 0,
+    servicesCount: services?.length || 0,
+    currentStep: bookingSteps.currentStep,
+    isLoading,
+    hasError: !!bookingSteps.error || !!dataError,
+  });
   
   return {
     ...bookingSteps,

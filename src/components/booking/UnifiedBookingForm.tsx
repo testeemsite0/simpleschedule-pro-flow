@@ -1,46 +1,42 @@
-
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUnifiedBooking } from "@/context/UnifiedBookingContext";
-import { ProfessionalStep } from "./steps/ProfessionalStep";
-import { ServiceStep } from "./steps/ServiceStep";
-import { InsuranceStep } from "./steps/InsuranceStep";
-import { DateStep } from "./steps/DateStep";
-import { TimeStep } from "./steps/TimeStep";
-import { MaintenanceNotice } from "./MaintenanceNotice";
-import { BookingStepContainer } from "./forms/BookingStepContainer";
-import { ClientInfoForm } from "./forms/ClientInfoForm";
-import { BookingErrorHandler } from "./forms/BookingErrorHandler";
-import { InsuranceLimitWarning } from "./forms/InsuranceLimitWarning";
-import { WalkInButton } from "./forms/WalkInButton";
-import { getBookingSteps, getCurrentStepNumber } from "./forms/BookingStepsDefinition";
-import { toast } from "sonner";
+import React from 'react';
+import { ProfessionalStep } from './steps/ProfessionalStep';
+import { ServiceStep } from './steps/ServiceStep';
+import { InsuranceStep } from './steps/InsuranceStep';
+import { TimeStep } from './steps/TimeStep';
+import { ClientInfoStep } from './steps/ClientInfoStep';
+import { ConfirmationStep } from './steps/ConfirmationStep';
+import { BookingStepIndicator } from './BookingStepIndicator';
+import { MaintenanceNotice } from './MaintenanceNotice';
+import { BookingErrorHandler } from './BookingErrorHandler';
+import { useUnifiedBooking } from '@/context/UnifiedBookingContext';
+import { RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface UnifiedBookingFormProps {
-  title?: string;
+  title: string;
   showStepIndicator?: boolean;
   isAdminView?: boolean;
   allowWalkIn?: boolean;
 }
 
 export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
-  title = "Agendar Consulta",
-  showStepIndicator = true,
+  title,
+  showStepIndicator = false,
   isAdminView = false,
   allowWalkIn = false,
 }) => {
-  const {
-    currentStep,
-    error,
+  const { 
+    currentStep, 
+    bookingData,
     teamMembers,
     services,
     insurancePlans,
     availableDates,
     availableSlots,
-    maintenanceMode,
-    bookingData,
     isLoading,
-    goToStep,
+    error,
+    maintenanceMode,
+    goToNextStep,
     goToPreviousStep,
     setTeamMember,
     setService,
@@ -48,141 +44,159 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     setDate,
     setTime,
     setClientInfo,
-    resetBooking,
     completeBooking,
+    resetBooking,
     getAvailableServicesForTeamMember,
+    checkInsuranceLimitReached,
+    refreshData
   } = useUnifiedBooking();
-
-  console.log("UnifiedBookingForm rendering with isAdminView:", isAdminView, "allowWalkIn:", allowWalkIn);
-  console.log("Current booking data:", bookingData);
-
-  // Handle Walk-in appointment
-  const handleWalkIn = () => {
-    console.log("Walk-in button clicked");
-    if (currentStep === "team-member" && allowWalkIn && isAdminView && bookingData.teamMemberId) {
-      // Set current date and time for immediate appointment
-      const now = new Date();
-      setDate(now);
-      
-      // Set default values for immediate appointment
-      if (insurancePlans.length > 0) {
-        // Default to "none" for private payment
-        setInsurance("none");
-      }
-      
-      // Skip to client info step
-      toast.info("Configurando agendamento imediato");
-      goToStep("client-info");
-    } else {
-      toast.error("Selecione um profissional primeiro para agendamento imediato");
+  
+  const handleTeamMemberChange = (teamMemberId: string) => {
+    setTeamMember(teamMemberId);
+  };
+  
+  const handleServiceChange = (serviceId: string) => {
+    setService(serviceId);
+  };
+  
+  const handleInsuranceChange = (insuranceId: string) => {
+    setInsurance(insuranceId);
+  };
+  
+  const handleDateChange = (date: Date) => {
+    setDate(date);
+  };
+  
+  const handleTimeChange = (startTime: string, endTime: string) => {
+    setTime(startTime, endTime);
+  };
+  
+  const handleClientInfoSubmit = (name: string, email: string, phone: string, notes?: string) => {
+    setClientInfo(name, email, phone, notes);
+  };
+  
+  const handleCompleteBooking = async () => {
+    const success = await completeBooking();
+    if (success) {
+      // Additional success handling can be added here
     }
   };
-
-  // Handle client form submission
-  const handleClientSubmit = (name: string, email: string, phone: string, notes: string) => {
-    setClientInfo(name, email, phone, notes);
-    completeBooking();
+  
+  const handleRefresh = () => {
+    refreshData();
+    toast({
+      title: "Atualizando",
+      description: "Recarregando dados do sistema"
+    });
   };
-
-  // If maintenance mode is active and not an admin view
-  if (maintenanceMode && !isAdminView) {
-    return <MaintenanceNotice />;
-  }
-
-  // Get steps and current step number
-  const steps = getBookingSteps();
-  const currentStepNumber = getCurrentStepNumber(currentStep);
-
-  // Filter services available for the selected team member
-  const filteredServices = bookingData.teamMemberId
-    ? getAvailableServicesForTeamMember(bookingData.teamMemberId)
-    : services;
-
-  // Determine if walk-in button should be shown
-  const showWalkIn = allowWalkIn && isAdminView && currentStep === "team-member" && !!bookingData.teamMemberId;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          <span>{title}</span>
-          <WalkInButton
-            show={showWalkIn}
-            onClick={handleWalkIn}
+  
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 'team-member':
+        return (
+          <ProfessionalStep
+            teamMembers={teamMembers}
+            selectedTeamMember={bookingData.teamMemberId}
+            onTeamMemberChange={handleTeamMemberChange}
+            isLoading={isLoading}
+            onRefresh={handleRefresh}
           />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <BookingErrorHandler
-          error={error}
-          resetError={resetBooking}
-        />
-
-        <BookingStepContainer
-          title={title}
-          currentStep={currentStepNumber}
-          steps={steps}
-          showStepIndicator={showStepIndicator}
-        >
-          {currentStep === "team-member" && (
-            <ProfessionalStep
-              teamMembers={teamMembers}
-              selectedTeamMember={bookingData.teamMemberId}
-              onTeamMemberChange={setTeamMember}
-              isLoading={isLoading}
-            />
-          )}
-
-          {currentStep === "insurance" && bookingData.teamMemberId && (
-            <>
-              <InsuranceLimitWarning insurancePlans={insurancePlans} />
-              <InsuranceStep
-                insurancePlans={insurancePlans}
-                selectedInsurance={bookingData.insuranceId}
-                onInsuranceChange={setInsurance}
-                onBack={goToPreviousStep}
-              />
-            </>
-          )}
-
-          {currentStep === "service" && bookingData.insuranceId && (
-            <ServiceStep
-              services={filteredServices}
-              selectedService={bookingData.serviceId}
-              onServiceChange={setService}
-              onBack={goToPreviousStep}
-              insuranceId={bookingData.insuranceId}
-            />
-          )}
-
-          {currentStep === "date" && bookingData.serviceId && (
-            <DateStep
-              availableDates={availableDates || []}
-              selectedDate={bookingData.date || null}
-              onDateSelect={setDate}
-              onBack={goToPreviousStep}
-            />
-          )}
-
-          {currentStep === "time" && bookingData.date && (
-            <TimeStep
-              availableSlots={availableSlots || []}
-              onTimeSlotSelect={(date, startTime, endTime, teamMemberId) => 
-                setTime(startTime, endTime)
-              }
-              onBack={goToPreviousStep}
-            />
-          )}
-
-          {currentStep === "client-info" && (
-            <ClientInfoForm
-              onSubmit={handleClientSubmit}
-              onBack={goToPreviousStep}
-              isLoading={isLoading}
-            />
-          )}
-        </BookingStepContainer>
-      </CardContent>
-    </Card>
+        );
+      case 'service':
+        return (
+          <ServiceStep
+            services={services}
+            availableServices={getAvailableServicesForTeamMember(bookingData.teamMemberId || '')}
+            selectedService={bookingData.serviceId}
+            onServiceChange={handleServiceChange}
+            isLoading={isLoading}
+          />
+        );
+      case 'insurance':
+        return (
+          <InsuranceStep
+            insurancePlans={insurancePlans}
+            selectedInsurance={bookingData.insuranceId}
+            onInsuranceChange={handleInsuranceChange}
+            teamMemberId={bookingData.teamMemberId}
+            checkInsuranceLimitReached={checkInsuranceLimitReached}
+            isLoading={isLoading}
+          />
+        );
+      case 'time':
+        return (
+          <TimeStep
+            availableDates={availableDates}
+            availableSlots={availableSlots}
+            selectedDate={bookingData.date}
+            selectedStartTime={bookingData.startTime}
+            selectedEndTime={bookingData.endTime}
+            onDateChange={handleDateChange}
+            onTimeChange={handleTimeChange}
+            isLoading={isLoading}
+          />
+        );
+      case 'client-info':
+        return (
+          <ClientInfoStep
+            onClientInfoSubmit={handleClientInfoSubmit}
+            isLoading={isLoading}
+          />
+        );
+      case 'confirmation':
+        return (
+          <ConfirmationStep
+            bookingData={bookingData}
+            onConfirm={handleCompleteBooking}
+            onEdit={goToPreviousStep}
+            isLoading={isLoading}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      {showStepIndicator && (
+        <BookingStepIndicator currentStep={currentStep} />
+      )}
+      {maintenanceMode && <MaintenanceNotice />}
+      <BookingErrorHandler error={error} onRetry={resetBooking} />
+      
+      <div className="mt-4">
+        {renderCurrentStep()}
+      </div>
+      
+      <div className="flex justify-between">
+        {currentStep !== 'team-member' && currentStep !== 'confirmation' && (
+          <button
+            onClick={goToPreviousStep}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            disabled={isLoading}
+          >
+            Voltar
+          </button>
+        )}
+        {currentStep !== 'confirmation' ? (
+          <button
+            onClick={goToNextStep}
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark"
+            disabled={isLoading}
+          >
+            Avançar
+          </button>
+        ) : (
+          <button
+            onClick={handleCompleteBooking}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
+            disabled={isLoading}
+          >
+            Confirmar Agendamento
+          </button>
+        )}
+      </div>
+    </div>
   );
 };
