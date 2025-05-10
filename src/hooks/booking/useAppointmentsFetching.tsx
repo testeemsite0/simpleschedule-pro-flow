@@ -31,13 +31,16 @@ export const useAppointmentsFetching = ({
       // Validate and ensure the status is correctly typed
       const typedAppointments: Appointment[] = Array.isArray(result) ? result.map(app => {
         if (app && typeof app === 'object') {
+          // Create a typed object with known properties to safely access status
+          const appointment = app as Record<string, any>;
+          
           // Validate and ensure the status is one of the allowed values
           let status: "scheduled" | "completed" | "canceled" = "scheduled";
-          if (app.status === "completed") status = "completed";
-          else if (app.status === "canceled") status = "canceled";
+          if (appointment.status === "completed") status = "completed";
+          else if (appointment.status === "canceled") status = "canceled";
           
           return {
-            ...(app as object), // Cast to object before spreading to fix spread error
+            ...(appointment as object), // Cast to object before spreading to fix spread error
             status
           } as Appointment;
         }
