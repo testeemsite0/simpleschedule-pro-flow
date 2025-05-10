@@ -65,11 +65,12 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
         throw new Error('Request aborted');
       }
 
+      // Modified query to use .eq exactly and handle results more safely
       const { data, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('slug', slug)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle() for safer handling
         
       // Check if the request was aborted during the query
       if (signal?.aborted) {
@@ -80,7 +81,11 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
         console.error("Error fetching professional by slug:", profileError);
         
         if (profileError.code === '406' || profileError.message?.includes('No rows found')) {
-          setError("Profissional não encontrado");
+          setError(`Profissional não encontrado com slug: ${slug}`);
+        } else if (profileError.code === 'PGRST116' || profileError.message?.includes('Results contain')) {
+          // This error means multiple results were found
+          console.error("Multiple profiles found with slug:", slug);
+          setError(`Múltiplos profissionais encontrados com o mesmo slug. Por favor, contate o suporte.`);
         } else if (profileError.code === '429' || profileError.message?.includes('rate limit')) {
           // Resource-related error - trigger exponential backoff retry
           throw new Error('RESOURCE_ERROR');
@@ -94,7 +99,7 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
       
       if (!data) {
         console.error("No professional found with slug:", slug);
-        setError("Profissional não encontrado");
+        setError(`Profissional não encontrado com slug: ${slug}`);
         setLoading(false);
         return;
       }
@@ -158,7 +163,7 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
       // Max retries reached or non-resource error
       setError(isResourceError 
         ? "Servidor ocupado. Tente novamente mais tarde." 
-        : "Erro ao carregar dados do profissional");
+        : `Erro ao carregar dados do profissional: ${error.message || 'Erro desconhecido'}`);
       
       setLoading(false);
       
