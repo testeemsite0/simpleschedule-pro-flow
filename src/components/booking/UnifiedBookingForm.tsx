@@ -167,7 +167,11 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
         <BookingStepIndicator currentStep={currentStep} />
       )}
       {maintenanceMode && <MaintenanceNotice />}
-      <BookingErrorHandler error={error} onRetry={resetBooking} />
+
+      <BookingErrorHandler 
+        error={error} 
+        onRetry={resetBooking} 
+      />
       
       <div className="mt-4">
         {renderCurrentStep()}
