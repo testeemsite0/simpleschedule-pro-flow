@@ -7,7 +7,6 @@ import { useBookingServices } from './useBookingServices';
 import { useBookingAppointment } from './useBookingAppointment';
 import { useAvailabilityCalculation } from './useAvailabilityCalculation';
 import { useMaintenanceMode } from './useMaintenanceMode';
-import { useBookingState } from './useBookingState';
 import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
 
 interface UseUnifiedBookingFlowProps {
@@ -26,9 +25,6 @@ export const useUnifiedBookingFlow = ({
     initialStep: initialStep || "team-member"
   });
   
-  // Maintenance mode hook
-  const { maintenanceMode, setMaintenanceMode } = useMaintenanceMode();
-  
   // Booking data fetching hook
   const {
     teamMembers,
@@ -36,6 +32,8 @@ export const useUnifiedBookingFlow = ({
     insurancePlans,
     timeSlots,
     appointments,
+    maintenanceMode,
+    setMaintenanceMode,
     isLoading: dataLoading,
     dataError
   } = useBookingDataFetching({
