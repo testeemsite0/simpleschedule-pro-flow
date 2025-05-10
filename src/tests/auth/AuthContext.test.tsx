@@ -2,7 +2,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
-import { screen, waitFor } from '@testing-library/dom';
+import { screen, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { User, Session, Subscription, AuthChangeEvent } from '@supabase/supabase-js';
 
