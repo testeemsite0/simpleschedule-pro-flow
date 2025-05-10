@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ProfessionalStep } from './steps/ProfessionalStep';
 import { ServiceStep } from './steps/ServiceStep';
@@ -13,7 +14,7 @@ import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UnifiedBookingFormProps {
-  title: string;
+  title?: string;
   showStepIndicator?: boolean;
   isAdminView?: boolean;
   allowWalkIn?: boolean;
@@ -96,7 +97,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
         return (
           <ProfessionalStep
             teamMembers={teamMembers}
-            selectedTeamMember={bookingData.teamMemberId}
+            selectedTeamMember={bookingData.teamMemberId || ''}
             onTeamMemberChange={handleTeamMemberChange}
             isLoading={isLoading}
             onRefresh={handleRefresh}
@@ -106,34 +107,30 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
         return (
           <ServiceStep
             services={services}
-            availableServices={getAvailableServicesForTeamMember(bookingData.teamMemberId || '')}
-            selectedService={bookingData.serviceId}
+            selectedService={bookingData.serviceId || ''}
             onServiceChange={handleServiceChange}
             isLoading={isLoading}
+            onBack={goToPreviousStep}
           />
         );
       case 'insurance':
         return (
           <InsuranceStep
             insurancePlans={insurancePlans}
-            selectedInsurance={bookingData.insuranceId}
+            selectedInsurance={bookingData.insuranceId || ''}
             onInsuranceChange={handleInsuranceChange}
-            teamMemberId={bookingData.teamMemberId}
-            checkInsuranceLimitReached={checkInsuranceLimitReached}
-            isLoading={isLoading}
+            onBack={goToPreviousStep}
           />
         );
       case 'time':
         return (
           <TimeStep
-            availableDates={availableDates}
             availableSlots={availableSlots}
-            selectedDate={bookingData.date}
-            selectedStartTime={bookingData.startTime}
-            selectedEndTime={bookingData.endTime}
-            onDateChange={handleDateChange}
-            onTimeChange={handleTimeChange}
-            isLoading={isLoading}
+            onTimeSlotSelect={(date, startTime, endTime) => {
+              setDate(date);
+              setTime(startTime, endTime);
+            }}
+            onBack={goToPreviousStep}
           />
         );
       case 'client-info':
@@ -141,6 +138,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           <ClientInfoStep
             onClientInfoSubmit={handleClientInfoSubmit}
             isLoading={isLoading}
+            onBack={goToPreviousStep}
           />
         );
       case 'confirmation':

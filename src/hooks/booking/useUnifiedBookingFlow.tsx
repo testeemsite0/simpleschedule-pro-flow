@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useBookingSteps, BookingStep } from './useBookingSteps';
@@ -137,15 +136,13 @@ export const useUnifiedBookingFlow = ({
     // Prevent excessive refreshes
     if (now - lastUpdate.current < MIN_REFRESH_INTERVAL) {
       console.log("Skipping refresh - too soon since last update");
-      toast({
-        title: "Aguarde",
+      toast("Aguarde", {
         description: "Atualização já está em andamento",
       });
       return;
     }
     
-    toast({
-      title: "Atualizando dados",
+    toast("Atualizando dados", {
       description: "Recarregando informações do sistema",
     });
     
