@@ -27,8 +27,10 @@ export const useServicesFetching = ({
     
     try {
       const result = await fetchServices(professionalId, signal);
-      setServices(result);
-      return result;
+      // Type assertion to ensure we're setting the right type
+      const typedServices = Array.isArray(result) ? result as Service[] : [];
+      setServices(typedServices);
+      return typedServices;
     } catch (error) {
       handleError('services', error);
       return [];

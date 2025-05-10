@@ -73,6 +73,11 @@ class Cache {
   get size(): number {
     return this.store.size;
   }
+
+  // Invalidate a specific cache entry
+  invalidate(key: string): void {
+    this.remove(key);
+  }
 }
 
 // Export singleton cache instance

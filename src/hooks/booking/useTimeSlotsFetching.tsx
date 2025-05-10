@@ -27,8 +27,10 @@ export const useTimeSlotsFetching = ({
     
     try {
       const result = await fetchTimeSlots(professionalId, signal);
-      setTimeSlots(result);
-      return result;
+      // Type assertion to ensure we're setting the right type
+      const typedSlots = Array.isArray(result) ? result as TimeSlot[] : [];
+      setTimeSlots(typedSlots);
+      return typedSlots;
     } catch (error) {
       handleError('time slots', error);
       return [];

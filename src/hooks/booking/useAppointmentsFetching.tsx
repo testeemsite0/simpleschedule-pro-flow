@@ -29,17 +29,30 @@ export const useAppointmentsFetching = ({
       const result = await fetchAppointments(professionalId, signal);
       
       // Validate and ensure the status is correctly typed
-      const typedAppointments: Appointment[] = result.map(app => {
-        // Validate and ensure the status is one of the allowed values
-        let status: "scheduled" | "completed" | "canceled" = "scheduled";
-        if (app.status === "completed") status = "completed";
-        else if (app.status === "canceled") status = "canceled";
-        
+      const typedAppointments: Appointment[] = Array.isArray(result) ? result.map(app => {
+        if (app && typeof app === 'object') {
+          // Validate and ensure the status is one of the allowed values
+          let status: "scheduled" | "completed" | "canceled" = "scheduled";
+          if (app.status === "completed") status = "completed";
+          else if (app.status === "canceled") status = "canceled";
+          
+          return {
+            ...(app as object), // Cast to object before spreading to fix spread error
+            status
+          } as Appointment;
+        }
+        // Default fallback if entry is not valid
         return {
-          ...app,
-          status
+          id: '',
+          professional_id: professionalId,
+          client_name: '',
+          client_email: '',
+          date: '',
+          start_time: '',
+          end_time: '',
+          status: 'scheduled'
         } as Appointment;
-      });
+      }) : [];
       
       setAppointments(typedAppointments);
       return typedAppointments;

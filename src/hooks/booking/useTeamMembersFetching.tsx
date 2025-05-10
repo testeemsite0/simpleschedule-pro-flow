@@ -27,8 +27,10 @@ export const useTeamMembersFetching = ({
     
     try {
       const result = await fetchTeamMembers(professionalId, signal);
-      setTeamMembers(result);
-      return result;
+      // Type assertion to ensure we're setting the right type
+      const typedMembers = Array.isArray(result) ? result as TeamMember[] : [];
+      setTeamMembers(typedMembers);
+      return typedMembers;
     } catch (error) {
       handleError('team members', error);
       return [];

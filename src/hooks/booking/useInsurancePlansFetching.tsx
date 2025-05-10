@@ -27,8 +27,10 @@ export const useInsurancePlansFetching = ({
     
     try {
       const result = await fetchInsurancePlans(professionalId, signal);
-      setInsurancePlans(result);
-      return result;
+      // Type assertion to ensure we're setting the right type
+      const typedPlans = Array.isArray(result) ? result as InsurancePlan[] : [];
+      setInsurancePlans(typedPlans);
+      return typedPlans;
     } catch (error) {
       handleError('insurance plans', error);
       return [];
