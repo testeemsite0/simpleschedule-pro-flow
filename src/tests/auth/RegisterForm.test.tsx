@@ -1,7 +1,9 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
+import * as reactTesting from '@testing-library/react';
+const { screen } = reactTesting;
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import RegisterForm from '@/components/auth/RegisterForm';
@@ -58,8 +60,9 @@ describe('RegisterForm', () => {
 
   it('should show validation errors for empty fields', async () => {
     renderComponent();
+    const user = userEvent.setup();
     
-    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar' }));
+    await user.click(screen.getByRole('button', { name: 'Cadastrar' }));
     
     await waitFor(() => {
       expect(screen.getByText('Nome deve ter pelo menos 2 caracteres')).toBeInTheDocument();
@@ -71,15 +74,16 @@ describe('RegisterForm', () => {
 
   it('should validate password confirmation', async () => {
     renderComponent();
+    const user = userEvent.setup();
     
-    await userEvent.type(screen.getByLabelText('Nome completo'), 'John Doe');
-    await userEvent.type(screen.getByLabelText('Email'), 'john@example.com');
-    await userEvent.click(screen.getByText('Selecione sua profissão'));
-    await userEvent.click(screen.getByText('Psicólogo(a)'));
-    await userEvent.type(screen.getByLabelText('Senha'), 'password123');
-    await userEvent.type(screen.getByLabelText('Confirmar senha'), 'password456');
+    await user.type(screen.getByLabelText('Nome completo'), 'John Doe');
+    await user.type(screen.getByLabelText('Email'), 'john@example.com');
+    await user.click(screen.getByText('Selecione sua profissão'));
+    await user.click(screen.getByText('Psicólogo(a)'));
+    await user.type(screen.getByLabelText('Senha'), 'password123');
+    await user.type(screen.getByLabelText('Confirmar senha'), 'password456');
     
-    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar' }));
+    await user.click(screen.getByRole('button', { name: 'Cadastrar' }));
     
     await waitFor(() => {
       expect(screen.getByText('As senhas não conferem')).toBeInTheDocument();
@@ -95,15 +99,16 @@ describe('RegisterForm', () => {
     });
 
     renderComponent();
+    const user = userEvent.setup();
     
-    await userEvent.type(screen.getByLabelText('Nome completo'), 'John Doe');
-    await userEvent.type(screen.getByLabelText('Email'), 'john@example.com');
-    await userEvent.click(screen.getByText('Selecione sua profissão'));
-    await userEvent.click(screen.getByText('Psicólogo(a)'));
-    await userEvent.type(screen.getByLabelText('Senha'), 'password123');
-    await userEvent.type(screen.getByLabelText('Confirmar senha'), 'password123');
+    await user.type(screen.getByLabelText('Nome completo'), 'John Doe');
+    await user.type(screen.getByLabelText('Email'), 'john@example.com');
+    await user.click(screen.getByText('Selecione sua profissão'));
+    await user.click(screen.getByText('Psicólogo(a)'));
+    await user.type(screen.getByLabelText('Senha'), 'password123');
+    await user.type(screen.getByLabelText('Confirmar senha'), 'password123');
     
-    await userEvent.click(screen.getByRole('button', { name: 'Cadastrar' }));
+    await user.click(screen.getByRole('button', { name: 'Cadastrar' }));
     
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith(

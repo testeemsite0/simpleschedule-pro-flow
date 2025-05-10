@@ -40,25 +40,35 @@ describe('useAuthMethods', () => {
       const { supabase } = await import('@/integrations/supabase/client');
       
       // Create mock user and session
-      const mockUser: Partial<User> = {
+      const mockUser: User = {
         id: '123',
         app_metadata: {},
         user_metadata: {},
         aud: 'authenticated',
-        created_at: new Date().toISOString() 
+        created_at: new Date().toISOString(),
+        confirmed_at: null,
+        last_sign_in_at: null,
+        role: null,
+        updated_at: null,
+        phone: null,
+        factors: null,
+        identities: null,
+        email: 'test@example.com'
       };
       
-      const mockSession: Partial<Session> = {
-        user: mockUser as User,
+      const mockSession: Session = {
+        user: mockUser,
         access_token: 'mock-token',
         refresh_token: 'mock-refresh',
         expires_in: 3600,
         expires_at: 9999999999,
-        token_type: 'bearer'
+        token_type: 'bearer',
+        provider_token: null,
+        provider_refresh_token: null
       };
       
       vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
-        data: { user: mockUser as User, session: mockSession as Session },
+        data: { user: mockUser, session: mockSession },
         error: null
       });
 
@@ -78,17 +88,16 @@ describe('useAuthMethods', () => {
     it('should return false when login fails', async () => {
       const { supabase } = await import('@/integrations/supabase/client');
       
-      const mockAuthError: Partial<AuthError> = {
+      const mockAuthError: AuthError = {
         message: 'Invalid login credentials',
         name: 'AuthError',
-        code: 'invalid_credentials',
         status: 400,
         __isAuthError: true
-      };
+      } as AuthError;
       
       vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
         data: { user: null, session: null },
-        error: mockAuthError as AuthError
+        error: mockAuthError
       });
 
       const { result } = renderHook(() => useAuthMethods());
@@ -115,25 +124,35 @@ describe('useAuthMethods', () => {
       const { supabase } = await import('@/integrations/supabase/client');
       
       // Create mock user
-      const mockUser: Partial<User> = {
+      const mockUser: User = {
         id: '123',
         app_metadata: {},
         user_metadata: {},
         aud: 'authenticated',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        confirmed_at: null,
+        last_sign_in_at: null,
+        role: null,
+        updated_at: null,
+        phone: null,
+        factors: null,
+        identities: null,
+        email: 'test@example.com'
       };
       
-      const mockSession: Partial<Session> = {
-        user: mockUser as User,
+      const mockSession: Session = {
+        user: mockUser,
         access_token: 'mock-token',
         refresh_token: 'mock-refresh',
         expires_in: 3600,
         expires_at: 9999999999,
-        token_type: 'bearer'
+        token_type: 'bearer',
+        provider_token: null,
+        provider_refresh_token: null
       };
       
       vi.mocked(supabase.auth.signUp).mockResolvedValue({
-        data: { user: mockUser as User, session: mockSession as Session },
+        data: { user: mockUser, session: mockSession },
         error: null
       });
 

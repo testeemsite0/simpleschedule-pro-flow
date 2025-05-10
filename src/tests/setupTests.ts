@@ -28,11 +28,11 @@ console.log = (...args: any[]) => {
 };
 
 // Clean up after tests
-beforeAll(() => {
+vi.beforeAll(() => {
   // Any global setup can go here
 });
 
-afterAll(() => {
+vi.afterAll(() => {
   // Restore console methods
   console.error = originalConsoleError;
   console.warn = originalConsoleWarn;

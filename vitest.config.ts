@@ -8,7 +8,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/tests/setupTests.ts']
+    setupFiles: ['./src/tests/setupTests.ts'],
+    includeSource: ['src/**/*.{js,ts,jsx,tsx}'],
+    deps: {
+      inline: ['@testing-library/user-event']
+    }
   },
   resolve: {
     alias: {
