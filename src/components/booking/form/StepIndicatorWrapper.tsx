@@ -4,7 +4,7 @@ import { BookingStepIndicator } from '../BookingStepIndicator';
 import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface StepIndicatorWrapperProps {
-  currentStep: BookingStep;
+  currentStep: BookingStep | number;
   steps: { id: number; key: string; label: string }[];
 }
 

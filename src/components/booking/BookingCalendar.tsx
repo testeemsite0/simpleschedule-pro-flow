@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { TimeSlot, Appointment, Professional } from '@/types';
@@ -11,6 +12,7 @@ import { useBookingCalendar } from '@/hooks/useBookingCalendar';
 import { BookingStepsHeader } from './BookingStepsHeader';
 import { BookingStepsContent } from './BookingStepsContent';
 import { ErrorState, LoadingState, LimitState, NoTeamMembersState } from './BookingStates';
+import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface BookingCalendarProps {
   professional: Professional;
@@ -86,20 +88,20 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
   return (
     <div className="space-y-6">
       {/* Steps indicator */}
-      <BookingStepsHeader currentStep={currentStep} />
+      <BookingStepsHeader currentStep={currentStep as BookingStep} />
       
       {/* Error message if any */}
       {error && <ErrorState error={error} />}
 
       {/* Debug info if there's no team members */}
-      {teamMembers.length === 0 && currentStep === 1 && !loading && (
+      {teamMembers.length === 0 && (currentStep === 1 || currentStep === 'team-member') && !loading && (
         <NoTeamMembersState />
       )}
 
       {/* Content area with steps */}
       <BookingStepsContent>
         {/* Step 1: Select Professional */}
-        {currentStep === 1 && (
+        {(currentStep === 1 || currentStep === 'team-member') && (
           <ProfessionalStep 
             teamMembers={teamMembers}
             selectedTeamMember={selectedTeamMember}
@@ -108,7 +110,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         )}
         
         {/* Step 2: Select Insurance */}
-        {currentStep === 2 && selectedTeamMember && (
+        {(currentStep === 2 || currentStep === 'insurance') && selectedTeamMember && (
           <InsuranceStep
             insurancePlans={insurancePlans}
             selectedInsurance={selectedInsurance}
@@ -118,7 +120,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         )}
         
         {/* Step 3: Select Service */}
-        {currentStep === 3 && selectedInsurance && (
+        {(currentStep === 3 || currentStep === 'service') && selectedInsurance && (
           <ServiceStep
             services={teamMemberServices}
             selectedService={selectedService}
@@ -129,7 +131,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         )}
         
         {/* Step 4: Select Date */}
-        {currentStep === 4 && selectedService && (
+        {(currentStep === 4 || currentStep === 'date') && selectedService && (
           <DateStep
             availableDates={availableDates}
             selectedDate={selectedDate}
@@ -139,7 +141,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
         )}
         
         {/* Step 5: Select Time */}
-        {currentStep === 5 && selectedDate && (
+        {(currentStep === 5 || currentStep === 'time') && selectedDate && (
           <TimeStep
             availableSlots={availableSlots}
             onTimeSlotSelect={handleTimeSlotSelect}

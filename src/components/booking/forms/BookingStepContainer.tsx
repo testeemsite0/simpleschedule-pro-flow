@@ -11,7 +11,7 @@ interface Step {
 
 interface BookingStepContainerProps {
   title: string;
-  currentStep: BookingStep;
+  currentStep: BookingStep | number;
   steps: Step[];
   children: React.ReactNode;
   showStepIndicator?: boolean;

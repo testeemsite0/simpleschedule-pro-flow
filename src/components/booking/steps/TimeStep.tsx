@@ -12,13 +12,27 @@ interface AvailableSlot {
 
 interface TimeStepProps {
   availableSlots: AvailableSlot[];
+  selectedDate?: Date | null;
+  selectedStartTime?: string;
+  selectedEndTime?: string;
+  availableDates?: Date[];
   onTimeSlotSelect: (date: Date, startTime: string, endTime: string, teamMemberId?: string) => void;
+  onDateChange?: (date: Date) => void;
+  onTimeChange?: (startTime: string, endTime: string) => void;
+  isLoading?: boolean;
   onBack: () => void;
 }
 
 export const TimeStep: React.FC<TimeStepProps> = ({
   availableSlots,
+  selectedDate,
+  selectedStartTime,
+  selectedEndTime,
+  availableDates,
   onTimeSlotSelect,
+  onDateChange,
+  onTimeChange,
+  isLoading,
   onBack
 }) => {
   // Debug available slots
@@ -26,7 +40,14 @@ export const TimeStep: React.FC<TimeStepProps> = ({
   
   const handleSelectSlot = (date: Date, startTime: string, endTime: string, teamMemberId?: string) => {
     console.log("TimeStep: Slot selected", { date, startTime, endTime, teamMemberId });
-    onTimeSlotSelect(date, startTime, endTime, teamMemberId);
+    
+    // Use the appropriate handler based on what was provided
+    if (onTimeChange && onDateChange) {
+      onDateChange(date);
+      onTimeChange(startTime, endTime);
+    } else {
+      onTimeSlotSelect(date, startTime, endTime, teamMemberId);
+    }
   };
   
   return (
@@ -41,7 +62,7 @@ export const TimeStep: React.FC<TimeStepProps> = ({
       />
       
       <div className="flex justify-between mt-4">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="outline" onClick={onBack} disabled={isLoading}>
           Voltar
         </Button>
       </div>

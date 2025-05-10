@@ -66,8 +66,8 @@ const BookingForm: React.FC<BookingFormProps> = ({
   
   // Booking steps - always start with cliente info (2)
   const steps = [
-    { id: 1, label: 'Convênio' },
-    { id: 2, label: 'Cliente' }
+    { id: 1, key: 'insurance', label: 'Convênio' },
+    { id: 2, key: 'client-info', label: 'Cliente' }
   ];
   
   const selectedTeamMemberObject = teamMembers.find(m => m.id === teamMemberId);

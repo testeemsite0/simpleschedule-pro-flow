@@ -4,7 +4,7 @@ import { CheckCircle } from 'lucide-react';
 import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface BookingStepIndicatorProps {
-  currentStep: BookingStep;
+  currentStep: BookingStep | number;
 }
 
 export const BookingStepIndicator: React.FC<BookingStepIndicatorProps> = ({
@@ -20,6 +20,11 @@ export const BookingStepIndicator: React.FC<BookingStepIndicatorProps> = ({
   ];
 
   const getCurrentStepIndex = () => {
+    // Handle both BookingStep string and legacy number step
+    if (typeof currentStep === 'number') {
+      return currentStep;
+    }
+    
     const index = steps.findIndex(step => step.key === currentStep);
     return index >= 0 ? index + 1 : 1;
   };

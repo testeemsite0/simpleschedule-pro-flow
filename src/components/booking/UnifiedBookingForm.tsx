@@ -107,7 +107,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       case 'service':
         return (
           <ServiceStep
-            services={services}
+            services={getAvailableServicesForTeamMember(bookingData.teamMemberId || '')}
             selectedService={bookingData.serviceId || ''}
             onServiceChange={handleServiceChange}
             onBack={goToPreviousStep}
@@ -137,6 +137,10 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
             onTimeChange={handleTimeChange}
             isLoading={isLoading}
             onBack={goToPreviousStep}
+            onTimeSlotSelect={(date, startTime, endTime) => {
+              handleDateChange(date);
+              handleTimeChange(startTime, endTime);
+            }}
           />
         );
       case 'client-info':

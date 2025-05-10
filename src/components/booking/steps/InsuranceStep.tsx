@@ -1,16 +1,18 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { ChevronRight, AlertCircle, Info } from 'lucide-react';
 import { InsurancePlan } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface InsuranceStepProps {
   insurancePlans: InsurancePlan[];
   selectedInsurance: string;
   onInsuranceChange: (insuranceId: string) => void;
+  teamMemberId?: string;
+  checkInsuranceLimitReached?: (insuranceId: string, teamMemberId?: string) => boolean;
+  isLoading?: boolean;
   onBack: () => void;
 }
 
@@ -18,81 +20,66 @@ export const InsuranceStep: React.FC<InsuranceStepProps> = ({
   insurancePlans,
   selectedInsurance,
   onInsuranceChange,
+  teamMemberId,
+  checkInsuranceLimitReached,
+  isLoading = false,
   onBack
 }) => {
-  console.log("InsuranceStep props:", { insurancePlans, selectedInsurance });
+  const handleInsuranceChange = (value: string) => {
+    if (checkInsuranceLimitReached && teamMemberId) {
+      const isLimitReached = checkInsuranceLimitReached(value, teamMemberId);
+      if (isLimitReached) {
+        // You can handle the limit reached case here if needed
+        console.warn("Insurance limit reached for this team member");
+      }
+    }
+    onInsuranceChange(value);
+  };
   
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold mb-4">
-        Escolha um convênio
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold">
+        Selecione seu convênio
       </h2>
       
-      {insurancePlans.length === 0 && (
-        <Alert variant="default" className="mb-4 border-amber-500 bg-amber-50 text-amber-800">
-          <Info className="h-4 w-4 text-amber-500" />
-          <AlertDescription>
-            Não há convênios disponíveis. Continue com atendimento particular.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="space-y-2">
-        <div className="grid grid-cols-1 gap-4">
-          <Button
-            variant="outline"
-            className={`flex justify-between items-center p-4 h-auto ${selectedInsurance === "none" ? "border-primary bg-primary/5" : ""}`}
-            onClick={() => onInsuranceChange("none")}
-          >
-            <div className="flex flex-col items-start">
-              <span className="font-medium">Particular</span>
-              <span className="text-xs text-muted-foreground">Pagamento direto</span>
-            </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-          </Button>
-          
-          {insurancePlans.map(plan => {
-            const isAvailable = plan.availableForBooking !== false;
-            const hasLimit = plan.limit_per_plan !== null;
-            const isLimitReached = hasLimit && plan.current_appointments >= plan.limit_per_plan;
-            
-            return (
-              <Button
-                key={plan.id}
-                variant="outline"
-                className={`flex justify-between items-center p-4 h-auto ${
-                  selectedInsurance === plan.id ? "border-primary bg-primary/5" : ""
-                }`}
-                onClick={() => onInsuranceChange(plan.id)}
-                disabled={isLimitReached}
-              >
-                <div className="flex flex-col items-start">
-                  <div className="flex items-center">
-                    <span className="font-medium">{plan.name}</span>
-                    {hasLimit && (
-                      <Badge
-                        variant={isLimitReached ? "destructive" : "secondary"}
-                        className="ml-2"
-                      >
-                        {plan.current_appointments}/{plan.limit_per_plan}
-                      </Badge>
-                    )}
+      <RadioGroup value={selectedInsurance} onValueChange={handleInsuranceChange}>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="none" id="insurance-none" />
+            <Label htmlFor="insurance-none">Particular (sem convênio)</Label>
+          </div>
+
+          {insurancePlans.map((plan) => (
+            <Card key={plan.id} className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex items-center space-x-3 p-3">
+                  <RadioGroupItem 
+                    value={plan.id} 
+                    id={`insurance-${plan.id}`} 
+                    disabled={isLoading || (plan.availableForBooking === false)} 
+                  />
+                  <div className="flex-1">
+                    <Label 
+                      htmlFor={`insurance-${plan.id}`}
+                      className={plan.availableForBooking === false ? "text-gray-400" : ""}
+                    >
+                      {plan.name}
+                      {plan.availableForBooking === false && (
+                        <span className="block text-xs text-red-500 mt-1">
+                          Limite de atendimentos atingido
+                        </span>
+                      )}
+                    </Label>
                   </div>
-                  {isLimitReached && (
-                    <span className="text-xs text-destructive mt-1">
-                      Limite de agendamentos atingido
-                    </span>
-                  )}
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </Button>
-            );
-          })}
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </div>
+      </RadioGroup>
       
-      <div className="flex justify-between mt-4">
-        <Button variant="outline" onClick={onBack}>
+      <div className="flex justify-between mt-6">
+        <Button variant="outline" onClick={onBack} disabled={isLoading}>
           Voltar
         </Button>
       </div>

@@ -4,7 +4,7 @@ import { BookingStepIndicator } from './BookingStepIndicator';
 import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface BookingStepsHeaderProps {
-  currentStep: BookingStep;
+  currentStep: BookingStep | number;
 }
 
 export const BookingStepsHeader: React.FC<BookingStepsHeaderProps> = ({ currentStep }) => {

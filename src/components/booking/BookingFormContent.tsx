@@ -6,6 +6,7 @@ import { BookingSummary } from './form/BookingSummary';
 import { InsuranceStepContent } from './form/InsuranceStepContent';
 import { ClientStepContent } from './form/ClientStepContent';
 import { TeamMember } from '@/types';
+import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface BookingFormContentProps {
   professionalName: string;
@@ -13,8 +14,8 @@ interface BookingFormContentProps {
   startTime: string;
   endTime: string;
   selectedTeamMember?: TeamMember;
-  currentStep: number;
-  steps: { id: number; label: string }[];
+  currentStep: BookingStep | number;
+  steps: { id: number; key: string; label: string; }[];
   name: string;
   setName: (value: string) => void;
   email: string;
