@@ -88,11 +88,13 @@ describe('useAuthMethods', () => {
     it('should return false when login fails', async () => {
       const { supabase } = await import('@/integrations/supabase/client');
       
+      // Create a complete AuthError object
       const mockAuthError: AuthError = {
         message: 'Invalid login credentials',
         name: 'AuthError',
         status: 400,
-        __isAuthError: true
+        __isAuthError: true,
+        code: 'invalid_credentials'
       } as AuthError;
       
       vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({

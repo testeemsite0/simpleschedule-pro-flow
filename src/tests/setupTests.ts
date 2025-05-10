@@ -1,6 +1,6 @@
 
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, beforeAll, afterAll } from 'vitest';
 
 // Mock console methods to avoid noisy logs during tests
 const originalConsoleError = console.error;
@@ -28,11 +28,11 @@ console.log = (...args: any[]) => {
 };
 
 // Clean up after tests
-vi.beforeAll(() => {
+beforeAll(() => {
   // Any global setup can go here
 });
 
-vi.afterAll(() => {
+afterAll(() => {
   // Restore console methods
   console.error = originalConsoleError;
   console.warn = originalConsoleWarn;

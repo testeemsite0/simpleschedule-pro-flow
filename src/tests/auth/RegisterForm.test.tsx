@@ -1,9 +1,8 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
-import * as reactTesting from '@testing-library/react';
-const { screen } = reactTesting;
+import { render } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/dom';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import RegisterForm from '@/components/auth/RegisterForm';
