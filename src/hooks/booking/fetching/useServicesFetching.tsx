@@ -31,7 +31,7 @@ export const useServicesFetching = ({
     try {
       const controller = new AbortController();
       const data = await fetchServices(professionalId, controller.signal);
-      setServices(data || []);
+      setServices(Array.isArray(data) ? data : []);
       
       if (onSuccess) {
         onSuccess();

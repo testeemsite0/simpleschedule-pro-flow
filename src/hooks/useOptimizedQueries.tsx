@@ -49,106 +49,57 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
     const signal = abortControllerRef.current.signal;
 
     try {
-      // Track which data types have been successfully fetched
-      const results: Partial<{
-        teamMembers: any[];
-        services: any[];
-        insurancePlans: any[];
-        timeSlots: any[];
-        appointments: any[];
-      }> = {};
+      console.log("useOptimizedQueries: Pre-warming booking data cache");
       
-      // Fetch all data types in parallel with proper error handling
+      // Fetch critical data first in parallel with immediate execution
+      const teamMembersPromise = fetchTeamMembers(professionalId, signal);
+      const servicesPromise = fetchServices(professionalId, signal);
+      
+      const [teamMembers, services] = await Promise.all([
+        teamMembersPromise,
+        servicesPromise
+      ]);
+      
+      console.log(`useOptimizedQueries: Pre-warmed team members: ${teamMembers.length}, services: ${Array.isArray(services) ? services.length : 'undefined'}`);
+      
+      // Then fetch non-critical data in parallel but with lower priority
       const [
-        teamMembersResult,
-        servicesResult,
-        insurancePlansResult,
         timeSlotsResult,
+        insurancePlansResult,
         appointmentsResult
       ] = await Promise.allSettled([
-        fetchTeamMembers(professionalId, signal),
-        fetchServices(professionalId, signal),
-        fetchInsurancePlans(professionalId, signal),
         fetchTimeSlots(professionalId, signal),
+        fetchInsurancePlans(professionalId, signal),
         fetchAppointments(professionalId, signal)
       ]);
-
-      // Process results and collect errors
-      const errors: string[] = [];
       
-      if (teamMembersResult.status === 'fulfilled') {
-        results.teamMembers = teamMembersResult.value;
-      } else {
-        errors.push(`Falha ao buscar membros da equipe: ${teamMembersResult.reason}`);
-      }
+      // Process results
+      const timeSlots = timeSlotsResult.status === 'fulfilled' ? timeSlotsResult.value : [];
+      const insurancePlans = insurancePlansResult.status === 'fulfilled' ? insurancePlansResult.value : [];
+      const appointments = appointmentsResult.status === 'fulfilled' ? appointmentsResult.value : [];
       
-      if (servicesResult.status === 'fulfilled') {
-        results.services = servicesResult.value;
-      } else {
-        errors.push(`Falha ao buscar serviços: ${servicesResult.reason}`);
-      }
-      
-      if (insurancePlansResult.status === 'fulfilled') {
-        results.insurancePlans = insurancePlansResult.value;
-      } else {
-        errors.push(`Falha ao buscar convênios: ${insurancePlansResult.reason}`);
-      }
-      
-      if (timeSlotsResult.status === 'fulfilled') {
-        results.timeSlots = timeSlotsResult.value;
-      } else {
-        errors.push(`Falha ao buscar horários: ${timeSlotsResult.reason}`);
-      }
-      
-      if (appointmentsResult.status === 'fulfilled') {
-        results.appointments = appointmentsResult.value;
-      } else {
-        errors.push(`Falha ao buscar agendamentos: ${appointmentsResult.reason}`);
-      }
-
-      if (errors.length > 0) {
-        // Report errors but don't fail completely if we have partial data
-        console.error("Some data fetching operations failed:", errors);
-        
-        // Show a toast for the user
-        if (errors.length < 3) {
-          // Show individual errors if there are only a few
-          errors.forEach(error => toast({ 
-            title: "Aviso", 
-            description: error,
-            variant: "destructive"
-          }));
-        } else {
-          // Show a consolidated error if there are many
-          toast({
-            title: "Problemas ao carregar dados",
-            description: "Alguns dados podem estar incompletos ou desatualizados",
-            variant: "destructive"
-          });
-        }
-      }
-
-      // Update the state with all data we were able to fetch
+      // Update state with all fetched data
       setData({
-        teamMembers: results.teamMembers || [],
-        services: results.services || [],
-        insurancePlans: results.insurancePlans || [],
-        timeSlots: results.timeSlots || [],
-        appointments: results.appointments || [],
+        teamMembers: Array.isArray(teamMembers) ? teamMembers : [],
+        services: Array.isArray(services) ? services : [],
+        insurancePlans: Array.isArray(insurancePlans) ? insurancePlans : [],
+        timeSlots: Array.isArray(timeSlots) ? timeSlots : [],
+        appointments: Array.isArray(appointments) ? appointments : [],
         isLoading: false,
-        error: errors.length > 0 ? errors.join("; ") : null
+        error: null
       });
-
+      
+      console.log("useOptimizedQueries: Cache pre-warming complete for all data");
     } catch (error) {
-      // Only update state if the request wasn't aborted
+      console.error("useOptimizedQueries: Error pre-warming cache:", error);
+      
       if (!signal.aborted) {
-        console.error("Critical error in useOptimizedQueries:", error);
         const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
         
         setData(prev => ({
           ...prev,
           isLoading: false,
-          error: `Falha ao buscar dados necessários: ${errorMessage}`
+          error: `Falha ao buscar dados: ${errorMessage}`
         }));
 
         toast({

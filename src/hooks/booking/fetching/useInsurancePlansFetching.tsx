@@ -31,7 +31,7 @@ export const useInsurancePlansFetching = ({
     try {
       const controller = new AbortController();
       const data = await fetchInsurancePlans(professionalId, controller.signal);
-      setInsurancePlans(data || []);
+      setInsurancePlans(Array.isArray(data) ? data : []);
       
       if (onSuccess) {
         onSuccess();

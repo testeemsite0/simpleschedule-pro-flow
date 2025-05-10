@@ -31,7 +31,7 @@ export const useAppointmentsFetching = ({
     try {
       const controller = new AbortController();
       const data = await fetchAppointments(professionalId, controller.signal);
-      setAppointments(data || []);
+      setAppointments(Array.isArray(data) ? data : []);
       
       if (onSuccess) {
         onSuccess();

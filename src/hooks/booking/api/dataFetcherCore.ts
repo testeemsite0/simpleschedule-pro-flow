@@ -15,14 +15,14 @@ interface FetchDataOptions {
 }
 
 interface QueryFunctions<T> {
-  [key: string]: () => Promise<T>;
+  [key: string]: () => Promise<T[]>;
 }
 
 // Main data fetching utility function with cache handling
 export async function fetchData<T>(
   options: FetchDataOptions,
-  queryFn: () => Promise<{ data: T; error: any } | T>
-): Promise<T> {
+  queryFn: () => Promise<{ data: T[]; error: any } | T[]>
+): Promise<T[]> {
   const { type, professionalId, signal, priority = 'medium', skipQueue = false, ttl = DEFAULT_CACHE_TTL } = options;
   
   // Log fetch request
@@ -32,7 +32,7 @@ export async function fetchData<T>(
   const cacheKey = generateCacheKey(type, professionalId);
   
   // Check if already in cache
-  const cachedData = QueryCache.get<T>(cacheKey);
+  const cachedData = QueryCache.get<T[]>(cacheKey);
   if (cachedData !== null) {
     console.log(`dataFetcherCore: Cache hit for ${cacheKey}`);
     return cachedData;
@@ -42,7 +42,7 @@ export async function fetchData<T>(
   const pendingRequest = isRequestPending(cacheKey);
   if (pendingRequest && !skipQueue) {
     console.log(`dataFetcherCore: Request already in progress for ${cacheKey}, joining pending request`);
-    return pendingRequest as Promise<T>;
+    return pendingRequest as Promise<T[]>;
   }
   
   // Abort handler
@@ -52,13 +52,13 @@ export async function fetchData<T>(
   }
   
   // Create fetch promise
-  const fetchPromise = async (): Promise<T> => {
+  const fetchPromise = async (): Promise<T[]> => {
     try {
       console.log(`dataFetcherCore: Starting actual fetch for ${cacheKey}`);
       const result = await queryFn();
       
       // Different response formats from queryFn
-      let data: T;
+      let data: T[];
       if (result && typeof result === 'object' && 'data' in result) {
         data = result.data;
         if (result.error) {
@@ -66,7 +66,7 @@ export async function fetchData<T>(
           throw result.error;
         }
       } else {
-        data = result as T;
+        data = result as T[];
       }
       
       // Log the data size/shape
@@ -74,6 +74,8 @@ export async function fetchData<T>(
         console.log(`dataFetcherCore: Fetched ${data.length} items for ${cacheKey}`);
       } else {
         console.log(`dataFetcherCore: Fetched data for ${cacheKey}:`, data ? 'data exists' : 'data is null/undefined');
+        // If data is not an array but should be, convert it to an array
+        data = Array.isArray(data) ? data : (data ? [data] : []) as T[];
       }
       
       // Cache the result
@@ -98,7 +100,7 @@ export async function unifiedDataFetch<T>(
   dataTypes: string[],
   queryFns: QueryFunctions<T>,
   signal?: AbortSignal
-): Promise<Record<string, T>> {
+): Promise<Record<string, T[]>> {
   console.log(`unifiedDataFetch: Starting unified fetch for ${professionalId}, data types: [${dataTypes.join(', ')}]`);
   
   // Helper function to map type to priority
@@ -130,9 +132,9 @@ export async function unifiedDataFetch<T>(
     const results = await Promise.all(promises);
     
     // Convert results to record
-    const resultRecord: Record<string, T> = {};
+    const resultRecord: Record<string, T[]> = {};
     results.forEach(({ type, data }) => {
-      resultRecord[type] = data;
+      resultRecord[type] = data || [];
     });
     
     console.log(`unifiedDataFetch: All data fetched for ${professionalId}`);

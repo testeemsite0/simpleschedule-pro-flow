@@ -14,8 +14,18 @@ export const fetchInsurancePlans = (professionalId: string, signal?: AbortSignal
     priority: 'medium',
     ttl: 60 * 10 * 1.5 // Cache insurance plans for longer (15 min)
   }, async () => {
-    return await supabase
+    console.log("InsuranceService: Executing DB query for professional:", professionalId);
+    
+    const { data, error } = await supabase
       .from('insurance_plans')
       .select('id, name, current_appointments, limit_per_plan')
       .eq('professional_id', professionalId);
+      
+    if (error) {
+      console.error("InsuranceService: Database error fetching insurance plans:", error);
+      throw error;
+    }
+    
+    console.log(`InsuranceService: Successfully fetched ${data?.length || 0} insurance plans`);
+    return { data: data || [], error: null };
   });

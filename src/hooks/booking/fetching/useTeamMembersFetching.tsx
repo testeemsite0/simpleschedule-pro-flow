@@ -29,14 +29,21 @@ export const useTeamMembersFetching = ({
     setError(null);
     
     try {
+      console.log("useTeamMembersFetching: Loading team members for professional:", professionalId);
       const controller = new AbortController();
       const data = await fetchTeamMembers(professionalId, controller.signal);
-      setTeamMembers(data || []);
+      
+      // Ensure data is always an array
+      const memberArray = Array.isArray(data) ? data : [];
+      console.log(`useTeamMembersFetching: Received ${memberArray.length} team members`);
+      
+      setTeamMembers(memberArray);
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (err: any) {
+      console.error("useTeamMembersFetching: Error loading team members:", err);
       setError(err instanceof Error ? err : new Error(String(err)));
       if (onError) {
         onError(err instanceof Error ? err : new Error(String(err)));
@@ -47,10 +54,12 @@ export const useTeamMembersFetching = ({
   }, [professionalId, onSuccess, onError]);
   
   useEffect(() => {
+    console.log("useTeamMembersFetching: Effect triggered with professionalId:", professionalId);
     loadTeamMembers();
   }, [loadTeamMembers]);
   
   const refetchTeamMembers = () => {
+    console.log("useTeamMembersFetching: Manually refetching team members");
     loadTeamMembers();
   };
   

@@ -7,18 +7,18 @@ import { AlertTriangle } from "lucide-react";
 interface BookingErrorHandlerProps {
   error: string | Error | null;
   onRetry: () => void;
-  title?: string; // Make title optional
+  title?: string;
 }
 
 export const BookingErrorHandler: React.FC<BookingErrorHandlerProps> = ({
   error,
   onRetry,
-  title = "Erro no agendamento" // Set default value
+  title = "Erro no agendamento"
 }) => {
   if (!error) return null;
   
   // Convert Error object to string if needed
-  const errorMessage = error instanceof Error ? error.message : error;
+  const errorMessage = error instanceof Error ? error.message : String(error);
   
   console.log("BookingErrorHandler: Displaying error:", errorMessage);
   

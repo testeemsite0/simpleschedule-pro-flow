@@ -13,16 +13,26 @@ export const fetchAppointments = (professionalId: string, signal?: AbortSignal) 
     signal,
     priority: 'low'
   }, async () => {
+    console.log("AppointmentService: Executing DB query for professional:", professionalId);
+    
     // Filter to only get current and future appointments to reduce data size
     const today = new Date();
     const formattedDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
     
-    return await supabase
+    const { data, error } = await supabase
       .from('appointments')
       .select('id, date, start_time, end_time, team_member_id, status')
       .eq('professional_id', professionalId)
       .gte('date', formattedDate) // Only get current and future appointments
       .order('date', { ascending: true });
+      
+    if (error) {
+      console.error("AppointmentService: Database error fetching appointments:", error);
+      throw error;
+    }
+    
+    console.log(`AppointmentService: Successfully fetched ${data?.length || 0} appointments`);
+    return { data: data || [], error: null };
   });
 
 /**
