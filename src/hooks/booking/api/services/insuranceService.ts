@@ -18,7 +18,7 @@ export const fetchInsurancePlans = (professionalId: string, signal?: AbortSignal
     
     const { data, error } = await supabase
       .from('insurance_plans')
-      .select('id, name, current_appointments, limit_per_plan')
+      .select('id, name, current_appointments, limit_per_plan, professional_id, created_at, updated_at')
       .eq('professional_id', professionalId);
       
     if (error) {
@@ -26,6 +26,17 @@ export const fetchInsurancePlans = (professionalId: string, signal?: AbortSignal
       throw error;
     }
     
-    console.log(`InsuranceService: Successfully fetched ${data?.length || 0} insurance plans`);
-    return { data: data || [], error: null };
+    // Map data to the expected InsurancePlan type
+    const insurancePlans = data?.map(plan => ({
+      id: plan.id,
+      name: plan.name,
+      professional_id: plan.professional_id,
+      created_at: plan.created_at || new Date().toISOString(),
+      updated_at: plan.updated_at || new Date().toISOString(),
+      limit_per_plan: plan.limit_per_plan,
+      current_appointments: plan.current_appointments
+    } as InsurancePlan)) || [];
+    
+    console.log(`InsuranceService: Successfully fetched ${insurancePlans.length} insurance plans`);
+    return { data: insurancePlans, error: null };
   });

@@ -29,17 +29,27 @@ export const useAppointmentsFetching = ({
     setError(null);
     
     try {
+      console.log("useAppointmentsFetching: Fetching appointments for", professionalId);
       const controller = new AbortController();
       const data = await fetchAppointments(professionalId, controller.signal);
-      setAppointments(Array.isArray(data) ? data : []);
+      
+      // Make sure we have array data
+      if (Array.isArray(data)) {
+        setAppointments(data);
+      } else {
+        console.warn("useAppointmentsFetching: Received non-array data:", data);
+        setAppointments([]);
+      }
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (err: any) {
-      setError(err instanceof Error ? err : new Error(String(err)));
+      const errorObj = err instanceof Error ? err : new Error(String(err));
+      console.error("useAppointmentsFetching: Error fetching appointments:", errorObj);
+      setError(errorObj);
       if (onError) {
-        onError(err instanceof Error ? err : new Error(String(err)));
+        onError(errorObj);
       }
     } finally {
       setIsLoading(false);

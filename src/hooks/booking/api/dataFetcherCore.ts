@@ -21,7 +21,7 @@ interface QueryFunctions<T> {
 // Main data fetching utility function with cache handling
 export async function fetchData<T>(
   options: FetchDataOptions,
-  queryFn: () => Promise<{ data: T[]; error: any } | T[]>
+  queryFn: () => Promise<{ data: any[]; error: any } | any[]>
 ): Promise<T[]> {
   const { type, professionalId, signal, priority = 'medium', skipQueue = false, ttl = DEFAULT_CACHE_TTL } = options;
   
@@ -58,7 +58,7 @@ export async function fetchData<T>(
       const result = await queryFn();
       
       // Different response formats from queryFn
-      let data: T[];
+      let data: any[];
       if (result && typeof result === 'object' && 'data' in result) {
         data = result.data;
         if (result.error) {
@@ -66,7 +66,7 @@ export async function fetchData<T>(
           throw result.error;
         }
       } else {
-        data = result as T[];
+        data = result as any[];
       }
       
       // Log the data size/shape
@@ -75,12 +75,12 @@ export async function fetchData<T>(
       } else {
         console.log(`dataFetcherCore: Fetched data for ${cacheKey}:`, data ? 'data exists' : 'data is null/undefined');
         // If data is not an array but should be, convert it to an array
-        data = Array.isArray(data) ? data : (data ? [data] : []) as T[];
+        data = Array.isArray(data) ? data : (data ? [data] : []);
       }
       
       // Cache the result
-      QueryCache.set(cacheKey, data, ttl);
-      return data;
+      QueryCache.set(cacheKey, data as T[], ttl);
+      return data as T[];
     } catch (error) {
       console.error(`dataFetcherCore: Error fetching ${cacheKey}:`, error);
       

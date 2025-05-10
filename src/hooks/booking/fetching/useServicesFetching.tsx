@@ -29,17 +29,27 @@ export const useServicesFetching = ({
     setError(null);
     
     try {
+      console.log("useServicesFetching: Fetching services for", professionalId);
       const controller = new AbortController();
       const data = await fetchServices(professionalId, controller.signal);
-      setServices(Array.isArray(data) ? data : []);
+      
+      // Make sure we have array data
+      if (Array.isArray(data)) {
+        setServices(data);
+      } else {
+        console.warn("useServicesFetching: Received non-array data:", data);
+        setServices([]);
+      }
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (err: any) {
-      setError(err instanceof Error ? err : new Error(String(err)));
+      const errorObj = err instanceof Error ? err : new Error(String(err));
+      console.error("useServicesFetching: Error fetching services:", errorObj);
+      setError(errorObj);
       if (onError) {
-        onError(err instanceof Error ? err : new Error(String(err)));
+        onError(errorObj);
       }
     } finally {
       setIsLoading(false);

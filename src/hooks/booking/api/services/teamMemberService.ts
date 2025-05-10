@@ -16,7 +16,7 @@ export const fetchTeamMembers = async (professionalId: string, signal?: AbortSig
     }
     
     // Use the fetchData utility with proper error handling
-    const result = await fetchData<TeamMember>({
+    return await fetchData<TeamMember>({
       type: 'teamMembers',
       professionalId,
       signal,
@@ -29,7 +29,7 @@ export const fetchTeamMembers = async (professionalId: string, signal?: AbortSig
       // Direct database query
       const { data, error } = await supabase
         .from('team_members')
-        .select('id, name, position, active')
+        .select('id, name, position, active, professional_id, created_at, updated_at, email, avatar')
         .eq('professional_id', professionalId)
         .eq('active', true);
         
@@ -47,15 +47,22 @@ export const fetchTeamMembers = async (professionalId: string, signal?: AbortSig
         return { data: [], error: null };
       }
       
-      console.log(`TeamMemberService: Successfully fetched ${data.length} team members`);
-      return { data, error: null };
+      // Map database results to expected type
+      const teamMembers = data.map(member => ({
+        id: member.id,
+        professional_id: member.professional_id,
+        name: member.name,
+        email: member.email || undefined,
+        position: member.position || undefined,
+        avatar: member.avatar || undefined,
+        active: member.active,
+        created_at: member.created_at || new Date().toISOString(),
+        updated_at: member.updated_at || new Date().toISOString()
+      } as TeamMember));
+      
+      console.log(`TeamMemberService: Successfully fetched ${teamMembers.length} team members`);
+      return { data: teamMembers, error: null };
     });
-    
-    // Log actual return value for debugging
-    console.log("TeamMemberService: Final result:", result);
-    
-    // Standardize the return format
-    return Array.isArray(result) ? result : [];
   } catch (error) {
     console.error("TeamMemberService: Critical error in fetchTeamMembers:", error);
     // Return empty array on error to prevent cascading failures

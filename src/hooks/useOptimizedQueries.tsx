@@ -10,15 +10,16 @@ import {
   fetchAppointments
 } from './booking/api/dataFetcher';
 import { QueryCache, generateCacheKey } from './booking/cache/queryCache';
+import { TeamMember, Service, InsurancePlan, TimeSlot, Appointment } from '@/types';
 
 // Hook para buscar múltiplos tipos de dados relacionados em uma única chamada
 export const useOptimizedQueries = (professionalId: string | undefined) => {
   const [data, setData] = useState<{
-    teamMembers: any[];
-    services: any[];
-    insurancePlans: any[];
-    timeSlots: any[];
-    appointments: any[];
+    teamMembers: TeamMember[];
+    services: Service[];
+    insurancePlans: InsurancePlan[];
+    timeSlots: TimeSlot[];
+    appointments: Appointment[];
     isLoading: boolean;
     error: string | null;
   }>({
@@ -60,7 +61,7 @@ export const useOptimizedQueries = (professionalId: string | undefined) => {
         servicesPromise
       ]);
       
-      console.log(`useOptimizedQueries: Pre-warmed team members: ${teamMembers.length}, services: ${Array.isArray(services) ? services.length : 'undefined'}`);
+      console.log(`useOptimizedQueries: Pre-warmed team members: ${Array.isArray(teamMembers) ? teamMembers.length : 'undefined'}, services: ${Array.isArray(services) ? services.length : 'undefined'}`);
       
       // Then fetch non-critical data in parallel but with lower priority
       const [

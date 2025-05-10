@@ -19,7 +19,7 @@ export const fetchServices = (professionalId: string, signal?: AbortSignal) =>
     
     const { data, error } = await supabase
       .from('services')
-      .select('id, name, duration_minutes, price, active')
+      .select('id, name, duration_minutes, price, active, professional_id, created_at, updated_at, description')
       .eq('professional_id', professionalId)
       .eq('active', true);
       
@@ -28,6 +28,19 @@ export const fetchServices = (professionalId: string, signal?: AbortSignal) =>
       throw error;
     }
     
-    console.log(`ServiceService: Successfully fetched ${data?.length || 0} services`);
-    return { data: data || [], error: null };
+    // Map data to the expected Service type
+    const services = data?.map(service => ({
+      id: service.id,
+      professional_id: service.professional_id,
+      name: service.name,
+      description: service.description || undefined,
+      price: service.price,
+      duration_minutes: service.duration_minutes,
+      active: service.active,
+      created_at: service.created_at || new Date().toISOString(),
+      updated_at: service.updated_at || new Date().toISOString()
+    } as Service)) || [];
+    
+    console.log(`ServiceService: Successfully fetched ${services.length} services`);
+    return { data: services, error: null };
   });

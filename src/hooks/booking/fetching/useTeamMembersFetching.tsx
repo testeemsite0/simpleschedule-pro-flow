@@ -34,19 +34,23 @@ export const useTeamMembersFetching = ({
       const data = await fetchTeamMembers(professionalId, controller.signal);
       
       // Ensure data is always an array
-      const memberArray = Array.isArray(data) ? data : [];
-      console.log(`useTeamMembersFetching: Received ${memberArray.length} team members`);
-      
-      setTeamMembers(memberArray);
+      if (Array.isArray(data)) {
+        console.log(`useTeamMembersFetching: Received ${data.length} team members`);
+        setTeamMembers(data);
+      } else {
+        console.warn("useTeamMembersFetching: Received non-array data:", data);
+        setTeamMembers([]);
+      }
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (err: any) {
       console.error("useTeamMembersFetching: Error loading team members:", err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      const errorObj = err instanceof Error ? err : new Error(String(err));
+      setError(errorObj);
       if (onError) {
-        onError(err instanceof Error ? err : new Error(String(err)));
+        onError(errorObj);
       }
     } finally {
       setIsLoading(false);

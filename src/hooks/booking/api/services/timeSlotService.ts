@@ -18,7 +18,7 @@ export const fetchTimeSlots = (professionalId: string, signal?: AbortSignal) =>
     
     const { data, error } = await supabase
       .from('time_slots')
-      .select('id, day_of_week, start_time, end_time, team_member_id, available, appointment_duration_minutes, lunch_break_start, lunch_break_end')
+      .select('id, day_of_week, start_time, end_time, team_member_id, available, appointment_duration_minutes, lunch_break_start, lunch_break_end, professional_id, created_at, updated_at')
       .eq('professional_id', professionalId);
       
     if (error) {
@@ -26,6 +26,22 @@ export const fetchTimeSlots = (professionalId: string, signal?: AbortSignal) =>
       throw error;
     }
     
-    console.log(`TimeSlotService: Successfully fetched ${data?.length || 0} time slots`);
-    return { data: data || [], error: null };
+    // Map data to the expected TimeSlot type
+    const timeSlots = data?.map(slot => ({
+      id: slot.id,
+      professional_id: slot.professional_id,
+      day_of_week: slot.day_of_week,
+      start_time: slot.start_time,
+      end_time: slot.end_time,
+      available: slot.available ?? true,
+      created_at: slot.created_at || undefined,
+      updated_at: slot.updated_at || undefined,
+      appointment_duration_minutes: slot.appointment_duration_minutes || undefined,
+      lunch_break_start: slot.lunch_break_start || undefined,
+      lunch_break_end: slot.lunch_break_end || undefined,
+      team_member_id: slot.team_member_id || undefined
+    } as TimeSlot)) || [];
+    
+    console.log(`TimeSlotService: Successfully fetched ${timeSlots.length} time slots`);
+    return { data: timeSlots, error: null };
   });

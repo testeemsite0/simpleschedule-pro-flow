@@ -29,17 +29,27 @@ export const useTimeSlotsFetching = ({
     setError(null);
     
     try {
+      console.log("useTimeSlotsFetching: Fetching time slots for", professionalId);
       const controller = new AbortController();
       const data = await fetchTimeSlots(professionalId, controller.signal);
-      setTimeSlots(data || []);
+      
+      // Make sure we have array data
+      if (Array.isArray(data)) {
+        setTimeSlots(data);
+      } else {
+        console.warn("useTimeSlotsFetching: Received non-array data:", data);
+        setTimeSlots([]);
+      }
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (err: any) {
-      setError(err instanceof Error ? err : new Error(String(err)));
+      const errorObj = err instanceof Error ? err : new Error(String(err));
+      console.error("useTimeSlotsFetching: Error fetching time slots:", errorObj);
+      setError(errorObj);
       if (onError) {
-        onError(err instanceof Error ? err : new Error(String(err)));
+        onError(errorObj);
       }
     } finally {
       setIsLoading(false);
