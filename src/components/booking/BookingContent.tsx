@@ -29,11 +29,14 @@ const BookingContent: React.FC<BookingContentProps> = ({ professional }) => {
   }
   
   if (error) {
+    // Convert Error object to string if needed
+    const errorMessage = error instanceof Error ? error.message : error;
+    
     return (
       <Card className="w-full">
         <CardContent className="pt-6">
           <ErrorHandler
-            error={error}
+            error={errorMessage}
             resetError={resetBooking}
             title="Erro no sistema de agendamento"
           />
