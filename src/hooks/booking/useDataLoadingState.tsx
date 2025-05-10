@@ -1,176 +1,111 @@
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 interface UseDataLoadingStateProps {
+  initialLoading?: boolean;
+  initialError?: string | null;
+  loadingTimeout?: number;
   showToast?: boolean;
   maxRetries?: number;
-  loadingTimeout?: number; // ms
-}
-
-interface ErrorState {
-  message: string;
-  details?: string;
-  hint?: string;
-  code?: string;
 }
 
 export const useDataLoadingState = ({
+  initialLoading = false,
+  initialError = null,
+  loadingTimeout = 10000,
   showToast = true,
-  maxRetries = 2, // Reduced from 3 to 2
-  loadingTimeout = 15000 // Reduced from 45s to 15s
+  maxRetries = 3
 }: UseDataLoadingStateProps = {}) => {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [dataError, setDataError] = useState<string | null>(null);
-  const retryCountRef = useRef<number>(0);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isLoading, setIsLoading] = useState(initialLoading);
+  const [dataError, setDataError] = useState<string | null>(initialError);
+  const retryCount = useRef(0);
+  const loadingTimeoutId = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
   
-  // Track if this component is still mounted
-  const isMountedRef = useRef<boolean>(true);
+  // Cache mechanism
+  const cachedData = useRef<Map<string, any>>(new Map());
   
-  // Cache for data, to reduce network requests
-  const cachedDataRef = useRef<Record<string, any>>({});
+  // Helpers for cache
+  const getCachedData = <T,>(key: string): T | null => {
+    return (cachedData.current.get(key) as T) || null;
+  };
   
-  // Track last error occurrence time to prevent error flooding
-  const lastErrorTimeRef = useRef<number>(0);
-  const errorCooldownMs = 5000; // 5 seconds between same errors
+  const setCachedData = <T,>(key: string, data: T): void => {
+    cachedData.current.set(key, data);
+  };
   
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
+  // Error handling with context info
+  const handleError = useCallback((context: string, error: any) => {
+    if (!isMountedRef.current) return;
+    
+    const errorMessage = error?.message || 'Unknown error occurred';
+    const contextualError = `Error in ${context}: ${errorMessage}`;
+    
+    console.error(contextualError, error);
+    setDataError(contextualError);
+    
+    if (showToast) {
+      toast.error(`Error loading data: ${errorMessage}`);
+    }
+    
+    // Retry mechanism
+    if (retryCount.current < maxRetries) {
+      retryCount.current += 1;
+      console.log(`Retry attempt ${retryCount.current} of ${maxRetries}`);
+    }
+  }, [showToast, maxRetries]);
+  
+  // Clear error state
+  const clearError = useCallback(() => {
+    setDataError(null);
   }, []);
   
-  // Set up loading timeout
+  // Reset retry counter
+  const resetRetryCount = useCallback(() => {
+    retryCount.current = 0;
+  }, []);
+  
+  // Loading timeout detection
   useEffect(() => {
     if (isLoading && loadingTimeout > 0) {
-      // Clear any existing timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      
-      timeoutRef.current = setTimeout(() => {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-          setDataError("O tempo para carregamento dos dados expirou. Tente novamente.");
+      loadingTimeoutId.current = window.setTimeout(() => {
+        if (isMountedRef.current && isLoading) {
+          console.warn(`Loading timeout after ${loadingTimeout}ms`);
           
           if (showToast) {
-            toast.error("O tempo para carregamento dos dados expirou", {
-              description: "Por favor, tente novamente mais tarde.",
-              duration: 5000,
-            });
+            toast.warning("Loading data is taking longer than expected.");
           }
         }
       }, loadingTimeout);
+    } else if (loadingTimeoutId.current !== null) {
+      clearTimeout(loadingTimeoutId.current);
+      loadingTimeoutId.current = null;
     }
     
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (loadingTimeoutId.current !== null) {
+        clearTimeout(loadingTimeoutId.current);
+        loadingTimeoutId.current = null;
       }
     };
   }, [isLoading, loadingTimeout, showToast]);
   
-  const handleError = useCallback((context: string, error: any) => {
-    if (!isMountedRef.current) return;
-    
-    // Check for error cooldown to prevent flooding
-    const now = Date.now();
-    if (now - lastErrorTimeRef.current < errorCooldownMs) {
-      console.log(`Error cooldown active (${errorCooldownMs}ms), suppressing error notification`);
-      return;
-    }
-    
-    // Update last error time
-    lastErrorTimeRef.current = now;
-    
-    // Format error info consistently
-    let errorInfo: ErrorState;
-    if (typeof error === 'string') {
-      errorInfo = { message: error };
-    } else if (error instanceof Error) {
-      errorInfo = {
-        message: error.message,
-        details: error.stack,
-      };
-    } else {
-      errorInfo = error || { message: 'Unknown error' };
-    }
-    
-    // Handle network errors specially
-    const isNetworkError = errorInfo.message.includes('Failed to fetch') || 
-                           errorInfo.message.includes('Network error') ||
-                           errorInfo.message.includes('network request failed');
-    
-    // Log the error with context
-    console.error(`Error in data loading: Error loading ${context}:`, errorInfo);
-    
-    // Only update state and show toast if still mounted and if retry count is within limits
-    if (retryCountRef.current >= maxRetries) {
-      const errorMessage = isNetworkError ? 
-        `Erro de conexão ao carregar ${context}. Verificando dados em cache.` : 
-        `Erro ao carregar ${context}. Por favor, recarregue a página.`;
-      
-      setDataError(errorMessage);
-      
-      // Continue executing but don't show loading state if network error
-      if (isNetworkError) {
-        setIsLoading(false);
-      }
-      
-      if (showToast) {
-        toast.error(`Erro ao carregar ${context}`, {
-          description: isNetworkError ? 
-            "Problemas de conexão. Tentando usar dados em cache." : 
-            "Tente novamente mais tarde. O sistema tentará usar dados em cache.",
-          duration: 5000,
-        });
-      }
-    } else {
-      // Increment retry count
-      retryCountRef.current += 1;
-      
-      if (showToast && retryCountRef.current === maxRetries) {
-        toast.error("Problemas ao carregar os dados", {
-          description: "Usando dados em cache. Algumas informações podem estar desatualizadas.",
-          duration: 4000,
-        });
-      }
-    }
-  }, [maxRetries, showToast]);
-  
-  const clearError = useCallback(() => {
-    if (!isMountedRef.current) return;
-    setDataError(null);
-  }, []);
-  
-  const resetRetryCount = useCallback(() => {
-    retryCountRef.current = 0;
-  }, []);
-  
-  // Methods to manage cached data
-  const getCachedData = useCallback(<T,>(key: string): T | null => {
-    return (cachedDataRef.current[key] as T) || null;
-  }, []);
-  
-  const setCachedData = useCallback(<T,>(key: string, data: T): void => {
-    cachedDataRef.current[key] = data;
-  }, []);
-
-  // Clean up cache and state
+  // Cleanup function
   const cleanup = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+    isMountedRef.current = false;
+    if (loadingTimeoutId.current !== null) {
+      clearTimeout(loadingTimeoutId.current);
+      loadingTimeoutId.current = null;
     }
-    
-    cachedDataRef.current = {};
-    retryCountRef.current = 0;
-    setDataError(null);
   }, []);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
   
   return {
     isLoading,

@@ -8,13 +8,15 @@ interface UseTimeSlotsFetchingProps {
   setIsLoading: (loading: boolean) => void;
   handleError: (context: string, error: any) => void;
   enabled?: boolean;
+  onSuccess?: () => void;
 }
 
 export const useTimeSlotsFetching = ({
   professionalId,
   setIsLoading,
   handleError,
-  enabled = true
+  enabled = true,
+  onSuccess
 }: UseTimeSlotsFetchingProps) => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   
@@ -30,6 +32,12 @@ export const useTimeSlotsFetching = ({
       // Type assertion to ensure we're setting the right type
       const typedSlots = Array.isArray(result) ? result as TimeSlot[] : [];
       setTimeSlots(typedSlots);
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       return typedSlots;
     } catch (error) {
       handleError('time slots', error);
@@ -37,7 +45,7 @@ export const useTimeSlotsFetching = ({
     } finally {
       setIsLoading(false);
     }
-  }, [professionalId, setIsLoading, handleError, enabled]);
+  }, [professionalId, setIsLoading, handleError, enabled, onSuccess]);
   
   useEffect(() => {
     if (enabled && professionalId) {

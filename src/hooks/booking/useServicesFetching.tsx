@@ -8,13 +8,15 @@ interface UseServicesFetchingProps {
   setIsLoading: (loading: boolean) => void;
   handleError: (context: string, error: any) => void;
   enabled?: boolean;
+  onSuccess?: () => void;
 }
 
 export const useServicesFetching = ({
   professionalId,
   setIsLoading,
   handleError,
-  enabled = true
+  enabled = true,
+  onSuccess
 }: UseServicesFetchingProps) => {
   const [services, setServices] = useState<Service[]>([]);
   
@@ -30,6 +32,12 @@ export const useServicesFetching = ({
       // Type assertion to ensure we're setting the right type
       const typedServices = Array.isArray(result) ? result as Service[] : [];
       setServices(typedServices);
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       return typedServices;
     } catch (error) {
       handleError('services', error);
@@ -37,7 +45,7 @@ export const useServicesFetching = ({
     } finally {
       setIsLoading(false);
     }
-  }, [professionalId, setIsLoading, handleError, enabled]);
+  }, [professionalId, setIsLoading, handleError, enabled, onSuccess]);
   
   useEffect(() => {
     if (enabled && professionalId) {

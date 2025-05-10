@@ -8,13 +8,15 @@ interface UseAppointmentsFetchingProps {
   setIsLoading: (loading: boolean) => void;
   handleError: (context: string, error: any) => void;
   enabled?: boolean;
+  onSuccess?: () => void;
 }
 
 export const useAppointmentsFetching = ({
   professionalId,
   setIsLoading,
   handleError,
-  enabled = true
+  enabled = true,
+  onSuccess
 }: UseAppointmentsFetchingProps) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   
@@ -58,6 +60,12 @@ export const useAppointmentsFetching = ({
       }) : [];
       
       setAppointments(typedAppointments);
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       return typedAppointments;
     } catch (error) {
       handleError('appointments', error);
@@ -65,7 +73,7 @@ export const useAppointmentsFetching = ({
     } finally {
       setIsLoading(false);
     }
-  }, [professionalId, setIsLoading, handleError, enabled]);
+  }, [professionalId, setIsLoading, handleError, enabled, onSuccess]);
   
   useEffect(() => {
     if (enabled && professionalId) {

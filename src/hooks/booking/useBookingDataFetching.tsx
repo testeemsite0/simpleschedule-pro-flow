@@ -85,8 +85,8 @@ export const useBookingDataFetching = ({
   const { teamMembers, fetchTeamMembers } = useTeamMembersFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('teamMembers', loading),
-    handleError: (e) => {
-      handleError(e);
+    handleError: (context, e) => {
+      handleError(context, e);
       if (!dataLoadedRef.current.teamMembers) {
         toast.error("Erro ao carregar dados dos profissionais");
       }
@@ -98,8 +98,8 @@ export const useBookingDataFetching = ({
   const { services, fetchServices } = useServicesFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('services', loading),
-    handleError: (e) => {
-      handleError(e);
+    handleError: (context, e) => {
+      handleError(context, e);
       if (!dataLoadedRef.current.services) {
         toast.error("Erro ao carregar dados dos serviços");
       }
@@ -111,8 +111,8 @@ export const useBookingDataFetching = ({
   const { timeSlots, fetchTimeSlots } = useTimeSlotsFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('timeSlots', loading),
-    handleError: (e) => {
-      handleError(e);
+    handleError: (context, e) => {
+      handleError(context, e);
       // Don't show toast for non-essential data
     },
     enabled: loadingStage === 1, // Second stage
@@ -122,8 +122,8 @@ export const useBookingDataFetching = ({
   const { insurancePlans, fetchInsurancePlans } = useInsurancePlansFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('insurancePlans', loading),
-    handleError: (e) => {
-      handleError(e);
+    handleError: (context, e) => {
+      handleError(context, e);
       // Don't show toast for non-essential data
     },
     enabled: loadingStage === 1, // Second stage
@@ -133,8 +133,8 @@ export const useBookingDataFetching = ({
   const { appointments, fetchAppointments } = useAppointmentsFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('appointments', loading),
-    handleError: (e) => {
-      handleError(e);
+    handleError: (context, e) => {
+      handleError(context, e);
       // Don't show toast for non-essential data
     },
     enabled: loadingStage === 2, // Last stage

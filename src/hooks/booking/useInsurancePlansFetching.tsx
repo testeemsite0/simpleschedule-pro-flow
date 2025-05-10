@@ -8,13 +8,15 @@ interface UseInsurancePlansFetchingProps {
   setIsLoading: (loading: boolean) => void;
   handleError: (context: string, error: any) => void;
   enabled?: boolean;
+  onSuccess?: () => void;
 }
 
 export const useInsurancePlansFetching = ({
   professionalId,
   setIsLoading,
   handleError,
-  enabled = true
+  enabled = true,
+  onSuccess
 }: UseInsurancePlansFetchingProps) => {
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   
@@ -30,6 +32,12 @@ export const useInsurancePlansFetching = ({
       // Type assertion to ensure we're setting the right type
       const typedPlans = Array.isArray(result) ? result as InsurancePlan[] : [];
       setInsurancePlans(typedPlans);
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       return typedPlans;
     } catch (error) {
       handleError('insurance plans', error);
@@ -37,7 +45,7 @@ export const useInsurancePlansFetching = ({
     } finally {
       setIsLoading(false);
     }
-  }, [professionalId, setIsLoading, handleError, enabled]);
+  }, [professionalId, setIsLoading, handleError, enabled, onSuccess]);
   
   useEffect(() => {
     if (enabled && professionalId) {
