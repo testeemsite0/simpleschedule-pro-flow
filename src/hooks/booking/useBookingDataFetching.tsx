@@ -63,39 +63,35 @@ export const useBookingDataFetching = ({
   }, [setIsLoading]);
   
   // Initialize data fetching hooks with customized loading setters
+  // Note: We've removed the 'enabled' property as it doesn't exist in the prop types
   const { teamMembers } = useTeamMembersFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('teamMembers', loading),
-    handleError,
-    enabled: dataFetchingEnabledRef.current
+    handleError
   });
   
   const { services } = useServicesFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('services', loading),
-    handleError,
-    enabled: dataFetchingEnabledRef.current
+    handleError
   });
   
   const { insurancePlans } = useInsurancePlansFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('insurancePlans', loading),
-    handleError,
-    enabled: dataFetchingEnabledRef.current
+    handleError
   });
   
   const { timeSlots } = useTimeSlotsFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('timeSlots', loading),
-    handleError,
-    enabled: dataFetchingEnabledRef.current
+    handleError
   });
   
   const { appointments } = useAppointmentsFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('appointments', loading),
-    handleError,
-    enabled: dataFetchingEnabledRef.current
+    handleError
   });
 
   // Only trigger data fetching once per professionalId and prevent unwanted re-initialization

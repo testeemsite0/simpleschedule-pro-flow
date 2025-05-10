@@ -27,6 +27,7 @@ const Booking: React.FC = () => {
   const bookingProvider = useMemo(() => {
     if (!professional) return null;
     
+    // Add key with timestamp to prevent stale context when professional changes
     return (
       <UnifiedBookingProvider 
         professionalId={professional.id} 

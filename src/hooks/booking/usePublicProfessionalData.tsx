@@ -59,12 +59,22 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
     try {
       console.log(`Fetching professional data for slug: ${slug} (attempt: ${retryCountRef.current + 1})`);
       
+      // Instead of using abortSignal directly on the Supabase query builder,
+      // we'll check if the request has been aborted before and after the query
+      if (signal?.aborted) {
+        throw new Error('Request aborted');
+      }
+
       const { data, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('slug', slug)
-        .single()
-        .abortSignal(signal);
+        .single();
+        
+      // Check if the request was aborted during the query
+      if (signal?.aborted) {
+        throw new Error('Request aborted');
+      }
         
       if (profileError) {
         console.error("Error fetching professional by slug:", profileError);
@@ -109,6 +119,12 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
       retryCountRef.current = 0; // Reset retry count on success
       
     } catch (error: any) {
+      // If the request was aborted, don't update state or show errors
+      if (error.message === 'Request aborted' || signal?.aborted) {
+        console.log("Request was aborted, ignoring");
+        return;
+      }
+      
       console.error("Error fetching professional data:", error);
       
       // Implement exponential backoff for resource errors
