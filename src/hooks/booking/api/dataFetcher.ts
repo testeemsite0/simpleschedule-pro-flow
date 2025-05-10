@@ -1,151 +1,24 @@
+
 /**
  * API layer for fetching different types of data
  */
 
 import { supabase } from '@/integrations/supabase/client';
 import { QueryCache, generateCacheKey, DEFAULT_CACHE_TTL } from '../cache/queryCache';
-
-// Maximum number of retries
-const MAX_RETRIES = 2; // Reduced from 3 to 2
-
-// Global concurrency control - increased from 2 to 4 to allow more concurrent requests
-const CONCURRENT_REQUESTS_LIMIT = 4;
-let activeRequests = 0;
-const requestQueue: Array<() => Promise<any>> = [];
-
-// Rate limiting settings - adjusted for better performance
-const RATE_LIMIT_WINDOW = 10000; // 10 seconds window
-const RATE_LIMIT_MAX_REQUESTS = 10; // Max 10 requests per window
-let requestsInWindow = 0;
-let windowStartTime = Date.now();
-
-// Reset rate limiting window
-const resetRateLimitingWindow = () => {
-  requestsInWindow = 0;
-  windowStartTime = Date.now();
-};
-
-// Check if we can make a new request within rate limits
-const canMakeRequest = (): boolean => {
-  const now = Date.now();
-  
-  // Reset window if needed
-  if (now - windowStartTime > RATE_LIMIT_WINDOW) {
-    resetRateLimitingWindow();
-    return true;
-  }
-  
-  return requestsInWindow < RATE_LIMIT_MAX_REQUESTS;
-};
-
-// Process queue function to manage concurrent requests
-const processQueue = async () => {
-  if (activeRequests >= CONCURRENT_REQUESTS_LIMIT || requestQueue.length === 0) {
-    return;
-  }
-  
-  // Check rate limiting
-  if (!canMakeRequest()) {
-    // If we're rate limited, wait until the window resets
-    const timeToWait = RATE_LIMIT_WINDOW - (Date.now() - windowStartTime) + 50;
-    console.log(`Rate limited, waiting for ${timeToWait}ms before processing next request`);
-    setTimeout(processQueue, timeToWait);
-    return;
-  }
-  
-  const nextRequest = requestQueue.shift();
-  if (nextRequest) {
-    activeRequests++;
-    requestsInWindow++;
-    try {
-      await nextRequest();
-    } catch (error) {
-      console.error("Error processing queued request:", error);
-    } finally {
-      activeRequests--;
-      // Process next item in queue
-      setTimeout(processQueue, 50); // Add small delay between requests
-    }
-  }
-};
-
-// Add request to queue
-const queueRequest = <T>(request: () => Promise<T>, priority: 'high' | 'medium' | 'low' = 'medium'): Promise<T> => {
-  return new Promise((resolve, reject) => {
-    const wrappedRequest = async () => {
-      try {
-        const result = await request();
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    
-    if (priority === 'high') {
-      // High priority goes to the front of the queue
-      requestQueue.unshift(wrappedRequest);
-    } else {
-      // Others go to the back
-      requestQueue.push(wrappedRequest);
-    }
-    
-    processQueue();
-  });
-};
-
-// Storage based cache with fallbacks
-const StorageCache = {
-  get: <T>(key: string): T | null => {
-    try {
-      const item = localStorage.getItem(`booking_cache_${key}`);
-      if (item) {
-        const parsed = JSON.parse(item);
-        if (Date.now() < parsed.expiry) {
-          return parsed.data;
-        } else {
-          localStorage.removeItem(`booking_cache_${key}`);
-        }
-      }
-    } catch (error) {
-      console.error("Error reading from localStorage cache:", error);
-    }
-    return null;
-  },
-  
-  set: <T>(key: string, data: T, ttlMs: number): void => {
-    try {
-      const item = {
-        data,
-        expiry: Date.now() + ttlMs
-      };
-      localStorage.setItem(`booking_cache_${key}`, JSON.stringify(item));
-    } catch (error) {
-      console.error("Error writing to localStorage cache:", error);
-    }
-  }
-};
-
-type FetchDataOptions = {
-  type: string;
-  professionalId: string;
-  ttl?: number;
-  signal?: AbortSignal;
-  priority?: 'high' | 'medium' | 'low';
-  useStorageCache?: boolean;
-  skipQueue?: boolean;
-}
+import { queueRequest } from './requestQueue';
+import { StorageCache } from './storageCache';
 
 /**
  * Generic data fetching function with caching and retry logic
  */
 export const fetchData = async <T>(
-  options: FetchDataOptions,
+  options: import('./types').FetchDataOptions,
   queryFn: () => Promise<any>
 ): Promise<T[]> => {
   const { 
     type, 
     professionalId, 
-    ttl = DEFAULT_CACHE_TTL, // This now uses the imported constant
+    ttl = DEFAULT_CACHE_TTL, 
     signal,
     priority = 'medium',
     useStorageCache = true,
@@ -199,7 +72,7 @@ export const fetchData = async <T>(
         console.error(`Error fetching ${type}:`, response.error);
         
         // Implement exponential backoff for retries with decreased delays
-        if (retryCount < MAX_RETRIES) {
+        if (retryCount < import('./constants').MAX_RETRIES) {
           const delay = Math.pow(2, retryCount) * 300; // Reduced from 500ms to 300ms 
           console.log(`Retrying ${type} in ${delay}ms (attempt ${retryCount + 1})`);
           

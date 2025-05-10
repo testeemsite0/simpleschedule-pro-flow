@@ -8,6 +8,7 @@ import { useTimeSlotsFetching } from './useTimeSlotsFetching';
 import { useAppointmentsFetching } from './useAppointmentsFetching';
 import { useMaintenanceMode } from './useMaintenanceMode';
 import { prewarmBookingDataCache } from './api/dataFetcher'; 
+import { useSequentialLoading } from './useSequentialLoading';
 import { toast } from 'sonner';
 
 interface UseBookingDataFetchingProps {
@@ -25,8 +26,6 @@ export const useBookingDataFetching = ({
     handleError,
     clearError,
     resetRetryCount,
-    getCachedData,
-    setCachedData,
     cleanup: cleanupLoadingState
   } = useDataLoadingState({ 
     showToast: false, // Disable toast for better UX, we'll handle our own toast
@@ -78,15 +77,15 @@ export const useBookingDataFetching = ({
     }
   }, [setIsLoading]);
   
-  // Sequential loading flag to control loading order
-  const [loadingStage, setLoadingStage] = useState<number>(0);
+  // Use sequential loading manager
+  const { loadingStage, setLoadingStage, moveToNextLoadingStage } = useSequentialLoading();
   
   // Initialize data fetching hooks with customized loading setters
   const { teamMembers, fetchTeamMembers } = useTeamMembersFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('teamMembers', loading),
-    handleError: (context, e) => {
-      handleError(context, e);
+    handleError: (context, error) => {
+      handleError(context, error);
       if (!dataLoadedRef.current.teamMembers) {
         toast.error("Erro ao carregar dados dos profissionais");
       }
@@ -98,8 +97,8 @@ export const useBookingDataFetching = ({
   const { services, fetchServices } = useServicesFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('services', loading),
-    handleError: (context, e) => {
-      handleError(context, e);
+    handleError: (context, error) => {
+      handleError(context, error);
       if (!dataLoadedRef.current.services) {
         toast.error("Erro ao carregar dados dos serviços");
       }
@@ -111,8 +110,8 @@ export const useBookingDataFetching = ({
   const { timeSlots, fetchTimeSlots } = useTimeSlotsFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('timeSlots', loading),
-    handleError: (context, e) => {
-      handleError(context, e);
+    handleError: (context, error) => {
+      handleError(context, error);
       // Don't show toast for non-essential data
     },
     enabled: loadingStage === 1, // Second stage
@@ -122,8 +121,8 @@ export const useBookingDataFetching = ({
   const { insurancePlans, fetchInsurancePlans } = useInsurancePlansFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('insurancePlans', loading),
-    handleError: (context, e) => {
-      handleError(context, e);
+    handleError: (context, error) => {
+      handleError(context, error);
       // Don't show toast for non-essential data
     },
     enabled: loadingStage === 1, // Second stage
@@ -133,20 +132,15 @@ export const useBookingDataFetching = ({
   const { appointments, fetchAppointments } = useAppointmentsFetching({ 
     professionalId, 
     setIsLoading: (loading) => setTypeLoading('appointments', loading),
-    handleError: (context, e) => {
-      handleError(context, e);
+    handleError: (context, error) => {
+      handleError(context, error);
       // Don't show toast for non-essential data
     },
     enabled: loadingStage === 2, // Last stage
     onSuccess: () => { dataLoadedRef.current.appointments = true; }
   });
 
-  // Progress to next loading stage
-  const moveToNextLoadingStage = useCallback(() => {
-    setLoadingStage(prev => Math.min(prev + 1, 3)); // Max 3 stages (0-2)
-  }, []);
-
-  // Sequential loading logic with better error handling and performance
+  // Use the sequential loading effect
   useEffect(() => {
     if (!professionalId || !dataFetchingEnabledRef.current) {
       return;
@@ -260,7 +254,7 @@ export const useBookingDataFetching = ({
       }
     }
     
-  }, [professionalId, clearError, resetRetryCount]);
+  }, [professionalId, clearError, resetRetryCount, setLoadingStage]);
 
   // Cleanup effect to prevent memory leaks
   useEffect(() => {
@@ -277,6 +271,37 @@ export const useBookingDataFetching = ({
       dataFetchingEnabledRef.current = false;
     };
   }, [cleanupLoadingState]);
+  
+  // Create a function to refresh all data
+  const refreshAll = useCallback(() => {
+    // Only allow full refresh if enough time has passed since last fetch
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    
+    if (timeSinceLastFetch < minFetchIntervalMs) {
+      console.log(`Skipping force refresh - last fetch was only ${timeSinceLastFetch}ms ago`);
+      toast.info("Atualizando dados...");
+      return;
+    }
+    
+    setLoadingStage(0);
+    lastFetchTimeRef.current = 0;
+    
+    // Reset data loaded states
+    Object.keys(dataLoadedRef.current).forEach(key => {
+      dataLoadedRef.current[key as keyof typeof dataLoadedRef.current] = false;
+    });
+    
+    // Cancel any ongoing requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+    
+    toast.info("Atualizando dados...");
+  }, [setLoadingStage]);
 
   // Public interface with additional information about data loading status
   return {
@@ -305,34 +330,6 @@ export const useBookingDataFetching = ({
     refreshInsurancePlans: () => fetchInsurancePlans(),
     refreshAppointments: () => fetchAppointments(),
     // Force refresh everything
-    refreshAll: () => {
-      // Only allow full refresh if enough time has passed since last fetch
-      const now = Date.now();
-      const timeSinceLastFetch = now - lastFetchTimeRef.current;
-      
-      if (timeSinceLastFetch < minFetchIntervalMs) {
-        console.log(`Skipping force refresh - last fetch was only ${timeSinceLastFetch}ms ago`);
-        toast.info("Atualizando dados...");
-        return;
-      }
-      
-      setLoadingStage(0);
-      lastFetchTimeRef.current = 0;
-      
-      // Reset data loaded states
-      Object.keys(dataLoadedRef.current).forEach(key => {
-        dataLoadedRef.current[key as keyof typeof dataLoadedRef.current] = false;
-      });
-      
-      // Cancel any ongoing requests
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      
-      // Create new abort controller
-      abortControllerRef.current = new AbortController();
-      
-      toast.info("Atualizando dados...");
-    }
+    refreshAll
   };
 };
