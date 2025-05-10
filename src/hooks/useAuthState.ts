@@ -93,7 +93,7 @@ export const useAuthState = (): AuthState => {
               toast({
                 title: "Aviso",
                 description: "Perfil temporário criado. Algumas funcionalidades podem estar limitadas.",
-                variant: "warning",
+                variant: "default", // Changed from "warning" to "default"
               });
             }
           } else {
