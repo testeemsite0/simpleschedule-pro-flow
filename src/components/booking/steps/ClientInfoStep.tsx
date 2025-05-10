@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,17 +9,32 @@ interface ClientInfoStepProps {
   onClientInfoSubmit: (name: string, email: string, phone: string, notes?: string) => void;
   isLoading?: boolean;
   onBack?: () => void;
+  defaultValues?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    notes?: string;
+  };
 }
 
 export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
   onClientInfoSubmit,
   isLoading = false,
-  onBack
+  onBack,
+  defaultValues = {}
 }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notes, setNotes] = useState('');
+  const [name, setName] = useState(defaultValues.name || '');
+  const [email, setEmail] = useState(defaultValues.email || '');
+  const [phone, setPhone] = useState(defaultValues.phone || '');
+  const [notes, setNotes] = useState(defaultValues.notes || '');
+
+  // Update form fields if defaultValues change
+  useEffect(() => {
+    if (defaultValues.name) setName(defaultValues.name);
+    if (defaultValues.email) setEmail(defaultValues.email);
+    if (defaultValues.phone) setPhone(defaultValues.phone);
+    if (defaultValues.notes) setNotes(defaultValues.notes);
+  }, [defaultValues]);
 
   const handleSubmit = () => {
     onClientInfoSubmit(name, email, phone, notes);

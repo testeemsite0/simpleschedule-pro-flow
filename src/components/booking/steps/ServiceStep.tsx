@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
 import { Service } from '@/types';
@@ -19,10 +19,8 @@ export const ServiceStep: React.FC<ServiceStepProps> = ({
   onBack,
   insuranceId = "none" // Default to "none" for private payment
 }) => {
-  // Function to display the price based on the type of insurance
-  const renderPrice = (service: Service) => {
-    console.log("ServiceStep rendering price with insuranceId:", insuranceId);
-    
+  // Memoize formatted price function
+  const renderPrice = useMemo(() => (service: Service) => {
     // If it's private payment (none), show the normal price
     if (insuranceId === "none") {
       return new Intl.NumberFormat('pt-BR', { 
@@ -33,7 +31,7 @@ export const ServiceStep: React.FC<ServiceStepProps> = ({
     
     // If it's insurance, show "Valor conforme plano"
     return <span className="text-xs text-muted-foreground">Valor conforme plano</span>;
-  };
+  }, [insuranceId]);
 
   return (
     <div className="space-y-4">

@@ -80,7 +80,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       {error && (
         <BookingErrorHandler 
           error={error} 
-          onRetry={resetBooking} 
+          onRetry={resetBooking}
+          title="Erro no agendamento"
         />
       )}
       

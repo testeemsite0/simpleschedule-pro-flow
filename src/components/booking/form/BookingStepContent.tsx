@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TeamMemberStepContent } from '../steps/TeamMemberStepContent';
 import { ServiceStepContent } from '../steps/ServiceStepContent';
 import { InsuranceStepContent } from '../steps/InsuranceStepContent';
@@ -9,7 +9,6 @@ import { ConfirmationStepContent } from '../steps/ConfirmationStepContent';
 import { BookingStep } from '@/hooks/booking/useBookingSteps';
 import { BookingData } from '@/hooks/booking/useBookingSteps';
 import { TeamMember, Service, InsurancePlan } from '@/types';
-import { RefreshCw } from 'lucide-react';
 
 interface BookingStepContentProps {
   currentStep: BookingStep;
@@ -59,6 +58,19 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
   checkInsuranceLimitReached,
   handleRefresh
 }) => {
+  // Memoize available services for the selected team member
+  const availableServices = useMemo(() => {
+    if (!bookingData.teamMemberId) return [];
+    return getAvailableServicesForTeamMember(bookingData.teamMemberId);
+  }, [bookingData.teamMemberId, getAvailableServicesForTeamMember]);
+
+  // Handle time selection in one function
+  const handleTimeSlotSelect = (date: Date, startTime: string, endTime: string) => {
+    handleDateChange(date);
+    handleTimeChange(startTime, endTime);
+  };
+
+  // Render the appropriate step content based on current step
   switch (currentStep) {
     case 'team-member':
       return (
@@ -73,7 +85,7 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
     case 'service':
       return (
         <ServiceStepContent
-          services={services}
+          services={availableServices}
           selectedService={bookingData.serviceId || ''}
           onServiceChange={handleServiceChange}
           onBack={goToPreviousStep}
@@ -99,10 +111,7 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
           selectedDate={bookingData.date}
           selectedStartTime={bookingData.startTime}
           selectedEndTime={bookingData.endTime}
-          onTimeSlotSelect={(date, startTime, endTime) => {
-            handleDateChange(date);
-            handleTimeChange(startTime, endTime);
-          }}
+          onTimeSlotSelect={handleTimeSlotSelect}
           isLoading={isLoading}
           onBack={goToPreviousStep}
         />
@@ -113,6 +122,12 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
           onClientInfoSubmit={handleClientInfoSubmit}
           isLoading={isLoading}
           onBack={goToPreviousStep}
+          defaultValues={{
+            name: bookingData.clientName,
+            email: bookingData.clientEmail,
+            phone: bookingData.clientPhone,
+            notes: bookingData.notes
+          }}
         />
       );
     case 'confirmation':

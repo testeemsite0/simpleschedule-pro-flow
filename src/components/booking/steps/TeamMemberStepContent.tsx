@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ProfessionalStep } from '../steps/ProfessionalStep';
+import { ProfessionalStep } from './ProfessionalStep';
 import { TeamMember } from '@/types';
 
 interface TeamMemberStepContentProps {

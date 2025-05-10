@@ -7,11 +7,13 @@ import { AlertTriangle } from "lucide-react";
 interface BookingErrorHandlerProps {
   error: string | Error | null;
   onRetry: () => void;
+  title?: string; // Make title optional
 }
 
 export const BookingErrorHandler: React.FC<BookingErrorHandlerProps> = ({
   error,
-  onRetry
+  onRetry,
+  title = "Erro no agendamento" // Set default value
 }) => {
   if (!error) return null;
   
@@ -21,7 +23,7 @@ export const BookingErrorHandler: React.FC<BookingErrorHandlerProps> = ({
   return (
     <Alert variant="destructive" className="mb-6">
       <AlertTriangle className="h-4 w-4" />
-      <AlertTitle>Erro no agendamento</AlertTitle>
+      <AlertTitle>{title}</AlertTitle>
       <AlertDescription className="mt-2 flex flex-col gap-2">
         <p>{errorMessage}</p>
         <Button 

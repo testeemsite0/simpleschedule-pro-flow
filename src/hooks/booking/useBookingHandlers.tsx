@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { BookingData } from '@/hooks/booking/useBookingSteps';
 
@@ -56,7 +56,7 @@ export const useBookingHandlers = ({
   
   const handleRefresh = useCallback(() => {
     refreshData();
-    toast.info("Atualizando", {
+    toast.info("Atualizando dados", {
       description: "Recarregando dados do sistema"
     });
   }, [refreshData]);
