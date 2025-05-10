@@ -14,3 +14,11 @@ export interface AuthState {
   user: Professional | null;
   isLoading: boolean;
 }
+
+export type RegisterFormValues = {
+  name: string;
+  email: string;
+  profession: string;
+  password: string;
+  confirmPassword: string;
+};
