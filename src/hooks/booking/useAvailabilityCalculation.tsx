@@ -1,164 +1,166 @@
 
-import { useState, useEffect } from 'react';
-import { format, isSameDay, addDays, startOfDay, isBefore } from 'date-fns';
-import { generateAvailableTimeSlots } from '@/booking/timeUtils';
+import { useMemo, useEffect } from 'react';
 import { TimeSlot, Appointment } from '@/types';
+import { format, isAfter, isSameDay, parseISO, isBefore, addDays, startOfDay } from 'date-fns';
+import { timeToMinutes, minutesToTime, doTimeSlotsOverlap } from '@/components/booking/timeUtils';
 
 interface UseAvailabilityCalculationProps {
-  timeSlots: TimeSlot[];
-  appointments: Appointment[];
-  teamMemberId: string | undefined;
-  date: Date | undefined;
+  timeSlots?: TimeSlot[];
+  appointments?: Appointment[];
+  teamMemberId?: string;
+  serviceId?: string;
+  date?: Date | null;
 }
 
 export const useAvailabilityCalculation = ({
-  timeSlots,
-  appointments,
+  timeSlots = [],
+  appointments = [],
   teamMemberId,
+  serviceId,
   date
 }: UseAvailabilityCalculationProps) => {
-  const [availableDates, setAvailableDates] = useState<Date[]>([]);
-  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
 
-  // Calculate availability when professional, team member or time slots change
+  // Log the input data for debugging
   useEffect(() => {
-    // Only calculate if we have a team member selected and time slots
-    if (!teamMemberId || timeSlots.length === 0) {
-      console.log("No team member or time slots, clearing availableDates");
-      setAvailableDates([]);
-      return;
-    }
+    console.log("useAvailabilityCalculation: Input data", {
+      timeSlotsCount: timeSlots?.length || 0,
+      appointmentsCount: appointments?.length || 0,
+      teamMemberId,
+      serviceId,
+      selectedDate: date ? date.toISOString().split('T')[0] : null
+    });
+  }, [timeSlots, appointments, teamMemberId, serviceId, date]);
 
-    console.log("Calculating available dates with team member:", teamMemberId);
+  // Filter time slots by teamMemberId
+  const filteredTimeSlots = useMemo(() => {
+    if (!timeSlots || !teamMemberId) return [];
     
-    const now = startOfDay(new Date());
+    const filtered = timeSlots.filter(
+      slot => slot.team_member_id === teamMemberId && slot.available
+    );
+    
+    console.log(`Filtered ${filtered.length} time slots for team member ${teamMemberId}`);
+    return filtered;
+  }, [timeSlots, teamMemberId]);
+  
+  // Generate available dates for the next 14 days
+  const availableDates = useMemo(() => {
+    if (!filteredTimeSlots || filteredTimeSlots.length === 0) return [];
+    
+    const today = startOfDay(new Date());
     const dates: Date[] = [];
     
-    // Filter time slots for the selected team member
-    const teamMemberTimeSlots = timeSlots.filter(slot => 
-      slot.team_member_id === teamMemberId && 
-      slot.available === true
-    );
-    
-    console.log(`Found ${teamMemberTimeSlots.length} time slots for team member`);
-    
-    if (teamMemberTimeSlots.length === 0) {
-      console.log("No time slots found for team member, clearing availableDates");
-      setAvailableDates([]);
-      return;
-    }
-    
-    // Get unique days of week with available slots
-    const availableDaysOfWeek = Array.from(
-      new Set(teamMemberTimeSlots.map(slot => slot.day_of_week))
-    );
-    
-    console.log("Available days of week:", availableDaysOfWeek);
-    
-    // Generate next 14 days
+    // Look ahead 14 days
     for (let i = 0; i < 14; i++) {
-      const date = addDays(now, i);
-      const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay(); // Convert Sunday (0) to 7 for our system
+      const checkDate = addDays(today, i);
+      const dayOfWeek = checkDate.getDay();
       
-      // Skip past dates
-      if (isBefore(date, now) && !isSameDay(date, now)) {
-        continue;
-      }
+      // Check if there's a time slot available for this day of week
+      const hasDaySlot = filteredTimeSlots.some(slot => slot.day_of_week === dayOfWeek);
       
-      // Skip days without slots
-      if (!availableDaysOfWeek.includes(dayOfWeek)) {
-        continue;
-      }
-      
-      // Format selected date for filtering appointments
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      
-      // Find bookings for this date and this team member
-      const bookedAppointments = appointments.filter(app => 
-        app.date === formattedDate && 
-        app.status === 'scheduled' &&
-        app.team_member_id === teamMemberId
-      );
-      
-      // Get all slots for this day
-      const daySlots = teamMemberTimeSlots.filter(slot => slot.day_of_week === dayOfWeek);
-      
-      if (daySlots.length > 0) {
-        try {
-          // Calculate available slots for this day
-          const availableTimeSlots = generateAvailableTimeSlots(daySlots, bookedAppointments, date);
-          
-          // Add date if there are available slots
-          if (availableTimeSlots.length > 0) {
-            dates.push(date);
-            console.log(`Date ${formattedDate} has ${availableTimeSlots.length} available slots`);
-          } else {
-            console.log(`Date ${formattedDate} has no available slots`);
-          }
-        } catch (error) {
-          console.error("Error calculating available slots:", error);
-        }
+      if (hasDaySlot) {
+        dates.push(checkDate);
       }
     }
     
-    console.log(`Found ${dates.length} available dates`);
-    setAvailableDates(dates);
-  }, [teamMemberId, timeSlots, appointments]);
+    console.log(`Generated ${dates.length} available dates`);
+    return dates;
+  }, [filteredTimeSlots]);
 
-  // Update available slots when date is selected
-  useEffect(() => {
-    if (!date || !teamMemberId) {
-      setAvailableSlots([]);
-      return;
-    }
+  // Generate available slots based on the selected date
+  const availableSlots = useMemo(() => {
+    if (!date || !filteredTimeSlots || filteredTimeSlots.length === 0) return [];
     
-    console.log("Calculating available slots for date:", date);
-    
-    const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
-    
-    // Filter time slots for selected team member and day of week
-    const teamMemberTimeSlots = timeSlots.filter(slot => 
-      slot.team_member_id === teamMemberId &&
-      slot.day_of_week === dayOfWeek &&
-      slot.available === true
-    );
-    
-    if (teamMemberTimeSlots.length === 0) {
-      setAvailableSlots([]);
-      return;
-    }
-    
-    // Format the selected date for filtering appointments
+    const dayOfWeek = date.getDay();
     const formattedDate = format(date, 'yyyy-MM-dd');
     
-    // Find bookings for this date and team member
+    // Get all scheduled appointments for the selected date and team member
     const bookedAppointments = appointments.filter(app => 
       app.date === formattedDate && 
       app.status === 'scheduled' &&
       app.team_member_id === teamMemberId
     );
     
-    try {
-      // Generate available time slots
-      const slots = generateAvailableTimeSlots(teamMemberTimeSlots, bookedAppointments, date);
-      
-      console.log(`Generated ${slots.length} available time slots`);
-      
-      // Add team member ID to each slot
-      const slotsWithTeamMember = slots.map(slot => ({
-        ...slot,
-        teamMemberId: teamMemberId
-      }));
-      
-      setAvailableSlots(slotsWithTeamMember);
-    } catch (error) {
-      console.error("Error generating available time slots:", error);
-      setAvailableSlots([]);
+    console.log(`Found ${bookedAppointments.length} booked appointments for ${formattedDate}`);
+    
+    // Get time slots for the selected day
+    const dayTimeSlots = filteredTimeSlots.filter(slot => slot.day_of_week === dayOfWeek);
+    
+    if (dayTimeSlots.length === 0) {
+      console.log(`No time slots defined for day of week ${dayOfWeek}`);
+      return [];
     }
-  }, [date, teamMemberId, timeSlots, appointments]);
+    
+    // Generate available slots
+    const slots: { date: Date; startTime: string; endTime: string; teamMemberId?: string }[] = [];
+    const now = new Date();
+    
+    dayTimeSlots.forEach(slot => {
+      // Get slot info
+      const startMinutes = timeToMinutes(slot.start_time);
+      const endMinutes = timeToMinutes(slot.end_time);
+      const duration = slot.appointment_duration_minutes || 60;
+      
+      // Check lunch break
+      const lunchStartMinutes = slot.lunch_break_start ? timeToMinutes(slot.lunch_break_start) : null;
+      const lunchEndMinutes = slot.lunch_break_end ? timeToMinutes(slot.lunch_break_end) : null;
+      
+      // Generate slots at interval of appointment duration
+      for (let time = startMinutes; time + duration <= endMinutes; time += duration) {
+        // Skip lunch break
+        if (
+          lunchStartMinutes !== null && 
+          lunchEndMinutes !== null && 
+          ((time < lunchEndMinutes && time + duration > lunchStartMinutes) || 
+           (time >= lunchStartMinutes && time < lunchEndMinutes))
+        ) {
+          continue;
+        }
+        
+        const startTime = minutesToTime(time);
+        const endTime = minutesToTime(time + duration);
+        
+        // Skip if time slot is in the past for today
+        if (isSameDay(date, now)) {
+          const hours = Math.floor(time / 60);
+          const mins = time % 60;
+          const slotDateTime = new Date(date);
+          slotDateTime.setHours(hours, mins, 0, 0);
+          
+          if (isBefore(slotDateTime, now)) {
+            continue;
+          }
+        }
+        
+        // Check if the slot overlaps with any booked appointment
+        const isOverlapping = bookedAppointments.some(app => 
+          doTimeSlotsOverlap(startTime, endTime, app.start_time, app.end_time)
+        );
+        
+        if (!isOverlapping) {
+          slots.push({
+            date: new Date(date),
+            startTime,
+            endTime,
+            teamMemberId: slot.team_member_id
+          });
+        }
+      }
+    });
+    
+    // Sort by time
+    const sortedSlots = slots.sort((a, b) => 
+      timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+    );
+    
+    console.log(`Generated ${sortedSlots.length} available time slots for ${formattedDate}`);
+    return sortedSlots;
+  }, [date, filteredTimeSlots, appointments, teamMemberId]);
 
   return {
     availableDates,
-    availableSlots
+    availableSlots,
+    selectedDate: date,
+    filteredTimeSlots
   };
 };

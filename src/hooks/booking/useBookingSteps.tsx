@@ -38,8 +38,9 @@ export const useBookingSteps = ({
     const currentIndex = stepOrder.indexOf(currentStep);
     
     if (currentIndex < stepOrder.length - 1) {
-      setCurrentStep(stepOrder[currentIndex + 1]);
-      console.log(`Moving from step ${currentStep} to ${stepOrder[currentIndex + 1]}`);
+      const nextStep = stepOrder[currentIndex + 1];
+      setCurrentStep(nextStep);
+      console.log(`Moving from step ${currentStep} to ${nextStep}`);
     }
   };
   
@@ -48,8 +49,9 @@ export const useBookingSteps = ({
     const currentIndex = stepOrder.indexOf(currentStep);
     
     if (currentIndex > 0) {
-      setCurrentStep(stepOrder[currentIndex - 1]);
-      console.log(`Moving back from step ${currentStep} to ${stepOrder[currentIndex - 1]}`);
+      const prevStep = stepOrder[currentIndex - 1];
+      setCurrentStep(prevStep);
+      console.log(`Moving back from step ${currentStep} to ${prevStep}`);
     }
   };
   
@@ -78,29 +80,33 @@ export const useBookingSteps = ({
     const teamMemberId = typeof teamMember === 'string' ? teamMember : teamMember.id;
     updateBookingData({ teamMemberId });
     setCurrentStep('insurance'); // Go to insurance step first
+    console.log(`Team member set to ${teamMemberId}, moving to insurance step`);
   };
   
   const setInsurance = (insurance: InsurancePlan | string) => {
     const insuranceId = typeof insurance === 'string' ? insurance : insurance.id;
     updateBookingData({ insuranceId });
     setCurrentStep('service'); // Then go to service step
+    console.log(`Insurance set to ${insuranceId}, moving to service step`);
   };
   
   const setService = (service: Service | string) => {
     const serviceId = typeof service === 'string' ? service : service.id;
     updateBookingData({ serviceId });
-    setCurrentStep('date'); // Then date selection
+    setCurrentStep('date'); // Then date selection, fixed from 'time'
+    console.log(`Service set to ${serviceId}, moving to date step`);
   };
   
   const setDate = (date: Date) => {
     updateBookingData({ date });
-    setCurrentStep('time'); // Finally time selection
+    setCurrentStep('time'); // Then time selection
+    console.log(`Date selected: ${date.toISOString().split('T')[0]}, moving to time step`);
   };
   
   const setTime = (startTime: string, endTime: string) => {
     updateBookingData({ startTime, endTime });
     setCurrentStep('client-info'); // Next is client info
-    console.log("Time selected, moving to client-info step");
+    console.log(`Time selected: ${startTime}-${endTime}, moving to client-info step`);
   };
   
   const setClientInfo = (name: string, email: string, phone: string, notes?: string) => {
@@ -110,7 +116,8 @@ export const useBookingSteps = ({
       clientPhone: phone,
       notes: notes || '' 
     });
-    console.log("Client info set:", { name, email, phone });
+    setCurrentStep('confirmation'); // Move to confirmation step
+    console.log("Client info set:", { name, email, phone }, "moving to confirmation step");
   };
   
   const completeBooking = async () => {
@@ -123,7 +130,6 @@ export const useBookingSteps = ({
       }
       
       toast.success("Agendamento realizado com sucesso!");
-      setCurrentStep('confirmation');
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro ao finalizar agendamento";

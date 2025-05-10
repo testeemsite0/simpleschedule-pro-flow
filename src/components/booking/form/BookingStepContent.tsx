@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { TeamMemberStepContent } from '../steps/TeamMemberStepContent';
 import { ServiceStepContent } from '../steps/ServiceStepContent';
 import { InsuranceStepContent } from '../steps/InsuranceStepContent';
+import { DateStepContent } from '../steps/DateStepContent';
 import { TimeStepContent } from '../steps/TimeStepContent';
 import { ClientInfoStepContent } from '../steps/ClientInfoStepContent';
 import { ConfirmationStepContent } from '../steps/ConfirmationStepContent';
@@ -70,6 +71,13 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
     handleTimeChange(startTime, endTime);
   };
 
+  console.log(`BookingStepContent: Rendering step ${currentStep}`, {
+    teamMembersCount: teamMembers.length,
+    availableDatesCount: availableDates.length,
+    availableSlotsCount: availableSlots.length,
+    hasSelectedDate: !!bookingData.date
+  });
+
   // Render the appropriate step content based on current step
   switch (currentStep) {
     case 'team-member':
@@ -102,6 +110,16 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
           onBack={goToPreviousStep}
           teamMemberId={bookingData.teamMemberId}
           checkInsuranceLimitReached={checkInsuranceLimitReached}
+        />
+      );
+    case 'date':
+      return (
+        <DateStepContent
+          availableDates={availableDates}
+          selectedDate={bookingData.date}
+          onDateSelect={handleDateChange}
+          onBack={goToPreviousStep}
+          isLoading={isLoading}
         />
       );
     case 'time':

@@ -14,9 +14,10 @@ export const BookingStepIndicator: React.FC<BookingStepIndicatorProps> = ({
     { id: 1, key: 'team-member', label: 'Profissional' },
     { id: 2, key: 'insurance', label: 'Convênio' },
     { id: 3, key: 'service', label: 'Serviço' },
-    { id: 4, key: 'time', label: 'Horário' },
-    { id: 5, key: 'client-info', label: 'Cliente' },
-    { id: 6, key: 'confirmation', label: 'Confirmação' }
+    { id: 4, key: 'date', label: 'Data' },
+    { id: 5, key: 'time', label: 'Horário' },
+    { id: 6, key: 'client-info', label: 'Cliente' },
+    { id: 7, key: 'confirmation', label: 'Confirmação' }
   ];
 
   const getCurrentStepIndex = () => {
@@ -35,6 +36,11 @@ export const BookingStepIndicator: React.FC<BookingStepIndicatorProps> = ({
     if (stepId === currentIndex) return "current";
     return "upcoming";
   };
+  
+  console.log("BookingStepIndicator: Current step", {
+    currentStep,
+    asNumber: getCurrentStepIndex()
+  });
   
   return (
     <div className="flex justify-between mb-8">
