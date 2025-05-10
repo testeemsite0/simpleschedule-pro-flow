@@ -32,7 +32,7 @@ export const fetchUserProfile = async (userId: string): Promise<Professional | n
       return null;
     }
     
-    console.log("User profile fetched:", profile);
+    console.log("User profile fetched:", profile.id);
     return profile;
   } catch (error) {
     console.error("Unexpected error fetching profile:", error);
@@ -42,32 +42,50 @@ export const fetchUserProfile = async (userId: string): Promise<Professional | n
 
 export const createUserProfile = async (userId: string, userData: any): Promise<Professional | null> => {
   try {
-    const { data: authUser } = await supabase.auth.getUser(userId);
+    console.log("Creating user profile for ID:", userId, "with data:", userData);
+    
+    const { data: authUser } = await supabase.auth.getUser();
     
     if (authUser && authUser.user) {
+      // Preparar dados do perfil com mais informações disponíveis
+      const name = userData.name || 
+                  authUser.user.user_metadata?.name || 
+                  authUser.user.email?.split('@')[0] || 
+                  'User';
+                  
       const slug = userData.slug || 
-                   authUser.user.user_metadata?.slug || 
-                   authUser.user.email?.split('@')[0]?.toLowerCase() || 
-                   'user';
+                  authUser.user.user_metadata?.slug || 
+                  name.toLowerCase().replace(/\s+/g, '-').normalize('NFD').replace(/[\u0300-\u036f]/g, '') || 
+                  'user';
+      
+      const newProfileData = {
+        id: userId,
+        name: name,
+        email: authUser.user.email || userData.email || '',
+        profession: userData.profession || authUser.user.user_metadata?.profession || 'Não especificado',
+        slug: slug
+      };
+      
+      console.log("Creating profile with data:", newProfileData);
       
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
-        .insert({
-          id: userId,
-          name: userData.name || authUser.user.user_metadata?.name || authUser.user.email?.split('@')[0] || 'User',
-          email: authUser.user.email || userData.email || '',
-          profession: userData.profession || authUser.user.user_metadata?.profession || 'Não especificado',
-          slug: slug
-        })
+        .insert(newProfileData)
         .select()
         .single();
         
       if (createError) {
         console.error("Error creating user profile:", createError);
+        console.log("Error details:", {
+          code: createError.code,
+          message: createError.message,
+          details: createError.details,
+          hint: createError.hint
+        });
         return null;
       }
       
-      console.log("Created new profile for user:", newProfile);
+      console.log("Created new profile for user:", newProfile.id);
       return newProfile;
     } else {
       console.error("Unable to retrieve auth user data for profile creation");

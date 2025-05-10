@@ -24,7 +24,9 @@ export const useAuthMethods = () => {
         return false;
       }
       
-      return !!data.user;
+      // Se chegou aqui, a autenticação foi bem sucedida
+      console.log("Login successful, session:", data.session?.access_token.substring(0, 10) + "...");
+      return !!data.session; // Verifica se há uma sessão válida em vez de apenas o usuário
     } catch (error) {
       console.error("Unexpected login error:", error);
       return false;
@@ -43,6 +45,9 @@ export const useAuthMethods = () => {
         throw new Error("O endereço de email fornecido não é válido");
       }
       
+      // Log para verificar que dados estão sendo enviados
+      console.log("Registering user:", { name, email, profession });
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -60,15 +65,21 @@ export const useAuthMethods = () => {
         throw error;
       }
       
-      // If we got a user ID, registration was successful
+      // Verificação mais completa do estado de registro
+      console.log("Registration response:", {
+        userId: data.user?.id,
+        emailConfirmed: data.user?.email_confirmed_at,
+        session: !!data.session,
+      });
+      
+      // Se o usuário for criado, consideramos o registro bem-sucedido
       if (data.user?.id) {
         console.log("Registration successful, user ID:", data.user.id);
+        return true;
       } else {
-        // Supabase might return a 200 OK status but without a user ID in some cases
         console.log("Registration potentially pending email confirmation:", data);
+        return false;
       }
-      
-      return true;
     } catch (error: any) {
       console.error("Registration error:", error.message);
       throw error;

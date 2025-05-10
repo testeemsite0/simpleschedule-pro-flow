@@ -37,6 +37,7 @@ const RegisterForm: React.FC = () => {
   
   const onSubmit = async (values: RegisterFormValues) => {
     setIsLoading(true);
+    console.log('Registration form submitted:', values);
     
     try {
       const success = await register(
@@ -52,15 +53,25 @@ const RegisterForm: React.FC = () => {
           description: 'Você será redirecionado para o dashboard',
         });
         navigate('/dashboard');
+      } else {
+        toast({
+          title: 'Atenção',
+          description: 'Cadastro iniciado, mas pode ser necessária confirmação por email',
+          variant: 'default',
+        });
       }
     } catch (error: any) {
-      // Handle specific error messages
+      // Handle specific error messages with mais detalhes
       let errorMessage = 'Ocorreu um erro ao processar sua solicitação';
       
-      if (error.message?.includes('Email address') && error.message?.includes('invalid')) {
+      console.error('Registration error details:', error);
+      
+      if (error.message?.includes('Email') && error.message?.includes('invalid')) {
         errorMessage = 'O endereço de email fornecido não é válido';
       } else if (error.message?.includes('already')) {
         errorMessage = 'Este email já está em uso';
+      } else if (error.message?.includes('password')) {
+        errorMessage = 'A senha fornecida não atende aos requisitos de segurança';
       } else if (error.message) {
         errorMessage = error.message;
       }

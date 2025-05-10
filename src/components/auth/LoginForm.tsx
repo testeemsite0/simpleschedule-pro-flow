@@ -20,8 +20,9 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginForm = () => {
-  const { login, isLoading } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   
   const form = useForm<LoginFormValues>({
@@ -34,10 +35,12 @@ const LoginForm = () => {
   
   const onSubmit = async (data: LoginFormValues) => {
     console.log('Login form submitted:', data.email);
+    setIsLoading(true);
     setLoginError(null);
     
     try {
       const success = await login(data.email, data.password);
+      console.log('Login result:', success);
       
       if (success) {
         console.log('Login successful, redirecting to dashboard');
@@ -51,10 +54,12 @@ const LoginForm = () => {
         setLoginError('Email ou senha incorretos. Por favor, tente novamente.');
         form.reset({ email: data.email, password: '' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
       setLoginError('Ocorreu um erro ao fazer login. Por favor, tente novamente.');
       form.reset({ email: data.email, password: '' });
+    } finally {
+      setIsLoading(false);
     }
   };
   
