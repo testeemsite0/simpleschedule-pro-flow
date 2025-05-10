@@ -10,6 +10,7 @@ interface ServiceStepContentProps {
   onBack: () => void;
   getAvailableServicesForTeamMember: (teamMemberId: string) => Service[];
   teamMemberId: string;
+  insuranceId?: string; // Added insuranceId prop
 }
 
 export const ServiceStepContent: React.FC<ServiceStepContentProps> = ({
@@ -18,7 +19,8 @@ export const ServiceStepContent: React.FC<ServiceStepContentProps> = ({
   onServiceChange,
   onBack,
   getAvailableServicesForTeamMember,
-  teamMemberId
+  teamMemberId,
+  insuranceId // Pass insuranceId to ServiceStep
 }) => {
   return (
     <ServiceStep
@@ -26,6 +28,7 @@ export const ServiceStepContent: React.FC<ServiceStepContentProps> = ({
       selectedService={selectedService}
       onServiceChange={onServiceChange}
       onBack={onBack}
+      insuranceId={insuranceId}
     />
   );
 };

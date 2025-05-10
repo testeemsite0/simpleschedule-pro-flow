@@ -75,7 +75,8 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
     teamMembersCount: teamMembers.length,
     availableDatesCount: availableDates.length,
     availableSlotsCount: availableSlots.length,
-    hasSelectedDate: !!bookingData.date
+    hasSelectedDate: !!bookingData.date,
+    insuranceId: bookingData.insuranceId // Log the insuranceId for debugging
   });
 
   // Render the appropriate step content based on current step
@@ -99,6 +100,7 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
           onBack={goToPreviousStep}
           getAvailableServicesForTeamMember={getAvailableServicesForTeamMember}
           teamMemberId={bookingData.teamMemberId || ''}
+          insuranceId={bookingData.insuranceId} // Pass insuranceId to ServiceStepContent
         />
       );
     case 'insurance':

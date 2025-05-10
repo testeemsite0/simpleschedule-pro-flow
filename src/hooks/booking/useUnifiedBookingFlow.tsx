@@ -88,7 +88,8 @@ export const useUnifiedBookingFlow = ({
       // You can add more actions after success here if necessary
     },
     goToStep: bookingSteps.goToStep,
-    updateErrorState: bookingSteps.updateErrorState
+    updateErrorState: bookingSteps.updateErrorState,
+    resetBooking: bookingSteps.resetBooking // Pass the resetBooking function
   });
   
   // Handle professional ID changes

@@ -1,9 +1,9 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BookingData } from './useBookingSteps';
 import { createAppointment } from './api/dataFetcher';
+import { useAppointments } from '@/context/AppointmentContext';
 
 interface UseBookingAppointmentProps {
   professionalId?: string;
@@ -12,6 +12,7 @@ interface UseBookingAppointmentProps {
   onSuccess?: () => void;
   goToStep: (step: string) => void;
   updateErrorState: (error: string | null) => void;
+  resetBooking?: () => void;
 }
 
 export const useBookingAppointment = ({
@@ -20,9 +21,11 @@ export const useBookingAppointment = ({
   bookingData,
   onSuccess,
   goToStep,
-  updateErrorState
+  updateErrorState,
+  resetBooking
 }: UseBookingAppointmentProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { isWithinFreeLimit, checkInsurancePlanLimit } = useAppointments();
 
   // Complete booking process with enhanced validation
   const completeBooking = async () => {
@@ -64,6 +67,23 @@ export const useBookingAppointment = ({
       }
       
       const formattedDate = format(bookingData.date, 'yyyy-MM-dd');
+      
+      // Check appointment limits for free tier and insurance plans
+      if (!isAdminView) {
+        // Only check limits for client-initiated bookings
+        const withinFreeLimit = await isWithinFreeLimit(professionalId);
+        if (!withinFreeLimit) {
+          throw new Error("Limite de agendamentos gratuitos atingido. Entre em contato com o profissional.");
+        }
+        
+        // Check insurance plan limits if using one
+        if (bookingData.insuranceId && bookingData.insuranceId !== "none") {
+          const withinInsuranceLimit = await checkInsurancePlanLimit(bookingData.insuranceId);
+          if (!withinInsuranceLimit) {
+            throw new Error("Limite de agendamentos para este convênio foi atingido.");
+          }
+        }
+      }
       
       // Log complete data right before creating the appointment
       console.log("Creating appointment with validated data:", {
@@ -107,11 +127,21 @@ export const useBookingAppointment = ({
       if (data && data.length > 0) {
         console.log("Appointment created successfully:", data[0]);
         toast.success("Agendamento realizado com sucesso!");
+        
+        // Show confirmation step before resetting
         goToStep("confirmation");
         
         if (onSuccess) {
           onSuccess();
         }
+        
+        // Wait 3 seconds before resetting to show the confirmation
+        setTimeout(() => {
+          if (resetBooking) {
+            console.log("Resetting booking form after successful appointment");
+            resetBooking(); // Reset the booking form after success
+          }
+        }, 3000);
         
         return true;
       } else {
