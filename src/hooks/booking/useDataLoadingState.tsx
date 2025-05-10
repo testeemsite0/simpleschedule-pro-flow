@@ -6,19 +6,23 @@ interface UseDataLoadingStateProps {
   initialLoading?: boolean;
   showToast?: boolean;
   maxRetries?: number;
+  loadingTimeout?: number; // in ms
 }
 
 export const useDataLoadingState = ({ 
   initialLoading = true, 
   showToast = true,
-  maxRetries = 3
+  maxRetries = 3,
+  loadingTimeout = 30000 // 30 seconds default timeout
 }: UseDataLoadingStateProps = {}) => {
   const [isLoading, setIsLoading] = useState(initialLoading);
   const [dataError, setDataError] = useState<string | null>(null);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef<number>(0);
+  const requestCacheRef = useRef<Map<string, {timestamp: number, data: any}>>(new Map());
+  const CACHE_TTL = 60000; // 1 minute cache TTL
   
-  // Prevent excessive loading state changes
+  // Prevent excessive loading state changes with debounce
   const safeSetLoading = useCallback((loading: boolean) => {
     // Clear any existing timeout to prevent race conditions
     if (loadingTimeoutRef.current) {
@@ -41,12 +45,31 @@ export const useDataLoadingState = ({
         if (showToast) {
           toast.error("A operação está demorando mais que o esperado");
         }
-      }, 30000); // 30 seconds max loading timeout
+        setDataError("Tempo limite excedido. Tente novamente mais tarde.");
+      }, loadingTimeout);
     }
-  }, [showToast]);
+  }, [showToast, loadingTimeout]);
+  
+  // Simple request caching to avoid redundant requests
+  const getCachedData = useCallback(<T,>(cacheKey: string): T | null => {
+    const cached = requestCacheRef.current.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+      console.log(`Using cached data for: ${cacheKey}`);
+      return cached.data as T;
+    }
+    return null;
+  }, []);
+  
+  const setCachedData = useCallback(<T,>(cacheKey: string, data: T): void => {
+    requestCacheRef.current.set(cacheKey, {
+      timestamp: Date.now(),
+      data
+    });
+    console.log(`Cached data for: ${cacheKey}`);
+  }, []);
   
   // Enhanced error handling with retry capability
-  const handleError = useCallback((errorMessage: string, errorObject?: any) => {
+  const handleError = useCallback((errorMessage: string, errorObject?: any, cacheKey?: string) => {
     console.error(`Error in data loading: ${errorMessage}`, errorObject);
     
     // Check if the error is related to API rate limits or insufficient resources
@@ -62,12 +85,15 @@ export const useDataLoadingState = ({
       
       console.log(`Retrying request in ${retryDelay}ms (attempt ${retryCountRef.current} of ${maxRetries})`);
       
-      if (showToast) {
+      if (showToast && retryCountRef.current > 1) {
         toast.warning(`Reconnecting... (attempt ${retryCountRef.current} of ${maxRetries})`);
       }
       
       // Don't set error or change loading state for retry attempts
-      return;
+      return {
+        shouldRetry: true,
+        retryDelay
+      };
     }
     
     // Reset retry counter and set error for non-retriable errors or max retries reached
@@ -80,6 +106,11 @@ export const useDataLoadingState = ({
     
     // Make sure loading is set to false to prevent UI from hanging
     safeSetLoading(false);
+    
+    return {
+      shouldRetry: false,
+      retryDelay: 0
+    };
   }, [showToast, maxRetries, safeSetLoading]);
   
   const clearError = useCallback(() => {
@@ -87,6 +118,11 @@ export const useDataLoadingState = ({
       setDataError(null);
     }
   }, [dataError]);
+  
+  // Reset retry counter
+  const resetRetryCount = useCallback(() => {
+    retryCountRef.current = 0;
+  }, []);
   
   // Clean up any timeouts when component unmounts
   const cleanup = useCallback(() => {
@@ -103,6 +139,9 @@ export const useDataLoadingState = ({
     setDataError,
     handleError,
     clearError,
+    resetRetryCount,
+    getCachedData,
+    setCachedData,
     cleanup
   };
 };
