@@ -1,12 +1,9 @@
 
-import { useState, useEffect } from 'react';
-import { prewarmBookingDataCache } from './api/dataLoader';
-import { useTeamMembersFetching } from './fetching/useTeamMembersFetching';
-import { useServicesFetching } from './fetching/useServicesFetching';
-import { useTimeSlotsFetching } from './fetching/useTimeSlotsFetching';
-import { useInsurancePlansFetching } from './fetching/useInsurancePlansFetching';
-import { useAppointmentsFetching } from './fetching/useAppointmentsFetching';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { prewarmBookingDataCache, unifiedDataFetch } from './api/dataLoader';
+import { TeamMember, Service, InsurancePlan, TimeSlot, Appointment } from '@/types';
 import { useMaintenanceMode } from './useMaintenanceMode';
+import { fetchTeamMembers, fetchServices, fetchInsurancePlans, fetchTimeSlots, fetchAppointments } from './api/dataLoader';
 
 interface UseBookingDataFetchingProps {
   professionalId?: string;
@@ -19,142 +16,143 @@ export const useBookingDataFetching = ({
   onDataLoaded,
   onError
 }: UseBookingDataFetchingProps = {}) => {
+  // State management
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [dataError, setDataError] = useState<Error | null>(null);
   const [allDataLoaded, setAllDataLoaded] = useState<boolean>(false);
+  
+  // Prevent re-fetching loops
+  const isFetchingRef = useRef(false);
+  const loadAttempted = useRef(false);
+  const activeFetchId = useRef<string>('');
   
   // Maintenance mode state
   const { maintenanceMode, setMaintenanceMode } = useMaintenanceMode();
   
   // Centralized error handler
-  const handleError = (context: string, error: Error) => {
+  const handleError = useCallback((context: string, error: Error) => {
     console.error(`Error in ${context}:`, error);
     setDataError(error);
     if (onError) {
       onError(error);
     }
-  };
+  }, [onError]);
   
-  // Track loading state for individual data types
-  const [loadingStates, setLoadingStates] = useState({
-    teamMembers: true,
-    services: true,
-    insurancePlans: true,
-    timeSlots: true,
-    appointments: true,
-  });
-  
-  // Success handler
-  const handleSuccess = (dataType: keyof typeof loadingStates) => {
-    setLoadingStates(prev => ({ ...prev, [dataType]: false }));
-  };
-  
-  // Team members fetching
-  const { 
-    teamMembers,
-    refetchTeamMembers
-  } = useTeamMembersFetching({
-    professionalId,
-    onSuccess: () => handleSuccess('teamMembers'),
-    onError: (error) => handleError('useTeamMembersFetching', error)
-  });
-  
-  // Services fetching
-  const { 
-    services,
-    refetchServices
-  } = useServicesFetching({
-    professionalId,
-    onSuccess: () => handleSuccess('services'),
-    onError: (error) => handleError('useServicesFetching', error)
-  });
-  
-  // Time slots fetching
-  const { 
-    timeSlots,
-    refetchTimeSlots
-  } = useTimeSlotsFetching({
-    professionalId,
-    onSuccess: () => handleSuccess('timeSlots'),
-    onError: (error) => handleError('useTimeSlotsFetching', error)
-  });
-  
-  // Insurance plans fetching
-  const { 
-    insurancePlans,
-    refetchInsurancePlans
-  } = useInsurancePlansFetching({
-    professionalId,
-    onSuccess: () => handleSuccess('insurancePlans'),
-    onError: (error) => handleError('useInsurancePlansFetching', error)
-  });
-  
-  // Appointments fetching
-  const { 
-    appointments,
-    refetchAppointments
-  } = useAppointmentsFetching({
-    professionalId,
-    onSuccess: () => handleSuccess('appointments'),
-    onError: (error) => handleError('useAppointmentsFetching', error)
-  });
-  
-  // Update overall loading state when individual states change
-  useEffect(() => {
-    const isStillLoading = Object.values(loadingStates).some(state => state === true);
-    setIsLoading(isStillLoading);
+  // Unified data loading function that loads all data types at once
+  const loadAllData = useCallback(async () => {
+    if (!professionalId || isFetchingRef.current) {
+      return;
+    }
     
-    if (!isStillLoading && !allDataLoaded) {
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log("Already fetching data, skipping redundant request");
+      return;
+    }
+    
+    // Generate a unique fetch ID to detect stale loads
+    const fetchId = `fetch_${Date.now()}`;
+    activeFetchId.current = fetchId;
+    isFetchingRef.current = true;
+    
+    setIsLoading(true);
+    setDataError(null);
+    loadAttempted.current = true;
+    
+    try {
+      console.log("Starting unified data load for professional:", professionalId);
+      const controller = new AbortController();
+      const signal = controller.signal;
+      
+      // Setup query functions map
+      const queryFns = {
+        teamMembers: () => fetchTeamMembers(professionalId, signal),
+        services: () => fetchServices(professionalId, signal),
+        insurancePlans: () => fetchInsurancePlans(professionalId, signal),
+        timeSlots: () => fetchTimeSlots(professionalId, signal),
+        appointments: () => fetchAppointments(professionalId, signal)
+      };
+      
+      // Load all data types in an optimized batch
+      const results = await unifiedDataFetch<any>(
+        professionalId,
+        ['teamMembers', 'services', 'insurancePlans', 'timeSlots', 'appointments'],
+        queryFns,
+        signal
+      );
+      
+      // If this load was superseded by another, discard results
+      if (activeFetchId.current !== fetchId) {
+        console.log("Discarding stale fetch results");
+        return;
+      }
+      
+      // Update state with all fetched data
+      if (results.teamMembers) setTeamMembers(results.teamMembers);
+      if (results.services) setServices(results.services);
+      if (results.insurancePlans) setInsurancePlans(results.insurancePlans);
+      if (results.timeSlots) setTimeSlots(results.timeSlots);
+      if (results.appointments) setAppointments(results.appointments);
+      
       setAllDataLoaded(true);
+      
       if (onDataLoaded) {
         onDataLoaded();
       }
+      
+    } catch (err: any) {
+      if (activeFetchId.current !== fetchId) return;
+      
+      const error = err instanceof Error ? err : new Error(String(err));
+      handleError('loadAllData', error);
+    } finally {
+      // Only update if this is still the active fetch
+      if (activeFetchId.current === fetchId) {
+        setIsLoading(false);
+        isFetchingRef.current = false;
+      }
     }
-  }, [loadingStates, allDataLoaded, onDataLoaded]);
+  }, [professionalId, handleError, onDataLoaded]);
   
   // Initialize data fetching
   useEffect(() => {
-    if (professionalId) {
-      // Reset error state
-      setDataError(null);
-      setAllDataLoaded(false);
-      
-      // Reset loading states
-      setLoadingStates({
-        teamMembers: true,
-        services: true,
-        insurancePlans: true,
-        timeSlots: true,
-        appointments: true,
-      });
-      
-      // Prewarm cache to optimize loading
-      prewarmBookingDataCache(professionalId)
-        .catch(error => console.warn("Error prewarming cache:", error));
+    // Reset state when professional ID changes
+    if (professionalId !== undefined) {
+      // Only fetch if we haven't attempted yet for this professional
+      if (!loadAttempted.current) {
+        loadAllData();
+      }
     } else {
       // No professional ID provided
       setIsLoading(false);
+      setTeamMembers([]);
+      setServices([]);
+      setInsurancePlans([]);
+      setTimeSlots([]);
+      setAppointments([]);
     }
-  }, [professionalId]);
+    
+    // Cleanup function
+    return () => {
+      // Nothing to clean up here
+    };
+  }, [professionalId, loadAllData]);
   
-  // Function to refresh all data
-  const refreshAllData = () => {
-    if (!professionalId) return;
+  // Function to refresh all data - exposed for manual refresh
+  const refreshAllData = useCallback(() => {
+    if (isFetchingRef.current) {
+      console.log("Skipping refresh as data is currently being fetched");
+      return;
+    }
     
-    setLoadingStates({
-      teamMembers: true,
-      services: true,
-      insurancePlans: true,
-      timeSlots: true,
-      appointments: true,
-    });
-    
-    refetchTeamMembers();
-    refetchServices();
-    refetchInsurancePlans();
-    refetchTimeSlots();
-    refetchAppointments();
-  };
+    loadAttempted.current = false; // Reset the load attempted flag
+    loadAllData();
+  }, [loadAllData]);
   
   return {
     // Data
@@ -173,4 +171,4 @@ export const useBookingDataFetching = ({
     setMaintenanceMode,
     refreshAllData
   };
-};
+}, []);

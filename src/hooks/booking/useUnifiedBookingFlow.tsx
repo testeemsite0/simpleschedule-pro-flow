@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useBookingSteps, BookingStep } from './useBookingSteps';
 import { useBookingDataFetching } from './useBookingDataFetching';
@@ -8,6 +7,7 @@ import { useBookingAppointment } from './useBookingAppointment';
 import { useAvailabilityCalculation } from './useAvailabilityCalculation';
 import { useMaintenanceMode } from './useMaintenanceMode';
 import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
+import { MIN_REFRESH_INTERVAL } from './api/constants';
 
 interface UseUnifiedBookingFlowProps {
   professionalId?: string;
@@ -20,12 +20,25 @@ export const useUnifiedBookingFlow = ({
   isAdminView = false,
   initialStep
 }: UseUnifiedBookingFlowProps = {}) => {
+  // Track initialization and prevent excessive updates
+  const isInitialized = useRef<boolean>(false);
+  const lastUpdate = useRef<number>(0);
+  const professionalIdRef = useRef<string | undefined>(professionalId);
+  
   // Use refactored hooks for better separation of concerns
   const bookingSteps = useBookingSteps({
     initialStep: initialStep || "team-member"
   });
   
-  // Booking data fetching hook
+  // Function to handle errors consistently
+  const handleDataError = useCallback((error: Error | null) => {
+    if (error) {
+      console.error("Booking data error:", error);
+      bookingSteps.updateErrorState(error.message || "Erro ao carregar dados");
+    }
+  }, [bookingSteps]);
+  
+  // Booking data fetching with optimized loading
   const {
     teamMembers,
     services,
@@ -35,9 +48,11 @@ export const useUnifiedBookingFlow = ({
     maintenanceMode,
     setMaintenanceMode,
     isLoading: dataLoading,
-    dataError
+    dataError,
+    refreshAllData
   } = useBookingDataFetching({
-    professionalId
+    professionalId,
+    onError: handleDataError
   });
 
   // Services-related utilities
@@ -75,6 +90,60 @@ export const useUnifiedBookingFlow = ({
     updateErrorState: bookingSteps.updateErrorState
   });
   
+  // Handle professional ID changes
+  useEffect(() => {
+    // Skip if nothing changed
+    if (professionalId === professionalIdRef.current) {
+      return;
+    }
+    
+    // Track the new professional ID
+    professionalIdRef.current = professionalId;
+    isInitialized.current = false;
+    
+    // Clear error state when changing professional
+    bookingSteps.updateErrorState(null);
+  }, [professionalId, bookingSteps]);
+  
+  // Initial data loading - with optimization to prevent excessive loading
+  useEffect(() => {
+    // Skip if already initialized or no professional ID
+    if (isInitialized.current || !professionalId) {
+      return;
+    }
+    
+    const now = Date.now();
+    
+    // Prevent excessive refreshes (throttle)
+    if (now - lastUpdate.current < MIN_REFRESH_INTERVAL) {
+      return;
+    }
+    
+    // Otherwise proceed with initialization
+    isInitialized.current = true;
+    lastUpdate.current = now;
+    
+    // Handle any errors from data fetching
+    if (dataError) {
+      handleDataError(dataError);
+    }
+  }, [professionalId, dataError, handleDataError]);
+  
+  // Optimized data refresh function
+  const refreshData = useCallback(() => {
+    const now = Date.now();
+    
+    // Prevent excessive refreshes
+    if (now - lastUpdate.current < MIN_REFRESH_INTERVAL) {
+      console.log("Skipping refresh - too soon since last update");
+      return;
+    }
+    
+    lastUpdate.current = now;
+    bookingSteps.updateErrorState(null);
+    refreshAllData();
+  }, [bookingSteps, refreshAllData]);
+  
   const resetBooking = () => {
     bookingSteps.resetBooking();
   };
@@ -98,6 +167,7 @@ export const useUnifiedBookingFlow = ({
     checkInsuranceLimitReached,
     completeBooking,
     setMaintenanceMode,
-    resetBooking
+    resetBooking,
+    refreshData
   };
 };

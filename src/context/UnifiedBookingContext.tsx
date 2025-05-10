@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { useBookingSteps, BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
 import { useUnifiedBookingFlow } from '@/hooks/booking/useUnifiedBookingFlow';
 import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
@@ -17,7 +17,7 @@ interface UnifiedBookingContextType {
   currentStep: BookingStep;
   bookingData: BookingData;
   isLoading: boolean;
-  error: string | Error | null;  // Update this type to accept Error objects as well
+  error: string | Error | null;
   maintenanceMode: boolean;
   
   // Dados
@@ -46,6 +46,7 @@ interface UnifiedBookingContextType {
   completeBooking: () => Promise<boolean>;
   resetBooking: () => void;
   setMaintenanceMode: (enabled: boolean) => void;
+  refreshData: () => void;
   
   // Funções utilitárias
   getAvailableServicesForTeamMember: (teamMemberId: string) => Service[];
@@ -67,9 +68,7 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
   isAdminView = false,
   initialStep,
 }) => {
-  // Log when the provider mounts to help debug re-renders
-  console.log("UnifiedBookingProvider mounted/updated with professionalId:", professionalId);
-  
+  // Instantiate the unified booking flow with memoization
   const unifiedBookingFlow = useUnifiedBookingFlow({
     professionalId,
     isAdminView,
@@ -77,8 +76,10 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
   });
   
   // Use useMemo to prevent unnecessary context value recreation
-  const contextValue = useMemo(() => unifiedBookingFlow, [
-    // List all dependencies that should trigger a context update
+  const contextValue = useMemo(() => ({
+    ...unifiedBookingFlow
+  }), [
+    // List essential dependencies that should trigger a context update
     unifiedBookingFlow.currentStep,
     unifiedBookingFlow.bookingData,
     unifiedBookingFlow.isLoading,
@@ -88,36 +89,6 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
     unifiedBookingFlow.insurancePlans,
     unifiedBookingFlow.availableDates,
     unifiedBookingFlow.availableSlots
-  ]);
-
-  // Add a debugging effect to help track render cycles
-  useEffect(() => {
-    console.log("UnifiedBookingContext rendered with professionalId:", professionalId);
-    
-    // Log data status to help with debugging
-    const logDataStatus = () => {
-      console.log("Current booking data state:", {
-        teamMembers: contextValue.teamMembers.length,
-        services: contextValue.services.length,
-        insurancePlans: contextValue.insurancePlans.length,
-        timeSlots: contextValue.timeSlots.length,
-        isLoading: contextValue.isLoading,
-        error: contextValue.error
-      });
-    };
-    
-    // Log status after a slight delay to ensure the latest data is captured
-    const logTimeout = setTimeout(logDataStatus, 1000);
-    
-    return () => {
-      clearTimeout(logTimeout);
-    };
-  }, [
-    professionalId, 
-    contextValue.teamMembers.length, 
-    contextValue.services.length,
-    contextValue.isLoading, 
-    contextValue.error
   ]);
 
   return (

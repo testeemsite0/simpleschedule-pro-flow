@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const Booking: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { professional, loading, error, retry } = usePublicProfessionalData(slug);
+  
   // Track if we've already attempted to render with the professional data
   const [hasAttemptedRender, setHasAttemptedRender] = useState(false);
   
@@ -27,11 +28,11 @@ const Booking: React.FC = () => {
   const bookingProvider = useMemo(() => {
     if (!professional) return null;
     
-    // Add key with timestamp to prevent stale context when professional changes
+    // Add key with professionalId to prevent stale context
     return (
       <UnifiedBookingProvider 
         professionalId={professional.id} 
-        key={`provider-${professional.id}`}
+        key={`booking-provider-${professional.id}`}
       >
         <BookingContent professional={professional} />
       </UnifiedBookingProvider>
