@@ -21,7 +21,14 @@ export const ConfirmationStepContent: React.FC<ConfirmationStepContentProps> = (
   if (bookingData.appointmentId) {
     return (
       <BookingConfirmation
-        professional={{ name: bookingData.professionalName || 'Profissional', id: '', address: '' }}
+        professional={{ 
+          name: bookingData.professionalName || 'Profissional', 
+          id: '', 
+          address: '',
+          email: 'email@example.com', // Adding required email property
+          profession: 'Profissional', // Adding required profession property
+          slug: 'professional-slug' // Adding required slug property
+        }}
         clientName={bookingData.clientName || ''}
         date={bookingData.date || new Date()}
         startTime={bookingData.startTime || ''}
