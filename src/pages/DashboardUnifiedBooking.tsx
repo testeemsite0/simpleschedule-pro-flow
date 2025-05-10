@@ -87,14 +87,19 @@ const DashboardUnifiedBooking = () => {
           </TabsContent>
           
           <TabsContent value="new-booking" className="space-y-6 pt-4">
-            <UnifiedBookingProvider professionalId={user?.id} isAdminView={true}>
-              <UnifiedBookingForm 
-                title="Novo Agendamento" 
-                showStepIndicator={true}
-                isAdminView={true}
-                allowWalkIn={true}
-              />
-            </UnifiedBookingProvider>
+            {/* Ensure we only try to render when user is available */}
+            {user ? (
+              <UnifiedBookingProvider professionalId={user.id} isAdminView={true} key={`booking-provider-${user.id}`}>
+                <UnifiedBookingForm 
+                  title="Novo Agendamento" 
+                  showStepIndicator={true}
+                  isAdminView={true}
+                  allowWalkIn={true}
+                />
+              </UnifiedBookingProvider>
+            ) : (
+              <p>Carregando informações do usuário...</p>
+            )}
           </TabsContent>
         </Tabs>
       </div>

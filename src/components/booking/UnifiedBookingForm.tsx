@@ -22,6 +22,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
   isAdminView = false,
   allowWalkIn = false,
 }) => {
+  // This hook must be used within a UnifiedBookingProvider context
   const { 
     currentStep, 
     bookingData,
@@ -86,7 +87,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       console.log("UnifiedBookingForm: No team members available but not loading, forcing refresh");
       handleRefresh();
     }
-  }, [teamMembers, isLoading, error]);
+  }, [teamMembers, isLoading, error, handleRefresh]);
   
   const handleForceRefresh = () => {
     console.log("UnifiedBookingForm: Force refreshing data");
@@ -151,7 +152,6 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
         />
       </div>
       
-      {/* Only show navigation buttons here - removed duplicate buttons from individual steps */}
       <BookingNavigationButtons 
         currentStep={currentStep}
         isLoading={isLoading}

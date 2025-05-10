@@ -24,21 +24,7 @@ const Booking: React.FC = () => {
     }
   }, [loading, professional, error]);
 
-  // Use useMemo to prevent recreating the UnifiedBookingProvider unnecessarily
-  const bookingProvider = useMemo(() => {
-    if (!professional) return null;
-    
-    // Add key with professionalId to prevent stale context
-    return (
-      <UnifiedBookingProvider 
-        professionalId={professional.id} 
-        key={`booking-provider-${professional.id}`}
-      >
-        <BookingContent professional={professional} />
-      </UnifiedBookingProvider>
-    );
-  }, [professional]);
-  
+  // We're going to let BookingContent handle its own UnifiedBookingProvider wrapping
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -59,7 +45,7 @@ const Booking: React.FC = () => {
             />
           )}
           
-          {bookingProvider}
+          {professional && <BookingContent professional={professional} />}
         </div>
       </main>
       <Footer />
