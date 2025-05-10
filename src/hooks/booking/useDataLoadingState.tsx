@@ -31,6 +31,10 @@ export const useDataLoadingState = ({
   // Cache for data, to reduce network requests
   const cachedDataRef = useRef<Record<string, any>>({});
   
+  // Track last error occurrence time to prevent error flooding
+  const lastErrorTimeRef = useRef<number>(0);
+  const errorCooldownMs = 5000; // 5 seconds between same errors
+  
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -44,6 +48,11 @@ export const useDataLoadingState = ({
   // Set up loading timeout
   useEffect(() => {
     if (isLoading && loadingTimeout > 0) {
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
       timeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
           setIsLoading(false);
@@ -69,6 +78,16 @@ export const useDataLoadingState = ({
   const handleError = useCallback((context: string, error: any) => {
     if (!isMountedRef.current) return;
     
+    // Check for error cooldown to prevent flooding
+    const now = Date.now();
+    if (now - lastErrorTimeRef.current < errorCooldownMs) {
+      console.log(`Error cooldown active (${errorCooldownMs}ms), suppressing error notification`);
+      return;
+    }
+    
+    // Update last error time
+    lastErrorTimeRef.current = now;
+    
     // Format error info consistently
     let errorInfo: ErrorState;
     if (typeof error === 'string') {
@@ -82,17 +101,32 @@ export const useDataLoadingState = ({
       errorInfo = error || { message: 'Unknown error' };
     }
     
+    // Handle network errors specially
+    const isNetworkError = errorInfo.message.includes('Failed to fetch') || 
+                           errorInfo.message.includes('Network error') ||
+                           errorInfo.message.includes('network request failed');
+    
     // Log the error with context
     console.error(`Error in data loading: Error loading ${context}:`, errorInfo);
     
     // Only update state and show toast if still mounted and if retry count is within limits
     if (retryCountRef.current >= maxRetries) {
-      setDataError(`Erro ao carregar ${context}. Por favor, recarregue a página.`);
-      setIsLoading(false);
+      const errorMessage = isNetworkError ? 
+        `Erro de conexão ao carregar ${context}. Verificando dados em cache.` : 
+        `Erro ao carregar ${context}. Por favor, recarregue a página.`;
+      
+      setDataError(errorMessage);
+      
+      // Continue executing but don't show loading state if network error
+      if (isNetworkError) {
+        setIsLoading(false);
+      }
       
       if (showToast) {
         toast.error(`Erro ao carregar ${context}`, {
-          description: "Tente novamente mais tarde. O sistema tentará usar dados em cache.",
+          description: isNetworkError ? 
+            "Problemas de conexão. Tentando usar dados em cache." : 
+            "Tente novamente mais tarde. O sistema tentará usar dados em cache.",
           duration: 5000,
         });
       }

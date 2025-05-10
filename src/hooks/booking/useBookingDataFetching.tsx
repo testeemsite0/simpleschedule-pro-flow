@@ -39,6 +39,8 @@ export const useBookingDataFetching = ({
   const initializedRef = useRef(false);
   const professionalIdRef = useRef<string | undefined>(undefined);
   const dataFetchingEnabledRef = useRef(false);
+  const lastFetchTimeRef = useRef<number>(0);
+  const minFetchIntervalMs = 5000; // 5 seconds minimum between fetches
   
   // Use a ref for tracking the abort controller to prevent infinite renders
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -113,8 +115,19 @@ export const useBookingDataFetching = ({
       return;
     }
 
+    // Check if we've fetched data too recently to prevent excessive API calls
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    if (lastFetchTimeRef.current > 0 && timeSinceLastFetch < minFetchIntervalMs) {
+      console.log(`Skipping fetch - last fetch was ${timeSinceLastFetch}ms ago (min interval: ${minFetchIntervalMs}ms)`);
+      return;
+    }
+
     const loadData = async () => {
       try {
+        // Update the last fetch timestamp
+        lastFetchTimeRef.current = now;
+
         if (loadingStage === 0) {
           // Stage 0: Load essential data in parallel (team members and services)
           await Promise.all([
@@ -138,6 +151,13 @@ export const useBookingDataFetching = ({
         }
       } catch (error) {
         console.error(`Error in sequential loading stage ${loadingStage}:`, error);
+        
+        // Handle "Failed to fetch" errors by attempting to use cached data if available
+        if (error instanceof Error && error.message.includes('Failed to fetch')) {
+          console.log('Network error detected, attempting to use cached data');
+          // Continue to next stage even if there was an error to prevent getting stuck
+          moveToNextLoadingStage();
+        }
       }
     };
 
@@ -165,6 +185,9 @@ export const useBookingDataFetching = ({
       
       // Reset loading stage to start at the beginning
       setLoadingStage(0);
+      
+      // Reset last fetch time to allow immediate fetching for the new professional
+      lastFetchTimeRef.current = 0;
       
       // Cancel any ongoing requests
       if (abortControllerRef.current) {
