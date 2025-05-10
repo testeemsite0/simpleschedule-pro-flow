@@ -1,12 +1,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Professional } from '@/types';
 import { toast } from 'sonner';
-
-// Simple cache implementation
-const professionalCache = new Map<string, {data: Professional; timestamp: number}>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+import { fetchProfessionalBySlug } from './api/professionalApi';
+import { ProfessionalCache } from './cache/professionalCache';
 
 /**
  * Hook to fetch professional data by slug - used for public booking links
@@ -21,36 +18,10 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
   const initialRetryDelay = 1000; // 1 second
   const abortControllerRef = useRef<AbortController | null>(null);
   
-  // Check cache first
-  const checkCache = useCallback((slug: string): Professional | null => {
-    const cached = professionalCache.get(slug);
-    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-      console.log("Using cached professional data for:", slug);
-      return cached.data;
-    }
-    return null;
-  }, []);
-  
-  // Update cache
-  const updateCache = useCallback((slug: string, data: Professional) => {
-    professionalCache.set(slug, {
-      data,
-      timestamp: Date.now()
-    });
-  }, []);
-  
   const fetchProfessionalData = useCallback(async (signal?: AbortSignal) => {
     if (!slug) {
       setLoading(false);
       setError("Link de agendamento inválido");
-      return;
-    }
-    
-    // Check cache first
-    const cachedData = checkCache(slug);
-    if (cachedData) {
-      setProfessional(cachedData);
-      setLoading(false);
       return;
     }
     
@@ -59,67 +30,51 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
     try {
       console.log(`Fetching professional data for slug: ${slug} (attempt: ${retryCountRef.current + 1})`);
       
-      // Instead of using abortSignal directly on the Supabase query builder,
-      // we'll check if the request has been aborted before and after the query
+      const result = await fetchProfessionalBySlug(slug, signal);
+      
+      // If the request was aborted, don't update state
       if (signal?.aborted) {
-        throw new Error('Request aborted');
+        return;
       }
-
-      // Modified query to use .eq exactly and handle results more safely
-      const { data, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle(); // Changed from .single() to .maybeSingle() for safer handling
-        
-      // Check if the request was aborted during the query
-      if (signal?.aborted) {
-        throw new Error('Request aborted');
-      }
-        
-      if (profileError) {
-        console.error("Error fetching professional by slug:", profileError);
-        
-        if (profileError.code === '406' || profileError.message?.includes('No rows found')) {
-          setError(`Profissional não encontrado com slug: ${slug}`);
-        } else if (profileError.code === 'PGRST116' || profileError.message?.includes('Results contain')) {
-          // This error means multiple results were found
-          console.error("Multiple profiles found with slug:", slug);
-          setError(`Múltiplos profissionais encontrados com o mesmo slug. Por favor, contate o suporte.`);
-        } else if (profileError.code === '429' || profileError.message?.includes('rate limit')) {
-          // Resource-related error - trigger exponential backoff retry
-          throw new Error('RESOURCE_ERROR');
-        } else {
-          setError(`Erro ao buscar dados do profissional: ${profileError.message}`);
+      
+      if (result.error) {
+        // Handle resource error with exponential backoff retry
+        if (result.error === 'RESOURCE_ERROR' && retryCountRef.current < maxRetries) {
+          const retryDelay = initialRetryDelay * Math.pow(2, retryCountRef.current);
+          retryCountRef.current += 1;
+          
+          console.log(`Resource error. Retrying in ${retryDelay}ms (attempt ${retryCountRef.current} of ${maxRetries})`);
+          
+          // Don't show toast for first retry
+          if (retryCountRef.current > 1) {
+            toast.info(`Tentando novamente em ${retryDelay/1000} segundos...`);
+          }
+          
+          // Schedule retry with exponential backoff
+          setTimeout(() => {
+            if (!signal?.aborted) {
+              fetchProfessionalData();
+            }
+          }, retryDelay);
+          
+          return;
         }
         
+        // Max retries reached or non-resource error
+        setError(result.error === 'RESOURCE_ERROR'
+          ? "Servidor ocupado. Tente novamente mais tarde."
+          : result.error);
+        
         setLoading(false);
+        
+        if (retryCountRef.current >= maxRetries) {
+          toast.error("Erro ao carregar dados do profissional após várias tentativas");
+        }
         return;
       }
       
-      if (!data) {
-        console.error("No professional found with slug:", slug);
-        setError(`Profissional não encontrado com slug: ${slug}`);
-        setLoading(false);
-        return;
-      }
-      
-      console.log("Found professional:", data);
-      
-      const professionalData: Professional = {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        profession: data.profession,
-        bio: data.bio || undefined,
-        slug: data.slug,
-        address: undefined,
-        avatar: data.avatar || undefined
-      };
-      
-      // Update cache and state
-      updateCache(slug, professionalData);
-      setProfessional(professionalData);
+      // Success
+      setProfessional(result.data);
       setLoading(false);
       retryCountRef.current = 0; // Reset retry count on success
       
@@ -130,48 +85,12 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
         return;
       }
       
-      console.error("Error fetching professional data:", error);
+      console.error("Unexpected error fetching professional data:", error);
       
-      // Implement exponential backoff for resource errors
-      const isResourceError = 
-        error.message === 'RESOURCE_ERROR' || 
-        error.message?.includes('ERR_INSUFFICIENT_RESOURCES') ||
-        error.code === 429 || 
-        (error.error && error.error.code === 429);
-      
-      if (isResourceError && retryCountRef.current < maxRetries) {
-        const retryDelay = initialRetryDelay * Math.pow(2, retryCountRef.current);
-        retryCountRef.current += 1;
-        
-        console.log(`Resource error. Retrying in ${retryDelay}ms (attempt ${retryCountRef.current} of ${maxRetries})`);
-        
-        // Don't show toast for first retry
-        if (retryCountRef.current > 1) {
-          toast.info(`Tentando novamente em ${retryDelay/1000} segundos...`);
-        }
-        
-        // Schedule retry with exponential backoff
-        setTimeout(() => {
-          if (!signal?.aborted) {
-            fetchProfessionalData();
-          }
-        }, retryDelay);
-        
-        return;
-      }
-      
-      // Max retries reached or non-resource error
-      setError(isResourceError 
-        ? "Servidor ocupado. Tente novamente mais tarde." 
-        : `Erro ao carregar dados do profissional: ${error.message || 'Erro desconhecido'}`);
-      
+      setError(`Erro ao carregar dados do profissional: ${error.message || 'Erro desconhecido'}`);
       setLoading(false);
-      
-      if (retryCountRef.current >= maxRetries) {
-        toast.error("Erro ao carregar dados do profissional após várias tentativas");
-      }
     }
-  }, [slug, checkCache, updateCache]);
+  }, [slug, maxRetries, initialRetryDelay]);
   
   // Initial fetch with cleanup
   useEffect(() => {
@@ -204,10 +123,18 @@ export const usePublicProfessionalData = (slug: string | undefined) => {
     fetchProfessionalData();
   }, [fetchProfessionalData]);
   
+  // Function to invalidate cache
+  const invalidateCache = useCallback(() => {
+    if (slug) {
+      ProfessionalCache.invalidate(slug);
+    }
+  }, [slug]);
+  
   return { 
     professional, 
     loading, 
     error,
-    retry
+    retry,
+    invalidateCache
   };
 };
