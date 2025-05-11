@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext } from 'react';
 import { Appointment, TimeSlot } from '@/types';
 import { useAuth } from '@/context/AuthContext';
