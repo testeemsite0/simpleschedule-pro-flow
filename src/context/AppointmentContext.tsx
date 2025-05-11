@@ -4,6 +4,7 @@ import { Appointment, TimeSlot } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+// Define the context type explicitly to avoid circular references
 interface AppointmentContextType {
   appointments: Appointment[];
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
@@ -20,6 +21,7 @@ interface AppointmentContextType {
   deleteTimeSlot: (timeSlotId: string) => Promise<boolean>;
 }
 
+// Create the context with an undefined initial value
 const AppointmentContext = createContext<AppointmentContextType | undefined>(undefined);
 
 export const useAppointments = () => {
@@ -256,24 +258,25 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
     }
   };
   
+  // Create the context value object explicitly
+  const contextValue: AppointmentContextType = {
+    appointments,
+    setAppointments,
+    getAppointmentsByProfessional,
+    getTimeSlotsByProfessional,
+    getTimeSlotsByTeamMember,
+    addAppointment,
+    countMonthlyAppointments,
+    isWithinFreeLimit,
+    checkInsurancePlanLimit,
+    cancelAppointment,
+    addTimeSlot,
+    updateTimeSlot,
+    deleteTimeSlot,
+  };
+  
   return (
-    <AppointmentContext.Provider 
-      value={{
-        appointments,
-        setAppointments,
-        getAppointmentsByProfessional,
-        getTimeSlotsByProfessional,
-        getTimeSlotsByTeamMember,
-        addAppointment,
-        countMonthlyAppointments,
-        isWithinFreeLimit,
-        checkInsurancePlanLimit,
-        cancelAppointment,
-        addTimeSlot,
-        updateTimeSlot,
-        deleteTimeSlot,
-      }}
-    >
+    <AppointmentContext.Provider value={contextValue}>
       {children}
     </AppointmentContext.Provider>
   );
