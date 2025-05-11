@@ -6,13 +6,13 @@ import * as appointmentApi from '@/api/appointments/appointmentApi';
 import * as timeSlotApi from '@/api/appointments/timeSlotApi';
 
 // Define function signature types to avoid circular references
-type GetAppointmentsFn = typeof appointmentApi.getAppointmentsByProfessional;
+type GetAppointmentsFn = (professionalId: string) => Promise<Appointment[]>;
 type GetTimeSlotsByProfessionalFn = typeof timeSlotApi.getTimeSlotsByProfessional;
 type GetTimeSlotsByTeamMemberFn = typeof timeSlotApi.getTimeSlotsByTeamMember;
-type CountMonthlyAppointmentsFn = typeof appointmentApi.countMonthlyAppointments;
-type IsWithinFreeLimitFn = typeof appointmentApi.isWithinFreeLimit;
-type CheckInsurancePlanLimitFn = typeof appointmentApi.checkInsurancePlanLimit;
-type CancelAppointmentFn = typeof appointmentApi.cancelAppointment;
+type CountMonthlyAppointmentsFn = (professionalId: string) => Promise<number>;
+type IsWithinFreeLimitFn = (professionalId: string) => Promise<boolean>;
+type CheckInsurancePlanLimitFn = (planId: string) => Promise<boolean>;
+type CancelAppointmentFn = (appointmentId: string) => Promise<boolean>;
 type AddTimeSlotFn = typeof timeSlotApi.addTimeSlot;
 type UpdateTimeSlotFn = typeof timeSlotApi.updateTimeSlot;
 type DeleteTimeSlotFn = typeof timeSlotApi.deleteTimeSlot;

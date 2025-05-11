@@ -48,8 +48,8 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Explicit return type for isWithinFreeLimit
-export const isWithinFreeLimit = async (professionalId: ProfessionalId): Promise<boolean> => {
+// Breaking the circular dependency by simplifying the return type
+export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) return false;
   
   try {
