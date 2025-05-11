@@ -48,39 +48,46 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Completely rewritten to avoid circular references and simplify types
-export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
-  if (!professionalId) return false;
+// Completely refactored to remove circular type dependencies
+export const isWithinFreeLimit = async (professionalId: ProfessionalId): Promise<boolean> => {
+  // Simple validation
+  if (!professionalId) {
+    console.log('No professional ID provided');
+    return false;
+  }
   
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // First check if the user has a premium subscription
-    const { data: subscriptionData, error: subscriptionError } = await supabase.functions.invoke('check-subscription', {
+    // Check if the user has a premium subscription
+    const { data, error } = await supabase.functions.invoke('check-subscription', {
       body: { userId: professionalId }
     });
     
-    if (subscriptionError) {
-      console.error('Error checking subscription status:', subscriptionError);
+    if (error) {
+      console.error('Error checking subscription status:', error);
       return false;
     }
     
-    console.log('Subscription check result:', subscriptionData);
+    // Safely access subscription data with proper type guards
+    const subscriptionData = data as { isPremium?: boolean; monthlyAppointments?: number } | null;
     
-    // If the user has a premium subscription, they are not limited
-    if (subscriptionData && subscriptionData.isPremium) {
+    // If premium subscription exists, no limits apply
+    if (subscriptionData && subscriptionData.isPremium === true) {
       console.log('Professional has premium subscription, no limits applied');
       return true;
     }
     
-    // If not premium, check if they're within the free tier limit (strictly less than 5)
-    const count = subscriptionData && typeof subscriptionData.monthlyAppointments === 'number' 
-      ? subscriptionData.monthlyAppointments 
-      : await countMonthlyAppointments(professionalId);
+    // Get appointment count, either from subscription data or by counting directly
+    const appointmentCount = 
+      (subscriptionData && typeof subscriptionData.monthlyAppointments === 'number')
+        ? subscriptionData.monthlyAppointments
+        : await countMonthlyAppointments(professionalId);
     
-    const isWithin = count < 5;
-    console.log(`Professional has ${count} monthly appointments, within limit: ${isWithin}`);
-    return isWithin;
+    // Free tier limit is strictly less than 5
+    const isWithinLimit = appointmentCount < 5;
+    console.log(`Professional has ${appointmentCount} monthly appointments, within limit: ${isWithinLimit}`);
+    return isWithinLimit;
   } catch (error) {
     console.error('Error checking appointment limits:', error);
     return false;
