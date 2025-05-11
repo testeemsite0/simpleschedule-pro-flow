@@ -48,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Fix the circular dependency by using a direct implementation rather than type references
+// Using direct implementation to avoid circular type references
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) return false;
   
