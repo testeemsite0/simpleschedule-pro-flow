@@ -21,8 +21,9 @@ type CancelAppointmentFn = (appointmentId: AppointmentId) => Promise<boolean>;
 type TimeSlotAddFn = (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
 type TimeSlotUpdateFn = (timeSlot: TimeSlot) => Promise<boolean>;
 type TimeSlotDeleteFn = (timeSlotId: TimeSlotId) => Promise<boolean>;
+type AddAppointmentFn = (appointment: Appointment) => void;
 
-// Define context interface without circular references
+// Define context interface using the function type aliases
 interface AppointmentContextType {
   // State
   appointments: Appointment[];
@@ -32,7 +33,7 @@ interface AppointmentContextType {
   getAppointmentsByProfessional: GetAppointmentsFn;
   getTimeSlotsByProfessional: GetTimeSlotsFn;
   getTimeSlotsByTeamMember: GetTeamMemberTimeSlotsFn;
-  addAppointment: (appointment: Appointment) => void;
+  addAppointment: AddAppointmentFn;
   countMonthlyAppointments: CountAppointmentsFn;
   isWithinFreeLimit: CheckLimitFn;
   checkInsurancePlanLimit: CheckLimitFn;
@@ -114,7 +115,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Add new appointment to the state and database
-  const addAppointment = (appointment: Appointment): void => {
+  const addAppointment: AddAppointmentFn = (appointment) => {
     setAppointments((prevAppointments) => [...prevAppointments, appointment]);
   };
   
@@ -279,7 +280,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
   
-  // Create a context value object with explicit type
+  // Create the context value object with explicit typing
   const contextValue: AppointmentContextType = {
     appointments,
     setAppointments,
