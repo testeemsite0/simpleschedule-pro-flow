@@ -48,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Fixed: Use simple primitive types and avoid circular references
+// Completely rewritten to avoid circular references and simplify types
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) return false;
   
@@ -68,14 +68,18 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
     console.log('Subscription check result:', subscriptionData);
     
     // If the user has a premium subscription, they are not limited
-    if (subscriptionData.isPremium) {
+    if (subscriptionData && subscriptionData.isPremium) {
       console.log('Professional has premium subscription, no limits applied');
       return true;
     }
     
     // If not premium, check if they're within the free tier limit (strictly less than 5)
-    const isWithin = subscriptionData.monthlyAppointments < 5;
-    console.log(`Professional has ${subscriptionData.monthlyAppointments} monthly appointments, within limit: ${isWithin}`);
+    const count = subscriptionData && typeof subscriptionData.monthlyAppointments === 'number' 
+      ? subscriptionData.monthlyAppointments 
+      : await countMonthlyAppointments(professionalId);
+    
+    const isWithin = count < 5;
+    console.log(`Professional has ${count} monthly appointments, within limit: ${isWithin}`);
     return isWithin;
   } catch (error) {
     console.error('Error checking appointment limits:', error);
