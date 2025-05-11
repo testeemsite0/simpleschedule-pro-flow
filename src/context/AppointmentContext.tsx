@@ -7,23 +7,23 @@ import * as timeSlotApi from '@/api/appointments/timeSlotApi';
 
 // Define function signature types to avoid circular references
 type GetAppointmentsFn = (professionalId: string) => Promise<Appointment[]>;
-type GetTimeSlotsByProfessionalFn = typeof timeSlotApi.getTimeSlotsByProfessional;
-type GetTimeSlotsByTeamMemberFn = typeof timeSlotApi.getTimeSlotsByTeamMember;
+type GetTimeSlotsByProfessionalFn = (professionalId: string) => Promise<any[]>;
+type GetTimeSlotsByTeamMemberFn = (teamMemberId: string) => Promise<any[]>;
 type CountMonthlyAppointmentsFn = (professionalId: string) => Promise<number>;
 type IsWithinFreeLimitFn = (professionalId: string) => Promise<boolean>;
 type CheckInsurancePlanLimitFn = (planId: string) => Promise<boolean>;
 type CancelAppointmentFn = (appointmentId: string) => Promise<boolean>;
-type AddTimeSlotFn = typeof timeSlotApi.addTimeSlot;
-type UpdateTimeSlotFn = typeof timeSlotApi.updateTimeSlot;
-type DeleteTimeSlotFn = typeof timeSlotApi.deleteTimeSlot;
+type AddTimeSlotFn = (timeSlot: any) => Promise<any>;
+type UpdateTimeSlotFn = (id: string, timeSlot: any) => Promise<any>;
+type DeleteTimeSlotFn = (id: string) => Promise<boolean>;
 
-// Define the context type explicitly, using imported functions
+// Define the context type explicitly, using the function signature types
 interface AppointmentContextType {
   // State
   appointments: Appointment[];
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   
-  // API Functions - reexporting from the api modules
+  // API Functions - using explicit function signatures
   getAppointmentsByProfessional: GetAppointmentsFn;
   getTimeSlotsByProfessional: GetTimeSlotsByProfessionalFn;
   getTimeSlotsByTeamMember: GetTimeSlotsByTeamMemberFn;

@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
-// Define primitive type alias
+// Define primitive type aliases
 type AppointmentId = string;
 type ProfessionalId = string;
 
@@ -48,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Break the circular reference by using a simple type signature
+// Use a simple function type definition to avoid circular references
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) return false;
   
