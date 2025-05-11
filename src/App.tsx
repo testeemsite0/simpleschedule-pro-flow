@@ -26,6 +26,7 @@ import DashboardUnifiedBooking from './pages/DashboardUnifiedBooking';
 import AdminPanel from './pages/AdminPanel';
 import Index from './pages/Index';
 
+// Protected route that ensures the AppointmentProvider is always available
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
 
@@ -33,120 +34,125 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/login" />;
   }
 
-  return children;
+  return (
+    <AppointmentProvider>
+      {children}
+    </AppointmentProvider>
+  );
 };
 
 const App = () => {
   return (
     <AuthProvider>
-      <AppointmentProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/booking/:slug" element={<Booking />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            {/* Removed the /dashboard/appointments route */}
-            <Route
-              path="/dashboard/unified-booking"
-              element={
-                <ProtectedRoute>
-                  <DashboardUnifiedBooking />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/schedules"
-              element={
-                <ProtectedRoute>
-                  <DashboardSchedules />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/team"
-              element={
-                <ProtectedRoute>
-                  <DashboardTeam />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/services"
-              element={
-                <ProtectedRoute>
-                  <DashboardServices />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/reports"
-              element={
-                <ProtectedRoute>
-                  <DashboardReports />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/clients"
-              element={
-                <ProtectedRoute>
-                  <DashboardClients />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/booking-link"
-              element={
-                <ProtectedRoute>
-                  <DashboardBookingLink />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/insurance"
-              element={
-                <ProtectedRoute>
-                  <DashboardInsurance />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/preferences"
-              element={
-                <ProtectedRoute>
-                  <DashboardPreferences />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminPanel />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard/team/:memberId/schedules"
-              element={
-                <ProtectedRoute>
-                  <TeamMemberSchedules />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Router>
-      </AppointmentProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/booking/:slug" element={
+            <AppointmentProvider>
+              <Booking />
+            </AppointmentProvider>
+          } />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/unified-booking"
+            element={
+              <ProtectedRoute>
+                <DashboardUnifiedBooking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/schedules"
+            element={
+              <ProtectedRoute>
+                <DashboardSchedules />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/team"
+            element={
+              <ProtectedRoute>
+                <DashboardTeam />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/services"
+            element={
+              <ProtectedRoute>
+                <DashboardServices />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/reports"
+            element={
+              <ProtectedRoute>
+                <DashboardReports />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/clients"
+            element={
+              <ProtectedRoute>
+                <DashboardClients />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/booking-link"
+            element={
+              <ProtectedRoute>
+                <DashboardBookingLink />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/insurance"
+            element={
+              <ProtectedRoute>
+                <DashboardInsurance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/preferences"
+            element={
+              <ProtectedRoute>
+                <DashboardPreferences />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/team/:memberId/schedules"
+            element={
+              <ProtectedRoute>
+                <TeamMemberSchedules />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Router>
     </AuthProvider>
   );
 };
