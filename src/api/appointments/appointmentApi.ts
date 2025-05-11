@@ -6,7 +6,7 @@ import { Appointment } from '@/types';
 type AppointmentId = string;
 type ProfessionalId = string;
 
-// Define appointment-related API functions
+// Define appointment-related API functions with explicit return types
 export const getAppointmentsByProfessional = async (professionalId: ProfessionalId): Promise<Appointment[]> => {
   try {
     const { data, error } = await supabase
@@ -48,6 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
+// Explicit return type for isWithinFreeLimit
 export const isWithinFreeLimit = async (professionalId: ProfessionalId): Promise<boolean> => {
   if (!professionalId) return false;
   

@@ -5,6 +5,18 @@ import { useAuth } from '@/context/AuthContext';
 import * as appointmentApi from '@/api/appointments/appointmentApi';
 import * as timeSlotApi from '@/api/appointments/timeSlotApi';
 
+// Define function signature types to avoid circular references
+type GetAppointmentsFn = typeof appointmentApi.getAppointmentsByProfessional;
+type GetTimeSlotsByProfessionalFn = typeof timeSlotApi.getTimeSlotsByProfessional;
+type GetTimeSlotsByTeamMemberFn = typeof timeSlotApi.getTimeSlotsByTeamMember;
+type CountMonthlyAppointmentsFn = typeof appointmentApi.countMonthlyAppointments;
+type IsWithinFreeLimitFn = typeof appointmentApi.isWithinFreeLimit;
+type CheckInsurancePlanLimitFn = typeof appointmentApi.checkInsurancePlanLimit;
+type CancelAppointmentFn = typeof appointmentApi.cancelAppointment;
+type AddTimeSlotFn = typeof timeSlotApi.addTimeSlot;
+type UpdateTimeSlotFn = typeof timeSlotApi.updateTimeSlot;
+type DeleteTimeSlotFn = typeof timeSlotApi.deleteTimeSlot;
+
 // Define the context type explicitly, using imported functions
 interface AppointmentContextType {
   // State
@@ -12,17 +24,17 @@ interface AppointmentContextType {
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   
   // API Functions - reexporting from the api modules
-  getAppointmentsByProfessional: typeof appointmentApi.getAppointmentsByProfessional;
-  getTimeSlotsByProfessional: typeof timeSlotApi.getTimeSlotsByProfessional;
-  getTimeSlotsByTeamMember: typeof timeSlotApi.getTimeSlotsByTeamMember;
+  getAppointmentsByProfessional: GetAppointmentsFn;
+  getTimeSlotsByProfessional: GetTimeSlotsByProfessionalFn;
+  getTimeSlotsByTeamMember: GetTimeSlotsByTeamMemberFn;
   addAppointment: (appointment: Appointment) => void;
-  countMonthlyAppointments: typeof appointmentApi.countMonthlyAppointments;
-  isWithinFreeLimit: typeof appointmentApi.isWithinFreeLimit;
-  checkInsurancePlanLimit: typeof appointmentApi.checkInsurancePlanLimit;
-  cancelAppointment: typeof appointmentApi.cancelAppointment;
-  addTimeSlot: typeof timeSlotApi.addTimeSlot;
-  updateTimeSlot: typeof timeSlotApi.updateTimeSlot;
-  deleteTimeSlot: typeof timeSlotApi.deleteTimeSlot;
+  countMonthlyAppointments: CountMonthlyAppointmentsFn;
+  isWithinFreeLimit: IsWithinFreeLimitFn;
+  checkInsurancePlanLimit: CheckInsurancePlanLimitFn;
+  cancelAppointment: CancelAppointmentFn;
+  addTimeSlot: AddTimeSlotFn;
+  updateTimeSlot: UpdateTimeSlotFn;
+  deleteTimeSlot: DeleteTimeSlotFn;
 }
 
 // Create the context with undefined initial value
