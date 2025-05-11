@@ -52,7 +52,7 @@ serve(async (req) => {
 
     // Use content-range header to get exact count
     const appointmentsResponse = await fetch(
-      `${Deno.env.get('SUPABASE_URL')}/rest/v1/appointments?select=id&professional_id=eq.${userId}&date=gte.${firstDay}&date=lte.${lastDay}`,
+      `${Deno.env.get('SUPABASE_URL')}/rest/v1/appointments?select=id&professional_id=eq.${userId}&date=gte.${firstDay}&date=lte.${lastDay}&free_tier_used=eq.true`,
       {
         headers: {
           Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
@@ -70,10 +70,12 @@ serve(async (req) => {
     console.log("Content-Range header:", contentRange);
 
     // The free tier limit is 5 appointments per month
-    const isWithinFreeLimit = appointmentCount < 5;
+    // Important: We strictly enforce this limit (less than 5, not less than or equal to 5)
+    const isWithinFreeLimit = isPremium || appointmentCount < 5;
     
     console.log("Is Premium:", isPremium);
     console.log("Is Within Free Limit:", isWithinFreeLimit);
+    console.log("Monthly Appointments Count:", appointmentCount);
 
     return new Response(
       JSON.stringify({

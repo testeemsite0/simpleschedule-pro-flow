@@ -72,18 +72,21 @@ export const useBookingAppointment = ({
       // Check appointment limits for free tier and insurance plans
       if (!isAdminView) {
         // Only check limits for client-initiated bookings
+        console.log("Checking free tier limits for professional:", professionalId);
+        
         const withinFreeLimit = await isWithinFreeLimit(professionalId);
         console.log("Free limit check result:", withinFreeLimit);
         
         if (!withinFreeLimit) {
           // This is a critical error - very important to show to users
-          const limitErrorMessage = "Limite de agendamentos gratuitos atingido. Entre em contato com o profissional diretamente.";
+          const limitErrorMessage = "Limite de agendamentos gratuitos atingido. Entre em contato com o profissional diretamente ou assine o plano premium.";
           toast.error(limitErrorMessage);
           throw new Error(limitErrorMessage);
         }
         
         // Check insurance plan limits if using one
         if (bookingData.insuranceId && bookingData.insuranceId !== "none") {
+          console.log("Checking insurance plan limits for:", bookingData.insuranceId);
           const withinInsuranceLimit = await checkInsurancePlanLimit(bookingData.insuranceId);
           if (!withinInsuranceLimit) {
             throw new Error("Limite de agendamentos para este convênio foi atingido.");
@@ -137,6 +140,7 @@ export const useBookingAppointment = ({
         
         // Update bookingData with the real appointmentId from the API
         const newAppointmentId = data[0].id;
+        bookingData.appointmentId = newAppointmentId;
         
         // Move to confirmation step and update with appointment ID
         goToStep("confirmation");

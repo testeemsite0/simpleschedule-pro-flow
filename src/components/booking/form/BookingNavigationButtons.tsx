@@ -31,6 +31,7 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
 
   return (
     <div className="flex justify-between">
+      {/* Only show back button if not on first step */}
       {currentStep !== 'team-member' && (
         <Button
           onClick={goToPreviousStep}
@@ -41,6 +42,7 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
         </Button>
       )}
       
+      {/* Only show next button on client-info step */}
       {!isAutoAdvancingStep && shouldShowNextButton && !showConfirmButton && (
         <Button
           onClick={goToNextStep}
@@ -51,6 +53,7 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
         </Button>
       )}
       
+      {/* Show confirm button only on confirmation step */}
       {showConfirmButton && (
         <Button
           onClick={handleCompleteBooking}
