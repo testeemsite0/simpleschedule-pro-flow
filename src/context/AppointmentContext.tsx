@@ -1,20 +1,21 @@
 
 import React, { createContext, useState } from 'react';
-import { Appointment } from '@/types';
+import { Appointment, TimeSlot } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import * as appointmentApi from '@/api/appointments/appointmentApi';
 import * as timeSlotApi from '@/api/appointments/timeSlotApi';
 
 // Define function signature types to avoid circular references
 type GetAppointmentsFn = (professionalId: string) => Promise<Appointment[]>;
-type GetTimeSlotsByProfessionalFn = (professionalId: string) => Promise<any[]>;
-type GetTimeSlotsByTeamMemberFn = (teamMemberId: string) => Promise<any[]>;
+type GetTimeSlotsByProfessionalFn = (professionalId: string) => Promise<TimeSlot[]>;
+type GetTimeSlotsByTeamMemberFn = (teamMemberId: string) => Promise<TimeSlot[]>;
 type CountMonthlyAppointmentsFn = (professionalId: string) => Promise<number>;
 type IsWithinFreeLimitFn = (professionalId: string) => Promise<boolean>;
 type CheckInsurancePlanLimitFn = (planId: string) => Promise<boolean>;
 type CancelAppointmentFn = (appointmentId: string) => Promise<boolean>;
-type AddTimeSlotFn = (timeSlot: any) => Promise<any>;
-type UpdateTimeSlotFn = (id: string, timeSlot: any) => Promise<any>;
+type AddTimeSlotFn = (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
+// Fixed: Update to match actual implementation in timeSlotApi
+type UpdateTimeSlotFn = (timeSlot: TimeSlot) => Promise<boolean>;
 type DeleteTimeSlotFn = (id: string) => Promise<boolean>;
 
 // Define the context type explicitly, using the function signature types

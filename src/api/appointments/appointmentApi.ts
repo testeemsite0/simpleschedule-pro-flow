@@ -48,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Use a simple function type definition to avoid circular references
+// Standalone function with simple types to avoid circular references
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) return false;
   

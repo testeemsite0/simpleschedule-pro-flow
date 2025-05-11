@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAppointments } from '@/context/AppointmentContext';
 import { useAuth } from '@/context/AuthContext';
@@ -235,12 +234,17 @@ export const useTimeSlotForm = ({ initialData, onSuccess }: UseTimeSlotFormProps
       
       if (isEditing && initialData) {
         // Update existing time slot (no batch mode for editing)
-        const success = await updateTimeSlot({
+        const updatedTimeSlot: TimeSlot = {
           ...baseTimeSlotData,
           id: initialData.id,
           day_of_week: parseInt(dayOfWeek),
           team_member_id: selectedTeamMember,
-        });
+          created_at: initialData.created_at,
+          updated_at: initialData.updated_at
+        };
+        
+        // Fixed: Now we're passing a complete TimeSlot object that matches the function signature
+        const success = await updateTimeSlot(updatedTimeSlot);
         
         if (success) {
           toast({
