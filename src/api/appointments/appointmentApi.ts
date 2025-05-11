@@ -48,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Using direct implementation to avoid circular type references
+// Break the circular reference by using a simple type signature
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) return false;
   
@@ -77,7 +77,6 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
     const isWithin = subscriptionData.monthlyAppointments < 5;
     console.log(`Professional has ${subscriptionData.monthlyAppointments} monthly appointments, within limit: ${isWithin}`);
     return isWithin;
-    
   } catch (error) {
     console.error('Error checking appointment limits:', error);
     return false;
