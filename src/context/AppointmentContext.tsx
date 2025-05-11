@@ -4,27 +4,39 @@ import { Appointment, TimeSlot } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-// Define the context type explicitly to avoid circular references
+// Define more granular types for our functions to avoid circular references
+type AppointmentsFetcher = (professionalId: string) => Promise<Appointment[]>;
+type TimeSlotsFetcher = (professionalId: string) => Promise<TimeSlot[]>;
+type TeamMemberTimeSlotsFetcher = (teamMemberId: string) => Promise<TimeSlot[]>;
+type AppointmentCounter = (professionalId: string) => Promise<number>;
+type FreeLimitChecker = (professionalId: string) => Promise<boolean>;
+type InsuranceLimitChecker = (planId: string) => Promise<boolean>;
+type AppointmentCanceler = (appointmentId: string) => Promise<boolean>;
+type TimeSlotAdder = (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
+type TimeSlotUpdater = (timeSlot: TimeSlot) => Promise<boolean>;
+type TimeSlotDeleter = (timeSlotId: string) => Promise<boolean>;
+
+// Define the context type explicitly with function types to avoid deep instantiation
 interface AppointmentContextType {
   appointments: Appointment[];
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
-  getAppointmentsByProfessional: (professionalId: string) => Promise<Appointment[]>;
-  getTimeSlotsByProfessional: (professionalId: string) => Promise<TimeSlot[]>;
-  getTimeSlotsByTeamMember: (teamMemberId: string) => Promise<TimeSlot[]>;
+  getAppointmentsByProfessional: AppointmentsFetcher;
+  getTimeSlotsByProfessional: TimeSlotsFetcher;
+  getTimeSlotsByTeamMember: TeamMemberTimeSlotsFetcher;
   addAppointment: (appointment: Appointment) => void;
-  countMonthlyAppointments: (professionalId: string) => Promise<number>;
-  isWithinFreeLimit: (professionalId: string) => Promise<boolean>;
-  checkInsurancePlanLimit: (planId: string) => Promise<boolean>;
-  cancelAppointment: (appointmentId: string) => Promise<boolean>;
-  addTimeSlot: (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
-  updateTimeSlot: (timeSlot: TimeSlot) => Promise<boolean>;
-  deleteTimeSlot: (timeSlotId: string) => Promise<boolean>;
+  countMonthlyAppointments: AppointmentCounter;
+  isWithinFreeLimit: FreeLimitChecker;
+  checkInsurancePlanLimit: InsuranceLimitChecker;
+  cancelAppointment: AppointmentCanceler;
+  addTimeSlot: TimeSlotAdder;
+  updateTimeSlot: TimeSlotUpdater;
+  deleteTimeSlot: TimeSlotDeleter;
 }
 
 // Create the context with an undefined initial value
 const AppointmentContext = createContext<AppointmentContextType | undefined>(undefined);
 
-export const useAppointments = () => {
+export const useAppointments = (): AppointmentContextType => {
   const context = useContext(AppointmentContext);
   if (!context) {
     throw new Error('useAppointments must be used within an AppointmentProvider');
@@ -32,12 +44,12 @@ export const useAppointments = () => {
   return context;
 };
 
-export const AppointmentProvider = ({ children }: { children: React.ReactNode }) => {
+export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const { user } = useAuth();
   
   // Fetch appointments from Supabase
-  const getAppointmentsByProfessional = async (professionalId: string): Promise<Appointment[]> => {
+  const getAppointmentsByProfessional: AppointmentsFetcher = async (professionalId) => {
     try {
       const { data, error } = await supabase
         .from('appointments')
@@ -55,7 +67,7 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
   };
   
   // Get time slots for a professional
-  const getTimeSlotsByProfessional = async (professionalId: string): Promise<TimeSlot[]> => {
+  const getTimeSlotsByProfessional: TimeSlotsFetcher = async (professionalId) => {
     try {
       const { data, error } = await supabase
         .from('time_slots')
@@ -74,7 +86,7 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
   };
   
   // Get time slots for a specific team member
-  const getTimeSlotsByTeamMember = async (teamMemberId: string): Promise<TimeSlot[]> => {
+  const getTimeSlotsByTeamMember: TeamMemberTimeSlotsFetcher = async (teamMemberId) => {
     try {
       const { data, error } = await supabase
         .from('time_slots')
@@ -93,12 +105,12 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
   };
   
   // Add new appointment to the state and database
-  const addAppointment = (appointment: Appointment) => {
+  const addAppointment = (appointment: Appointment): void => {
     setAppointments((prevAppointments) => [...prevAppointments, appointment]);
   };
   
   // Count monthly appointments to check free tier limits
-  const countMonthlyAppointments = async (professionalId: string): Promise<number> => {
+  const countMonthlyAppointments: AppointmentCounter = async (professionalId) => {
     try {
       const today = new Date();
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -123,7 +135,7 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
   };
   
   // Check if professional is within free tier limits or has premium subscription
-  const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
+  const isWithinFreeLimit: FreeLimitChecker = async (professionalId) => {
     if (!professionalId) return false;
     
     try {
@@ -159,7 +171,7 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
   };
   
   // Check if an insurance plan has reached its limit
-  const checkInsurancePlanLimit = async (planId: string): Promise<boolean> => {
+  const checkInsurancePlanLimit: InsuranceLimitChecker = async (planId) => {
     try {
       const { data, error } = await supabase
         .from('insurance_plans')
@@ -184,8 +196,8 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
     }
   };
   
-  // ADDED: Cancel an appointment
-  const cancelAppointment = async (appointmentId: string): Promise<boolean> => {
+  // Cancel an appointment
+  const cancelAppointment: AppointmentCanceler = async (appointmentId) => {
     try {
       const { error } = await supabase
         .from('appointments')
@@ -208,8 +220,8 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
     }
   };
   
-  // ADDED: Add a new time slot
-  const addTimeSlot = async (timeSlot: Omit<TimeSlot, "id">): Promise<boolean> => {
+  // Add a new time slot
+  const addTimeSlot: TimeSlotAdder = async (timeSlot) => {
     try {
       const { error } = await supabase
         .from('time_slots')
@@ -224,8 +236,8 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
     }
   };
   
-  // ADDED: Update an existing time slot
-  const updateTimeSlot = async (timeSlot: TimeSlot): Promise<boolean> => {
+  // Update an existing time slot
+  const updateTimeSlot: TimeSlotUpdater = async (timeSlot) => {
     try {
       const { error } = await supabase
         .from('time_slots')
@@ -241,8 +253,8 @@ export const AppointmentProvider = ({ children }: { children: React.ReactNode })
     }
   };
   
-  // ADDED: Delete a time slot
-  const deleteTimeSlot = async (timeSlotId: string): Promise<boolean> => {
+  // Delete a time slot
+  const deleteTimeSlot: TimeSlotDeleter = async (timeSlotId) => {
     try {
       const { error } = await supabase
         .from('time_slots')
