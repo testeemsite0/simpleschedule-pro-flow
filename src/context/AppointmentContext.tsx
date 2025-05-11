@@ -4,36 +4,45 @@ import { Appointment, TimeSlot } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-// Define more granular types for our functions to avoid circular references
-type AppointmentsFetcher = (professionalId: string) => Promise<Appointment[]>;
-type TimeSlotsFetcher = (professionalId: string) => Promise<TimeSlot[]>;
-type TeamMemberTimeSlotsFetcher = (teamMemberId: string) => Promise<TimeSlot[]>;
-type AppointmentCounter = (professionalId: string) => Promise<number>;
-type FreeLimitChecker = (professionalId: string) => Promise<boolean>;
-type InsuranceLimitChecker = (planId: string) => Promise<boolean>;
-type AppointmentCanceler = (appointmentId: string) => Promise<boolean>;
-type TimeSlotAdder = (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
-type TimeSlotUpdater = (timeSlot: TimeSlot) => Promise<boolean>;
-type TimeSlotDeleter = (timeSlotId: string) => Promise<boolean>;
+// Define simple primitive types first
+type AppointmentId = string;
+type ProfessionalId = string;
+type TeamMemberId = string;
+type PlanId = string;
+type TimeSlotId = string;
 
-// Define the context type explicitly with function types to avoid deep instantiation
+// Define function signatures as separate types
+type GetAppointmentsFn = (professionalId: ProfessionalId) => Promise<Appointment[]>;
+type GetTimeSlotsFn = (professionalId: ProfessionalId) => Promise<TimeSlot[]>;
+type GetTeamMemberTimeSlotsFn = (teamMemberId: TeamMemberId) => Promise<TimeSlot[]>;
+type CountAppointmentsFn = (professionalId: ProfessionalId) => Promise<number>;
+type CheckLimitFn = (id: string) => Promise<boolean>;
+type CancelAppointmentFn = (appointmentId: AppointmentId) => Promise<boolean>;
+type TimeSlotAddFn = (timeSlot: Omit<TimeSlot, "id">) => Promise<boolean>;
+type TimeSlotUpdateFn = (timeSlot: TimeSlot) => Promise<boolean>;
+type TimeSlotDeleteFn = (timeSlotId: TimeSlotId) => Promise<boolean>;
+
+// Define context interface without circular references
 interface AppointmentContextType {
+  // State
   appointments: Appointment[];
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
-  getAppointmentsByProfessional: AppointmentsFetcher;
-  getTimeSlotsByProfessional: TimeSlotsFetcher;
-  getTimeSlotsByTeamMember: TeamMemberTimeSlotsFetcher;
+  
+  // API Functions
+  getAppointmentsByProfessional: GetAppointmentsFn;
+  getTimeSlotsByProfessional: GetTimeSlotsFn;
+  getTimeSlotsByTeamMember: GetTeamMemberTimeSlotsFn;
   addAppointment: (appointment: Appointment) => void;
-  countMonthlyAppointments: AppointmentCounter;
-  isWithinFreeLimit: FreeLimitChecker;
-  checkInsurancePlanLimit: InsuranceLimitChecker;
-  cancelAppointment: AppointmentCanceler;
-  addTimeSlot: TimeSlotAdder;
-  updateTimeSlot: TimeSlotUpdater;
-  deleteTimeSlot: TimeSlotDeleter;
+  countMonthlyAppointments: CountAppointmentsFn;
+  isWithinFreeLimit: CheckLimitFn;
+  checkInsurancePlanLimit: CheckLimitFn;
+  cancelAppointment: CancelAppointmentFn;
+  addTimeSlot: TimeSlotAddFn;
+  updateTimeSlot: TimeSlotUpdateFn;
+  deleteTimeSlot: TimeSlotDeleteFn;
 }
 
-// Create the context with an undefined initial value
+// Create the context with undefined initial value
 const AppointmentContext = createContext<AppointmentContextType | undefined>(undefined);
 
 export const useAppointments = (): AppointmentContextType => {
@@ -49,7 +58,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const { user } = useAuth();
   
   // Fetch appointments from Supabase
-  const getAppointmentsByProfessional: AppointmentsFetcher = async (professionalId) => {
+  const getAppointmentsByProfessional: GetAppointmentsFn = async (professionalId) => {
     try {
       const { data, error } = await supabase
         .from('appointments')
@@ -67,7 +76,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Get time slots for a professional
-  const getTimeSlotsByProfessional: TimeSlotsFetcher = async (professionalId) => {
+  const getTimeSlotsByProfessional: GetTimeSlotsFn = async (professionalId) => {
     try {
       const { data, error } = await supabase
         .from('time_slots')
@@ -86,7 +95,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Get time slots for a specific team member
-  const getTimeSlotsByTeamMember: TeamMemberTimeSlotsFetcher = async (teamMemberId) => {
+  const getTimeSlotsByTeamMember: GetTeamMemberTimeSlotsFn = async (teamMemberId) => {
     try {
       const { data, error } = await supabase
         .from('time_slots')
@@ -110,7 +119,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Count monthly appointments to check free tier limits
-  const countMonthlyAppointments: AppointmentCounter = async (professionalId) => {
+  const countMonthlyAppointments: CountAppointmentsFn = async (professionalId) => {
     try {
       const today = new Date();
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -135,7 +144,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Check if professional is within free tier limits or has premium subscription
-  const isWithinFreeLimit: FreeLimitChecker = async (professionalId) => {
+  const isWithinFreeLimit: CheckLimitFn = async (professionalId) => {
     if (!professionalId) return false;
     
     try {
@@ -171,7 +180,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Check if an insurance plan has reached its limit
-  const checkInsurancePlanLimit: InsuranceLimitChecker = async (planId) => {
+  const checkInsurancePlanLimit: CheckLimitFn = async (planId) => {
     try {
       const { data, error } = await supabase
         .from('insurance_plans')
@@ -197,7 +206,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Cancel an appointment
-  const cancelAppointment: AppointmentCanceler = async (appointmentId) => {
+  const cancelAppointment: CancelAppointmentFn = async (appointmentId) => {
     try {
       const { error } = await supabase
         .from('appointments')
@@ -221,7 +230,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Add a new time slot
-  const addTimeSlot: TimeSlotAdder = async (timeSlot) => {
+  const addTimeSlot: TimeSlotAddFn = async (timeSlot) => {
     try {
       const { error } = await supabase
         .from('time_slots')
@@ -237,7 +246,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Update an existing time slot
-  const updateTimeSlot: TimeSlotUpdater = async (timeSlot) => {
+  const updateTimeSlot: TimeSlotUpdateFn = async (timeSlot) => {
     try {
       const { error } = await supabase
         .from('time_slots')
@@ -254,7 +263,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
   
   // Delete a time slot
-  const deleteTimeSlot: TimeSlotDeleter = async (timeSlotId) => {
+  const deleteTimeSlot: TimeSlotDeleteFn = async (timeSlotId) => {
     try {
       const { error } = await supabase
         .from('time_slots')
@@ -270,7 +279,7 @@ export const AppointmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
   
-  // Create the context value object explicitly
+  // Create a context value object with explicit type
   const contextValue: AppointmentContextType = {
     appointments,
     setAppointments,
