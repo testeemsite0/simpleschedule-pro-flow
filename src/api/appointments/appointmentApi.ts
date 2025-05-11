@@ -48,9 +48,8 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Completely refactored to remove circular type dependencies
-export const isWithinFreeLimit = async (professionalId: ProfessionalId): Promise<boolean> => {
-  // Simple validation
+// Simplify the function completely to avoid complex type inferences
+export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
     return false;
@@ -59,35 +58,46 @@ export const isWithinFreeLimit = async (professionalId: ProfessionalId): Promise
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Check if the user has a premium subscription
-    const { data, error } = await supabase.functions.invoke('check-subscription', {
+    // Make a type-safe invocation
+    const response = await supabase.functions.invoke('check-subscription', {
       body: { userId: professionalId }
     });
     
-    if (error) {
-      console.error('Error checking subscription status:', error);
+    if (response.error) {
+      console.error('Error checking subscription status:', response.error);
       return false;
     }
     
-    // Safely access subscription data with proper type guards
-    const subscriptionData = data as { isPremium?: boolean; monthlyAppointments?: number } | null;
-    
-    // If premium subscription exists, no limits apply
-    if (subscriptionData && subscriptionData.isPremium === true) {
-      console.log('Professional has premium subscription, no limits applied');
-      return true;
+    // Use simple type assertion and property access
+    if (response.data && typeof response.data === 'object') {
+      const data = response.data as Record<string, unknown>;
+      
+      // Check for premium status
+      if (data.isPremium === true) {
+        console.log('Professional has premium subscription, no limits applied');
+        return true;
+      }
+      
+      // Get appointment count
+      let appointmentCount: number;
+      if (typeof data.monthlyAppointments === 'number') {
+        appointmentCount = data.monthlyAppointments;
+      } else {
+        appointmentCount = await countMonthlyAppointments(professionalId);
+      }
+      
+      // Free tier limit is strictly less than 5
+      const isWithinLimit = appointmentCount < 5;
+      console.log(`Professional has ${appointmentCount} monthly appointments, within limit: ${isWithinLimit}`);
+      return isWithinLimit;
     }
     
-    // Get appointment count, either from subscription data or by counting directly
-    const appointmentCount = 
-      (subscriptionData && typeof subscriptionData.monthlyAppointments === 'number')
-        ? subscriptionData.monthlyAppointments
-        : await countMonthlyAppointments(professionalId);
-    
-    // Free tier limit is strictly less than 5
-    const isWithinLimit = appointmentCount < 5;
-    console.log(`Professional has ${appointmentCount} monthly appointments, within limit: ${isWithinLimit}`);
+    // Fallback to direct count if response data format is unexpected
+    const count = await countMonthlyAppointments(professionalId);
+    const isWithinLimit = count < 5;
+    console.log(`Professional has ${count} monthly appointments, within limit: ${isWithinLimit}`);
     return isWithinLimit;
+    
   } catch (error) {
     console.error('Error checking appointment limits:', error);
     return false;
