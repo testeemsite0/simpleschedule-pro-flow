@@ -4,14 +4,14 @@ import { Appointment, TimeSlot } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-// Define simple primitive types first
+// Define primitive type aliases
 type AppointmentId = string;
 type ProfessionalId = string;
 type TeamMemberId = string;
 type PlanId = string;
 type TimeSlotId = string;
 
-// Define function signatures as separate types
+// Define function signature types explicitly to avoid circular references
 type GetAppointmentsFn = (professionalId: ProfessionalId) => Promise<Appointment[]>;
 type GetTimeSlotsFn = (professionalId: ProfessionalId) => Promise<TimeSlot[]>;
 type GetTeamMemberTimeSlotsFn = (teamMemberId: TeamMemberId) => Promise<TimeSlot[]>;
