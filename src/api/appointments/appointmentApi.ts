@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -47,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Completely rewritten function with minimal type inference
+// Avoiding complex type inference by using simple typed objects
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
@@ -57,50 +58,52 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Simple function invocation without complex typing
-    const functionResponse = await supabase.functions.invoke('check-subscription', {
-      body: { userId: professionalId }
+    // Use simple typed object for the request
+    const request = { userId: professionalId };
+    
+    // Explicitly define the return type and avoid chained type inference
+    const { data, error } = await supabase.functions.invoke('check-subscription', {
+      body: request
     });
     
-    // Early return for error case
-    if (functionResponse.error) {
-      console.error('Error checking subscription status:', functionResponse.error);
+    if (error) {
+      console.error('Error checking subscription status:', error);
       return false;
     }
     
-    // Type assertion for response data
-    const responseData = functionResponse.data as {
-      isPremium?: boolean;
-      monthlyAppointments?: number;
-      isWithinFreeLimit?: boolean;
-    } | null;
+    // Use type guard functions for safer type checking
+    const hasProperty = (obj: unknown, prop: string): boolean => {
+      return Boolean(obj && typeof obj === 'object' && prop in obj);
+    };
     
-    // Check if user has premium subscription - immediate return if yes
-    if (responseData?.isPremium === true) {
+    const isPremium = hasProperty(data, 'isPremium') && data.isPremium === true;
+    
+    if (isPremium) {
       console.log('Professional has premium subscription, no limits applied');
       return true;
     }
     
-    // If the edge function already calculated whether user is within limit, use that
-    if (typeof responseData?.isWithinFreeLimit === 'boolean') {
-      console.log(`Using edge function calculation: within limit = ${responseData.isWithinFreeLimit}`);
-      return responseData.isWithinFreeLimit;
+    // Check if the edge function already provided the answer
+    if (hasProperty(data, 'isWithinFreeLimit') && typeof data.isWithinFreeLimit === 'boolean') {
+      console.log(`Using edge calculation: within limit = ${data.isWithinFreeLimit}`);
+      return data.isWithinFreeLimit;
     }
     
-    // Otherwise, determine appointment count from response or database
+    // Get appointment count from the safest source
     let appointmentCount = 0;
     
-    if (responseData && typeof responseData.monthlyAppointments === 'number') {
-      appointmentCount = responseData.monthlyAppointments;
-      console.log(`Using appointment count from edge function: ${appointmentCount}`);
+    if (hasProperty(data, 'monthlyAppointments') && 
+        typeof data.monthlyAppointments === 'number') {
+      appointmentCount = data.monthlyAppointments;
+      console.log(`Using appointment count from edge: ${appointmentCount}`);
     } else {
       appointmentCount = await countMonthlyAppointments(professionalId);
-      console.log(`Using appointment count from database: ${appointmentCount}`);
+      console.log(`Using appointment count from DB: ${appointmentCount}`);
     }
     
-    // Free tier limit is strictly less than 5
+    // Apply free tier limit check
     const isWithinLimit = appointmentCount < 5;
-    console.log(`Professional has ${appointmentCount} monthly appointments, within limit: ${isWithinLimit}`);
+    console.log(`Professional has ${appointmentCount} appointments, within limit: ${isWithinLimit}`);
     return isWithinLimit;
   } catch (error) {
     console.error('Error checking appointment limits:', error);
