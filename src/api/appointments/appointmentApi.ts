@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -48,7 +47,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Fixed version - avoid complex type inference completely
+// Completely rewritten function with minimal type inference
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
@@ -58,33 +57,45 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Call the edge function without complex type inference
-    const response = await supabase.functions.invoke('check-subscription', {
+    // Simple function invocation without complex typing
+    const functionResponse = await supabase.functions.invoke('check-subscription', {
       body: { userId: professionalId }
     });
     
-    // Handle error case
-    if (response.error) {
-      console.error('Error checking subscription status:', response.error);
+    // Early return for error case
+    if (functionResponse.error) {
+      console.error('Error checking subscription status:', functionResponse.error);
       return false;
     }
     
-    // Safely handle the data with minimal type inference
-    const data = response.data;
+    // Type assertion for response data
+    const responseData = functionResponse.data as {
+      isPremium?: boolean;
+      monthlyAppointments?: number;
+      isWithinFreeLimit?: boolean;
+    } | null;
     
-    // Check if user has premium subscription
-    if (data && data.isPremium === true) {
+    // Check if user has premium subscription - immediate return if yes
+    if (responseData?.isPremium === true) {
       console.log('Professional has premium subscription, no limits applied');
       return true;
     }
     
-    // Get appointment count from response or database
+    // If the edge function already calculated whether user is within limit, use that
+    if (typeof responseData?.isWithinFreeLimit === 'boolean') {
+      console.log(`Using edge function calculation: within limit = ${responseData.isWithinFreeLimit}`);
+      return responseData.isWithinFreeLimit;
+    }
+    
+    // Otherwise, determine appointment count from response or database
     let appointmentCount = 0;
     
-    if (data && typeof data.monthlyAppointments === 'number') {
-      appointmentCount = data.monthlyAppointments;
+    if (responseData && typeof responseData.monthlyAppointments === 'number') {
+      appointmentCount = responseData.monthlyAppointments;
+      console.log(`Using appointment count from edge function: ${appointmentCount}`);
     } else {
       appointmentCount = await countMonthlyAppointments(professionalId);
+      console.log(`Using appointment count from database: ${appointmentCount}`);
     }
     
     // Free tier limit is strictly less than 5
