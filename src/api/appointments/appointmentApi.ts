@@ -48,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Avoiding complex type inference by using simple typed objects
+// Simplified version with explicit typing to avoid excessive type instantiation
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
@@ -58,42 +58,46 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Use simple typed object for the request
-    const request = { userId: professionalId };
+    // Explicitly type the request and use a simple structure
+    type SubscriptionRequest = { userId: string };
+    const requestBody: SubscriptionRequest = { userId: professionalId };
     
-    // Explicitly define the return type and avoid chained type inference
-    const { data, error } = await supabase.functions.invoke('check-subscription', {
-      body: request
+    // Call the edge function with the typed request
+    const response = await supabase.functions.invoke('check-subscription', {
+      body: requestBody
     });
     
-    if (error) {
-      console.error('Error checking subscription status:', error);
+    // Handle potential errors first
+    if (response.error) {
+      console.error('Error checking subscription status:', response.error);
       return false;
     }
     
-    // Use type guard functions for safer type checking
-    const hasProperty = (obj: unknown, prop: string): boolean => {
-      return Boolean(obj && typeof obj === 'object' && prop in obj);
+    // Type assertion for the response data
+    type SubscriptionResponse = {
+      isPremium?: boolean;
+      isWithinFreeLimit?: boolean;
+      monthlyAppointments?: number;
     };
     
-    const isPremium = hasProperty(data, 'isPremium') && data.isPremium === true;
+    const data = response.data as SubscriptionResponse;
     
-    if (isPremium) {
+    // Premium users have no limits
+    if (data && data.isPremium === true) {
       console.log('Professional has premium subscription, no limits applied');
       return true;
     }
     
-    // Check if the edge function already provided the answer
-    if (hasProperty(data, 'isWithinFreeLimit') && typeof data.isWithinFreeLimit === 'boolean') {
+    // Use pre-calculated value if available
+    if (data && typeof data.isWithinFreeLimit === 'boolean') {
       console.log(`Using edge calculation: within limit = ${data.isWithinFreeLimit}`);
       return data.isWithinFreeLimit;
     }
     
-    // Get appointment count from the safest source
+    // Get appointment count from the best available source
     let appointmentCount = 0;
     
-    if (hasProperty(data, 'monthlyAppointments') && 
-        typeof data.monthlyAppointments === 'number') {
+    if (data && typeof data.monthlyAppointments === 'number') {
       appointmentCount = data.monthlyAppointments;
       console.log(`Using appointment count from edge: ${appointmentCount}`);
     } else {
@@ -101,7 +105,7 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
       console.log(`Using appointment count from DB: ${appointmentCount}`);
     }
     
-    // Apply free tier limit check
+    // Apply free tier limit (less than 5)
     const isWithinLimit = appointmentCount < 5;
     console.log(`Professional has ${appointmentCount} appointments, within limit: ${isWithinLimit}`);
     return isWithinLimit;
