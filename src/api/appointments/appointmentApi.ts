@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -47,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Completely bypass TypeScript inference for this function
+// Use direct fetch to avoid TypeScript inference issues
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
@@ -57,18 +58,27 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Use type assertion to completely bypass TypeScript inference
-    const response: any = await (supabase.functions as any).invoke('check-subscription', {
-      body: { userId: professionalId }
+    // Get the session to include authorization header
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // Use direct fetch call to avoid TypeScript inference issues
+    const response = await fetch(`https://iabhmwqracdcdnevtpzt.supabase.co/functions/v1/check-subscription`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token || ''}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYmhtd3FyYWNkY2RuZXZ0cHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MDY5OTcsImV4cCI6MjA2MTM4Mjk5N30.ITy9iYrYUqYGvXsLL_OempEACnzFGDe3jB9WaIX9HqA'
+      },
+      body: JSON.stringify({ userId: professionalId })
     });
     
     // Handle potential errors first
-    if (response.error) {
-      console.error('Error checking subscription status:', response.error);
+    if (!response.ok) {
+      console.error('Error checking subscription status:', response.statusText);
       return false;
     }
     
-    const data = response.data;
+    const data = await response.json();
     
     // Premium users have no limits
     if (data && data.isPremium === true) {
