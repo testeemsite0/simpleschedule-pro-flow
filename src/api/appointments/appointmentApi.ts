@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -47,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Fixed version using any type to avoid TypeScript inference issues
+// Completely bypass TypeScript inference for this function
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
@@ -57,8 +58,8 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Use any type to avoid complex type inference
-    const response: any = await supabase.functions.invoke('check-subscription', {
+    // Use type assertion to completely bypass TypeScript inference
+    const response = await (supabase.functions as any).invoke('check-subscription', {
       body: { userId: professionalId }
     });
     
