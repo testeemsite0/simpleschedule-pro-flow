@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -48,7 +47,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Simplified version with explicit typing to avoid excessive type instantiation
+// Fixed version using any type to avoid TypeScript inference issues
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
@@ -58,13 +57,9 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Explicitly type the request and use a simple structure
-    type SubscriptionRequest = { userId: string };
-    const requestBody: SubscriptionRequest = { userId: professionalId };
-    
-    // Call the edge function with the typed request
-    const response = await supabase.functions.invoke('check-subscription', {
-      body: requestBody
+    // Use any type to avoid complex type inference
+    const response: any = await supabase.functions.invoke('check-subscription', {
+      body: { userId: professionalId }
     });
     
     // Handle potential errors first
@@ -73,14 +68,7 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
       return false;
     }
     
-    // Type assertion for the response data
-    type SubscriptionResponse = {
-      isPremium?: boolean;
-      isWithinFreeLimit?: boolean;
-      monthlyAppointments?: number;
-    };
-    
-    const data = response.data as SubscriptionResponse;
+    const data = response.data;
     
     // Premium users have no limits
     if (data && data.isPremium === true) {
