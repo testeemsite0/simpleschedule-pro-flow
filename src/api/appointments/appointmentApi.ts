@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -59,7 +58,7 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
     // Use type assertion to completely bypass TypeScript inference
-    const response = await (supabase.functions as any).invoke('check-subscription', {
+    const response: any = await (supabase.functions as any).invoke('check-subscription', {
       body: { userId: professionalId }
     });
     
