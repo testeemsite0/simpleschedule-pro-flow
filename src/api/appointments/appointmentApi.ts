@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -58,8 +57,9 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Get the session to include authorization header
-    const { data: { session } } = await supabase.auth.getSession();
+    // Use type assertion to bypass TypeScript inference issues
+    const sessionResult: any = await (supabase.auth as any).getSession();
+    const session = sessionResult?.data?.session;
     
     // Use direct fetch call to avoid TypeScript inference issues
     const response = await fetch(`https://iabhmwqracdcdnevtpzt.supabase.co/functions/v1/check-subscription`, {
