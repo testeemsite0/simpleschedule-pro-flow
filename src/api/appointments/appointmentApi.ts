@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -47,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Use direct fetch to avoid TypeScript inference issues
+// Simplified version to avoid TypeScript inference issues
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
@@ -57,16 +58,21 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Use type assertion to bypass TypeScript inference issues
-    const sessionResult: any = await (supabase.auth as any).getSession();
-    const session = sessionResult?.data?.session;
+    // Get session token directly without complex type inference
+    let sessionToken = '';
+    try {
+      const authSession = await supabase.auth.getSession();
+      sessionToken = authSession?.data?.session?.access_token || '';
+    } catch (authError) {
+      console.log('Could not get auth session, continuing without token');
+    }
     
     // Use direct fetch call to avoid TypeScript inference issues
     const response = await fetch(`https://iabhmwqracdcdnevtpzt.supabase.co/functions/v1/check-subscription`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token || ''}`,
+        'Authorization': `Bearer ${sessionToken}`,
         'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYmhtd3FyYWNkY2RuZXZ0cHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MDY5OTcsImV4cCI6MjA2MTM4Mjk5N30.ITy9iYrYUqYGvXsLL_OempEACnzFGDe3jB9WaIX9HqA'
       },
       body: JSON.stringify({ userId: professionalId })
