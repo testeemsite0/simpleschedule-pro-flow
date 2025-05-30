@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -58,22 +57,17 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Get session token without triggering TypeScript inference issues
+    // Get session token using edge function call
     let sessionToken = '';
     
-    // Use a simple approach to get the session
-    const session = supabase.auth.getSession;
-    if (session) {
-      try {
-        // Call the session method and handle the result simply
-        const result = await session();
-        if (result && result.data && result.data.session) {
-          sessionToken = result.data.session.access_token || '';
-        }
-      } catch {
-        // Ignore auth errors and continue
-        console.log('Could not get auth session, continuing without token');
+    // Simple session token retrieval
+    try {
+      const sessionResponse = await supabase.auth.getSession();
+      if (sessionResponse?.data?.session?.access_token) {
+        sessionToken = sessionResponse.data.session.access_token;
       }
+    } catch {
+      console.log('Could not get auth session, continuing without token');
     }
     
     // Use direct fetch call to avoid TypeScript inference issues
