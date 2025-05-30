@@ -58,13 +58,22 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Get session token directly without complex type inference
+    // Get session token without triggering TypeScript inference issues
     let sessionToken = '';
-    try {
-      const authSession = await supabase.auth.getSession();
-      sessionToken = authSession?.data?.session?.access_token || '';
-    } catch (authError) {
-      console.log('Could not get auth session, continuing without token');
+    
+    // Use a simple approach to get the session
+    const session = supabase.auth.getSession;
+    if (session) {
+      try {
+        // Call the session method and handle the result simply
+        const result = await session();
+        if (result && result.data && result.data.session) {
+          sessionToken = result.data.session.access_token || '';
+        }
+      } catch {
+        // Ignore auth errors and continue
+        console.log('Could not get auth session, continuing without token');
+      }
     }
     
     // Use direct fetch call to avoid TypeScript inference issues
