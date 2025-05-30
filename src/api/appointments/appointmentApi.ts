@@ -57,25 +57,11 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Get session token using edge function call
-    let sessionToken = '';
-    
-    // Simple session token retrieval
-    try {
-      const sessionResponse = await supabase.auth.getSession();
-      if (sessionResponse?.data?.session?.access_token) {
-        sessionToken = sessionResponse.data.session.access_token;
-      }
-    } catch {
-      console.log('Could not get auth session, continuing without token');
-    }
-    
     // Use direct fetch call to avoid TypeScript inference issues
     const response = await fetch(`https://iabhmwqracdcdnevtpzt.supabase.co/functions/v1/check-subscription`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`,
         'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYmhtd3FyYWNkY2RuZXZ0cHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MDY5OTcsImV4cCI6MjA2MTM4Mjk5N30.ITy9iYrYUqYGvXsLL_OempEACnzFGDe3jB9WaIX9HqA'
       },
       body: JSON.stringify({ userId: professionalId })
