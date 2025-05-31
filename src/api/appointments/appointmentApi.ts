@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Appointment } from '@/types';
 
@@ -31,9 +32,9 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
     
     const { count, error } = await supabase
       .from('appointments')
-      .select('*', { count: 'exact' })
+      .select('*', { count: 'exact', head: true })
       .eq('professional_id', professionalId)
-      .eq('free_tier_used', true)  // Only count appointments that used the free tier
+      .eq('free_tier_used', true)
       .gte('date', firstDay.toISOString().split('T')[0])
       .lte('date', lastDay.toISOString().split('T')[0]);
       

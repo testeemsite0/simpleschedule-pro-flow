@@ -17,6 +17,7 @@ export type Database = {
           created_at: string | null
           date: string
           end_time: string
+          free_tier_used: boolean
           id: string
           insurance_plan_id: string | null
           notes: string | null
@@ -36,6 +37,7 @@ export type Database = {
           created_at?: string | null
           date: string
           end_time: string
+          free_tier_used?: boolean
           id?: string
           insurance_plan_id?: string | null
           notes?: string | null
@@ -55,6 +57,7 @@ export type Database = {
           created_at?: string | null
           date?: string
           end_time?: string
+          free_tier_used?: boolean
           id?: string
           insurance_plan_id?: string | null
           notes?: string | null
