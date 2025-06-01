@@ -66,7 +66,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     setTime,
     setClientInfo,
     completeBooking,
-    refreshData
+    refreshData,
+    goToNextStep
   });
   
   // Log component rendering and data
