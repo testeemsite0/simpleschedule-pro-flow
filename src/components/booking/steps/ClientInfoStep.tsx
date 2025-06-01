@@ -15,7 +15,7 @@ interface ClientInfoStepProps {
     phone?: string;
     notes?: string;
   };
-  hideButtons?: boolean; // Add this prop to hide buttons when used in UnifiedBookingForm
+  hideButtons?: boolean;
 }
 
 export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
@@ -23,22 +23,60 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
   isLoading = false,
   onBack,
   defaultValues = {},
-  hideButtons = false // Default to showing buttons for backward compatibility
+  hideButtons = false
 }) => {
   const [name, setName] = useState(defaultValues.name || '');
   const [email, setEmail] = useState(defaultValues.email || '');
   const [phone, setPhone] = useState(defaultValues.phone || '');
   const [notes, setNotes] = useState(defaultValues.notes || '');
+  const [error, setError] = useState('');
+
+  console.log("ClientInfoStep: Initialized with values:", {
+    name,
+    email,
+    phone,
+    defaultValues
+  });
 
   // Update form fields if defaultValues change
   useEffect(() => {
-    if (defaultValues.name) setName(defaultValues.name);
-    if (defaultValues.email) setEmail(defaultValues.email);
-    if (defaultValues.phone) setPhone(defaultValues.phone);
-    if (defaultValues.notes) setNotes(defaultValues.notes);
+    console.log("ClientInfoStep: Default values changed:", defaultValues);
+    if (defaultValues.name !== undefined) setName(defaultValues.name);
+    if (defaultValues.email !== undefined) setEmail(defaultValues.email);
+    if (defaultValues.phone !== undefined) setPhone(defaultValues.phone);
+    if (defaultValues.notes !== undefined) setNotes(defaultValues.notes);
   }, [defaultValues]);
 
+  const validateForm = () => {
+    if (!name || !name.trim()) {
+      setError("Nome é obrigatório");
+      return false;
+    }
+    
+    if (!email || !email.trim()) {
+      setError("Email é obrigatório");
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Email em formato inválido");
+      return false;
+    }
+    
+    setError('');
+    return true;
+  };
+
   const handleSubmit = () => {
+    console.log("ClientInfoStep: Form submitted with:", { name, email, phone, notes });
+    
+    if (!validateForm()) {
+      console.error("ClientInfoStep: Form validation failed");
+      return;
+    }
+    
+    console.log("ClientInfoStep: Form validation passed, calling onClientInfoSubmit");
     onClientInfoSubmit(name, email, phone, notes);
   };
 
@@ -46,14 +84,24 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Informações do cliente</h2>
       
+      {error && (
+        <div className="p-3 bg-red-50 text-red-600 rounded border border-red-200">
+          <p className="text-sm font-medium">{error}</p>
+        </div>
+      )}
+      
       <div className="space-y-2">
         <Label htmlFor="name">Nome completo <span className="text-destructive">*</span></Label>
         <Input 
           id="name" 
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (error) setError(''); // Clear error when user starts typing
+          }}
           required
           disabled={isLoading}
+          placeholder="Digite o nome completo"
         />
       </div>
       
@@ -63,9 +111,13 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
           id="email" 
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (error) setError(''); // Clear error when user starts typing
+          }}
           required
           disabled={isLoading}
+          placeholder="exemplo@email.com"
         />
       </div>
       
@@ -93,13 +145,15 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
         />
       </div>
       
-      {!hideButtons && onBack && (
+      {!hideButtons && (
         <div className="flex justify-between mt-4">
-          <Button variant="outline" onClick={onBack} disabled={isLoading}>
-            Voltar
-          </Button>
+          {onBack && (
+            <Button variant="outline" onClick={onBack} disabled={isLoading}>
+              Voltar
+            </Button>
+          )}
           <Button onClick={handleSubmit} disabled={isLoading}>
-            Avançar
+            {isLoading ? "Processando..." : "Avançar"}
           </Button>
         </div>
       )}

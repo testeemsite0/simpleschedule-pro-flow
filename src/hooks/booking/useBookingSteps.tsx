@@ -1,20 +1,13 @@
 
-import { useState } from 'react';
-import { toast } from 'sonner';
-import { Service, TeamMember, InsurancePlan } from '@/types';
+import { useState, useCallback } from 'react';
 
-export type BookingStep = 'team-member' | 'insurance' | 'service' | 'date' | 'time' | 'client-info' | 'confirmation';
-
-interface UseBookingStepsProps {
-  initialStep?: BookingStep;
-  onCompleteBooking?: (bookingData: BookingData) => Promise<void>;
-}
+export type BookingStep = 'team-member' | 'service' | 'insurance' | 'date' | 'time' | 'client-info' | 'confirmation';
 
 export interface BookingData {
   teamMemberId?: string;
   serviceId?: string;
   insuranceId?: string;
-  date?: Date | null;
+  date?: Date;
   startTime?: string;
   endTime?: string;
   clientName?: string;
@@ -22,175 +15,124 @@ export interface BookingData {
   clientPhone?: string;
   notes?: string;
   appointmentId?: string;
+  // Additional fields for display purposes
   professionalName?: string;
   professionalEmail?: string;
   professionalRole?: string;
   professionalSlug?: string;
-  usedFreeSlot?: boolean;
 }
 
-export const useBookingSteps = ({ 
-  initialStep = 'team-member',
-  onCompleteBooking 
-}: UseBookingStepsProps = {}) => {
+interface UseBookingStepsProps {
+  initialStep?: BookingStep;
+}
+
+export const useBookingSteps = ({ initialStep = 'team-member' }: UseBookingStepsProps = {}) => {
   const [currentStep, setCurrentStep] = useState<BookingStep>(initialStep);
   const [bookingData, setBookingData] = useState<BookingData>({});
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Functions for navigating steps - correct order: team-member → insurance → service → date → time → client-info → confirmation
-  const goToNextStep = () => {
-    const stepOrder: BookingStep[] = ['team-member', 'insurance', 'service', 'date', 'time', 'client-info', 'confirmation'];
-    const currentIndex = stepOrder.indexOf(currentStep);
+
+  console.log("useBookingSteps: Current data:", JSON.stringify(bookingData, null, 2));
+
+  const goToNextStep = useCallback(() => {
+    const steps: BookingStep[] = ['team-member', 'service', 'insurance', 'date', 'time', 'client-info', 'confirmation'];
+    const currentIndex = steps.indexOf(currentStep);
     
-    if (currentIndex < stepOrder.length - 1) {
-      const nextStep = stepOrder[currentIndex + 1];
+    if (currentIndex < steps.length - 1) {
+      const nextStep = steps[currentIndex + 1];
+      console.log(`useBookingSteps: Moving from ${currentStep} to ${nextStep}`);
       setCurrentStep(nextStep);
-      console.log(`Moving from step ${currentStep} to ${nextStep}`);
     }
-  };
-  
-  const goToPreviousStep = () => {
-    const stepOrder: BookingStep[] = ['team-member', 'insurance', 'service', 'date', 'time', 'client-info', 'confirmation'];
-    const currentIndex = stepOrder.indexOf(currentStep);
+  }, [currentStep]);
+
+  const goToPreviousStep = useCallback(() => {
+    const steps: BookingStep[] = ['team-member', 'service', 'insurance', 'date', 'time', 'client-info', 'confirmation'];
+    const currentIndex = steps.indexOf(currentStep);
     
     if (currentIndex > 0) {
-      const prevStep = stepOrder[currentIndex - 1];
-      setCurrentStep(prevStep);
-      console.log(`Moving back from step ${currentStep} to ${prevStep}`);
+      const previousStep = steps[currentIndex - 1];
+      console.log(`useBookingSteps: Moving from ${currentStep} to ${previousStep}`);
+      setCurrentStep(previousStep);
     }
-  };
-  
-  const goToStep = (step: BookingStep) => {
+  }, [currentStep]);
+
+  const goToStep = useCallback((step: BookingStep) => {
+    console.log(`useBookingSteps: Jumping to step ${step}`);
     setCurrentStep(step);
-    console.log(`Directly setting step to ${step}`);
-  };
-  
-  // Functions for updating booking data
-  const updateBookingData = (data: Partial<BookingData>) => {
-    setBookingData(prev => ({
-      ...prev,
-      ...data
-    }));
-    console.log("Updated booking data:", {...bookingData, ...data});
-  };
-  
-  const updateErrorState = (errorMessage: string | null) => {
-    setError(errorMessage);
-    if (errorMessage) {
-      console.error("Booking error:", errorMessage);
-    }
-  };
-  
-  const setTeamMember = (teamMember: TeamMember | string) => {
-    const teamMemberId = typeof teamMember === 'string' ? teamMember : teamMember.id;
-    const professionalName = typeof teamMember === 'string' ? undefined : teamMember.name;
-    const professionalEmail = typeof teamMember === 'string' ? undefined : teamMember.email;
-    const professionalRole = typeof teamMember === 'string' ? undefined : teamMember.position || 'Profissional';
-    const professionalSlug = typeof teamMember === 'string' ? undefined : undefined; // TeamMember doesn't have a slug property
-    
-    updateBookingData({ 
-      teamMemberId, 
-      professionalName,
-      professionalEmail,
-      professionalRole,
-      professionalSlug
+  }, []);
+
+  const updateBookingData = useCallback((updates: Partial<BookingData>) => {
+    console.log("useBookingSteps: Updating booking data with:", JSON.stringify(updates, null, 2));
+    setBookingData(prev => {
+      const newData = { ...prev, ...updates };
+      console.log("useBookingSteps: New booking data:", JSON.stringify(newData, null, 2));
+      return newData;
     });
-    
-    setCurrentStep('insurance'); // Go to insurance step first
-    console.log(`Team member set to ${teamMemberId}, moving to insurance step`);
-  };
-  
-  const setInsurance = (insurance: InsurancePlan | string) => {
-    const insuranceId = typeof insurance === 'string' ? insurance : insurance.id;
-    updateBookingData({ insuranceId });
-    setCurrentStep('service'); // Then go to service step
-    console.log(`Insurance set to ${insuranceId}, moving to service step`);
-  };
-  
-  const setService = (service: Service | string) => {
-    const serviceId = typeof service === 'string' ? service : service.id;
+  }, []);
+
+  const setTeamMember = useCallback((teamMemberId: string) => {
+    console.log(`useBookingSteps: Setting team member: ${teamMemberId}`);
+    updateBookingData({ teamMemberId });
+  }, [updateBookingData]);
+
+  const setService = useCallback((serviceId: string) => {
+    console.log(`useBookingSteps: Setting service: ${serviceId}`);
     updateBookingData({ serviceId });
-    setCurrentStep('date'); // Then date selection, fixed from 'time'
-    console.log(`Service set to ${serviceId}, moving to date step`);
-  };
-  
-  const setDate = (date: Date) => {
+  }, [updateBookingData]);
+
+  const setInsurance = useCallback((insuranceId: string) => {
+    console.log(`useBookingSteps: Setting insurance: ${insuranceId}`);
+    updateBookingData({ insuranceId });
+  }, [updateBookingData]);
+
+  const setDate = useCallback((date: Date) => {
+    console.log(`useBookingSteps: Setting date: ${date.toISOString()}`);
     updateBookingData({ date });
-    setCurrentStep('time'); // Then time selection
-    console.log(`Date selected: ${date.toISOString().split('T')[0]}, moving to time step`);
-  };
-  
-  const setTime = (startTime: string, endTime: string) => {
+  }, [updateBookingData]);
+
+  const setTime = useCallback((startTime: string, endTime: string) => {
+    console.log(`useBookingSteps: Setting time: ${startTime} - ${endTime}`);
     updateBookingData({ startTime, endTime });
-    setCurrentStep('client-info'); // Next is client info
-    console.log(`Time selected: ${startTime}-${endTime}, moving to client-info step`);
-  };
-  
-  const setClientInfo = (name: string, email: string, phone: string, notes?: string) => {
-    updateBookingData({ 
-      clientName: name, 
-      clientEmail: email, 
-      clientPhone: phone,
-      notes: notes || '' 
-    });
-    setCurrentStep('confirmation'); // Move to confirmation step
-    console.log("Client info set:", { name, email, phone }, "moving to confirmation step");
-  };
-  
-  const completeBooking = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      if (onCompleteBooking) {
-        await onCompleteBooking(bookingData);
-      }
-      
-      toast.success("Agendamento realizado com sucesso!");
-      
-      // Generate a mock appointment ID for testing/display purposes if not already set
-      const appointmentId = bookingData.appointmentId || `appt-${Date.now().toString(36)}`;
-      updateBookingData({ 
-        appointmentId,
-        usedFreeSlot: true // Track that we used a free slot to enforce limits
-      });
-      
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Erro ao finalizar agendamento";
-      setError(errorMessage);
-      toast.error(errorMessage);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const resetBooking = () => {
+  }, [updateBookingData]);
+
+  const setClientInfo = useCallback((name: string, email: string, phone?: string, notes?: string) => {
+    console.log(`useBookingSteps: Setting client info - Name: ${name}, Email: ${email}, Phone: ${phone}`);
+    const clientData = {
+      clientName: name,
+      clientEmail: email,
+      clientPhone: phone || '',
+      notes: notes || ''
+    };
+    console.log("useBookingSteps: Client data to be saved:", JSON.stringify(clientData, null, 2));
+    updateBookingData(clientData);
+  }, [updateBookingData]);
+
+  const updateErrorState = useCallback((errorMessage: string | null) => {
+    console.log(`useBookingSteps: Setting error: ${errorMessage}`);
+    setError(errorMessage);
+  }, []);
+
+  const resetBooking = useCallback(() => {
+    console.log("useBookingSteps: Resetting booking data");
     setBookingData({});
-    setCurrentStep(initialStep);
+    setCurrentStep('team-member');
     setError(null);
-    console.log("Booking reset to initial state");
-  };
-  
+  }, []);
+
   return {
     currentStep,
     bookingData,
-    isLoading,
     error,
     goToNextStep,
     goToPreviousStep,
     goToStep,
-    updateBookingData,
-    updateErrorState,
     setTeamMember,
     setService,
     setInsurance,
     setDate,
     setTime,
     setClientInfo,
-    completeBooking,
-    resetBooking
+    updateErrorState,
+    resetBooking,
+    updateBookingData
   };
 };
