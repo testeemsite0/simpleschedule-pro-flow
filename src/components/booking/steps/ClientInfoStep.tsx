@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 interface ClientInfoStepProps {
   onClientInfoSubmit: (name: string, email: string, phone: string, notes?: string) => void;
   isLoading?: boolean;
-  onBack?: () => void;
   defaultValues?: {
     name?: string;
     email?: string;
@@ -20,7 +19,6 @@ interface ClientInfoStepProps {
 export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
   onClientInfoSubmit,
   isLoading = false,
-  onBack,
   defaultValues = {},
   hideButtons = false
 }) => {
@@ -46,40 +44,23 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
     if (defaultValues.notes !== undefined) setNotes(defaultValues.notes);
   }, [defaultValues]);
 
-  const validateAndSubmit = () => {
-    console.log("ClientInfoStep: Validating and submitting form:", { name, email, phone, notes });
-    
-    if (!name || !name.trim()) {
-      setError("Nome é obrigatório");
-      return;
-    }
-    
-    if (!email || !email.trim()) {
-      setError("Email é obrigatório");
-      return;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Email em formato inválido");
-      return;
-    }
-    
-    setError('');
-    console.log("ClientInfoStep: Form validation passed, calling onClientInfoSubmit");
-    onClientInfoSubmit(name, email, phone, notes);
-  };
-
-  // Auto-submit when all required fields are filled and valid
+  // Auto-save when required fields are filled and valid
   useEffect(() => {
     if (name.trim() && email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      const timeoutId = setTimeout(() => {
-        validateAndSubmit();
-      }, 1000); // Delay to allow user to finish typing
-      
-      return () => clearTimeout(timeoutId);
+      setError('');
+      console.log("ClientInfoStep: Auto-saving valid data");
+      onClientInfoSubmit(name, email, phone, notes);
+    } else if (name.trim() || email.trim()) {
+      // Show error only if user has started typing
+      if (name.trim() && !email.trim()) {
+        setError("Email é obrigatório");
+      } else if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setError("Email em formato inválido");
+      } else if (email.trim() && !name.trim()) {
+        setError("Nome é obrigatório");
+      }
     }
-  }, [name, email, phone, notes]);
+  }, [name, email, phone, notes, onClientInfoSubmit]);
 
   return (
     <div className="space-y-4">

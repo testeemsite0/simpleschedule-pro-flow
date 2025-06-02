@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 
-export type BookingStep = 'team-member' | 'service' | 'insurance' | 'date' | 'time' | 'client-info' | 'confirmation';
+export type BookingStep = 'team-member' | 'insurance' | 'service' | 'date' | 'time' | 'client-info' | 'confirmation';
 
 export interface BookingData {
   teamMemberId?: string;
@@ -34,7 +34,8 @@ export const useBookingSteps = ({ initialStep = 'team-member' }: UseBookingSteps
   console.log("useBookingSteps: Current data:", JSON.stringify(bookingData, null, 2));
 
   const goToNextStep = useCallback(() => {
-    const steps: BookingStep[] = ['team-member', 'service', 'insurance', 'date', 'time', 'client-info', 'confirmation'];
+    // Sequência corrigida: Profissional → Convênio → Serviço → Data → Horário → Cliente → Confirmação
+    const steps: BookingStep[] = ['team-member', 'insurance', 'service', 'date', 'time', 'client-info', 'confirmation'];
     const currentIndex = steps.indexOf(currentStep);
     
     if (currentIndex < steps.length - 1) {
@@ -45,7 +46,8 @@ export const useBookingSteps = ({ initialStep = 'team-member' }: UseBookingSteps
   }, [currentStep]);
 
   const goToPreviousStep = useCallback(() => {
-    const steps: BookingStep[] = ['team-member', 'service', 'insurance', 'date', 'time', 'client-info', 'confirmation'];
+    // Sequência corrigida: Profissional → Convênio → Serviço → Data → Horário → Cliente → Confirmação
+    const steps: BookingStep[] = ['team-member', 'insurance', 'service', 'date', 'time', 'client-info', 'confirmation'];
     const currentIndex = steps.indexOf(currentStep);
     
     if (currentIndex > 0) {

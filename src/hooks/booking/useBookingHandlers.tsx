@@ -55,13 +55,11 @@ export const useBookingHandlers = ({
     // Validate required fields
     if (!name || !name.trim()) {
       console.error("useBookingHandlers: Name is required but was empty");
-      toast.error("Nome é obrigatório");
       return;
     }
     
     if (!email || !email.trim()) {
       console.error("useBookingHandlers: Email is required but was empty");
-      toast.error("Email é obrigatório");
       return;
     }
     
@@ -69,14 +67,11 @@ export const useBookingHandlers = ({
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       console.error("useBookingHandlers: Invalid email format");
-      toast.error("Email em formato inválido");
       return;
     }
     
     console.log("useBookingHandlers: Client info validation passed, saving data");
     setClientInfo(name.trim(), email.trim(), phone?.trim(), notes?.trim());
-    
-    toast.success("Informações do cliente salvas com sucesso!");
   }, [setClientInfo]);
 
   const handleCompleteBooking = useCallback(async () => {

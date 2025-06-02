@@ -11,7 +11,6 @@ interface InsuranceStepProps {
   teamMemberId?: string;
   checkInsuranceLimitReached?: (insuranceId: string, teamMemberId?: string) => boolean;
   isLoading?: boolean;
-  onBack?: () => void;
 }
 
 export const InsuranceStep: React.FC<InsuranceStepProps> = ({
@@ -20,8 +19,7 @@ export const InsuranceStep: React.FC<InsuranceStepProps> = ({
   onInsuranceChange,
   teamMemberId,
   checkInsuranceLimitReached,
-  isLoading = false,
-  onBack
+  isLoading = false
 }) => {
   const handleInsuranceChange = (value: string) => {
     if (checkInsuranceLimitReached && teamMemberId) {

@@ -25,10 +25,10 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
     switch (currentStep) {
       case 'team-member':
         return !!bookingData.teamMemberId;
-      case 'service':
-        return !!bookingData.serviceId;
       case 'insurance':
         return !!bookingData.insuranceId;
+      case 'service':
+        return !!bookingData.serviceId;
       case 'date':
         return !!bookingData.date;
       case 'time':
@@ -43,8 +43,8 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
   // Show confirmation button only on confirmation step
   const showConfirmButton = currentStep === 'confirmation';
   
-  // Show next button for all steps except confirmation and client-info (which handles its own advancement)
-  const showNextButton = !showConfirmButton && currentStep !== 'client-info';
+  // Show next button for all steps except confirmation
+  const showNextButton = !showConfirmButton;
 
   return (
     <div className="flex justify-between pt-4 border-t">
@@ -59,7 +59,7 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
         </Button>
       )}
       
-      {/* Show next button for most steps */}
+      {/* Show next button for all steps except confirmation */}
       {showNextButton && (
         <Button
           onClick={goToNextStep}
