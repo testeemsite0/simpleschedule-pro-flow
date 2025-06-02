@@ -76,7 +76,7 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
     availableDatesCount: availableDates.length,
     availableSlotsCount: availableSlots.length,
     hasSelectedDate: !!bookingData.date,
-    insuranceId: bookingData.insuranceId // Log the insuranceId for debugging
+    insuranceId: bookingData.insuranceId
   });
 
   // Render the appropriate step content based on current step
@@ -91,27 +91,25 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
           onRefresh={handleRefresh}
         />
       );
-    case 'service':
-      return (
-        <ServiceStepContent
-          services={availableServices}
-          selectedService={bookingData.serviceId || ''}
-          onServiceChange={handleServiceChange}
-          onBack={goToPreviousStep}
-          getAvailableServicesForTeamMember={getAvailableServicesForTeamMember}
-          teamMemberId={bookingData.teamMemberId || ''}
-          insuranceId={bookingData.insuranceId} // Pass insuranceId to ServiceStepContent
-        />
-      );
     case 'insurance':
       return (
         <InsuranceStepContent
           insurancePlans={insurancePlans}
           selectedInsurance={bookingData.insuranceId || ''}
           onInsuranceChange={handleInsuranceChange}
-          onBack={goToPreviousStep}
           teamMemberId={bookingData.teamMemberId}
           checkInsuranceLimitReached={checkInsuranceLimitReached}
+        />
+      );
+    case 'service':
+      return (
+        <ServiceStepContent
+          services={availableServices}
+          selectedService={bookingData.serviceId || ''}
+          onServiceChange={handleServiceChange}
+          getAvailableServicesForTeamMember={getAvailableServicesForTeamMember}
+          teamMemberId={bookingData.teamMemberId || ''}
+          insuranceId={bookingData.insuranceId}
         />
       );
     case 'date':
@@ -120,7 +118,6 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
           availableDates={availableDates}
           selectedDate={bookingData.date}
           onDateSelect={handleDateChange}
-          onBack={goToPreviousStep}
           isLoading={isLoading}
         />
       );
@@ -133,7 +130,6 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
           selectedEndTime={bookingData.endTime}
           onTimeSlotSelect={handleTimeSlotSelect}
           isLoading={isLoading}
-          onBack={goToPreviousStep}
         />
       );
     case 'client-info':
@@ -141,7 +137,6 @@ export const BookingStepContent: React.FC<BookingStepContentProps> = ({
         <ClientInfoStepContent
           onClientInfoSubmit={handleClientInfoSubmit}
           isLoading={isLoading}
-          onBack={goToPreviousStep}
           defaultValues={{
             name: bookingData.clientName,
             email: bookingData.clientEmail,
