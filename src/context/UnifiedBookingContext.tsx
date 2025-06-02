@@ -61,10 +61,11 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
     isAdminView 
   });
 
+  // Fix: Pass the correct props to useUnifiedBookingFlow
   const unifiedBookingData = useUnifiedBookingFlow({
-    professionalSlug,
     professionalId,
-    isAdminView
+    isAdminView,
+    professionalSlug
   });
 
   // Debug the professional data loading
@@ -79,8 +80,18 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
     });
   }, [unifiedBookingData.teamMembers, unifiedBookingData.services, unifiedBookingData.isLoading, unifiedBookingData.error, professionalSlug, professionalId]);
 
+  // Fix: Convert complex availableSlots to simple string array for the context
+  const contextValue: UnifiedBookingContextType = {
+    ...unifiedBookingData,
+    availableSlots: Array.isArray(unifiedBookingData.availableSlots) 
+      ? unifiedBookingData.availableSlots.map(slot => 
+          typeof slot === 'string' ? slot : slot.startTime
+        )
+      : []
+  };
+
   return (
-    <UnifiedBookingContext.Provider value={unifiedBookingData}>
+    <UnifiedBookingContext.Provider value={contextValue}>
       {children}
     </UnifiedBookingContext.Provider>
   );

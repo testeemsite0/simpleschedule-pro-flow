@@ -49,8 +49,8 @@ const UnifiedBookingFormWrapper: React.FC<{
   }
   
   if (error) {
-    // Convert Error object to string if needed
-    const errorMessage = error instanceof Error ? error.message : error;
+    // Fix: Handle both string and Error types properly
+    const errorMessage = typeof error === 'string' ? error : error?.message || 'Erro desconhecido';
     
     return (
       <ErrorHandler

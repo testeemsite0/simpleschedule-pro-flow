@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useBookingSteps, BookingStep } from './useBookingSteps';
@@ -12,12 +13,14 @@ import { clearBookingCache } from './api/dataLoader';
 
 interface UseUnifiedBookingFlowProps {
   professionalId?: string;
+  professionalSlug?: string;
   isAdminView?: boolean;
   initialStep?: BookingStep;
 }
 
 export const useUnifiedBookingFlow = ({
   professionalId,
+  professionalSlug,
   isAdminView = false,
   initialStep
 }: UseUnifiedBookingFlowProps = {}) => {
@@ -53,6 +56,7 @@ export const useUnifiedBookingFlow = ({
     refreshAllData
   } = useBookingDataFetching({
     professionalId,
+    professionalSlug,
     onError: handleDataError
   });
 
