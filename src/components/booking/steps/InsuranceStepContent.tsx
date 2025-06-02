@@ -7,7 +7,6 @@ interface InsuranceStepContentProps {
   insurancePlans: InsurancePlan[];
   selectedInsurance: string;
   onInsuranceChange: (insuranceId: string) => void;
-  onBack: () => void;
   teamMemberId?: string;
   checkInsuranceLimitReached?: (insuranceId: string, teamMemberId?: string) => boolean;
 }
@@ -16,7 +15,6 @@ export const InsuranceStepContent: React.FC<InsuranceStepContentProps> = ({
   insurancePlans,
   selectedInsurance,
   onInsuranceChange,
-  onBack,
   teamMemberId,
   checkInsuranceLimitReached
 }) => {
@@ -25,7 +23,6 @@ export const InsuranceStepContent: React.FC<InsuranceStepContentProps> = ({
       insurancePlans={insurancePlans}
       selectedInsurance={selectedInsurance}
       onInsuranceChange={onInsuranceChange}
-      onBack={onBack}
       teamMemberId={teamMemberId}
       checkInsuranceLimitReached={checkInsuranceLimitReached}
     />

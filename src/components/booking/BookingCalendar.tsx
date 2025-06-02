@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { TimeSlot, Appointment, Professional } from '@/types';
@@ -124,7 +123,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
             insurancePlans={insurancePlans}
             selectedInsurance={selectedInsurance}
             onInsuranceChange={handleInsuranceChange}
-            onBack={goToPreviousStep}
+            teamMemberId={selectedTeamMember}
           />
         )}
         
@@ -134,7 +133,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
             services={teamMemberServices}
             selectedService={selectedService}
             onServiceChange={handleServiceChange}
-            onBack={goToPreviousStep}
             insuranceId={selectedInsurance}
           />
         )}
@@ -145,7 +143,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
             availableDates={availableDates}
             selectedDate={selectedDate}
             onDateSelect={handleDateSelect}
-            onBack={goToPreviousStep}
           />
         )}
         
@@ -154,7 +151,6 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({
           <TimeStep
             availableSlots={availableSlots}
             onTimeSlotSelect={handleTimeSlotSelect}
-            onBack={goToPreviousStep}
           />
         )}
       </BookingStepsContent>
