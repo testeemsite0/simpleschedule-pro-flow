@@ -40,6 +40,11 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
     }
   };
 
+  // Don't show navigation buttons if appointment is completed
+  if (bookingData.appointmentId) {
+    return null;
+  }
+
   // Show confirmation button only on confirmation step
   const showConfirmButton = currentStep === 'confirmation';
   

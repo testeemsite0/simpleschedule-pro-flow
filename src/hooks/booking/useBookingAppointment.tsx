@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { BookingData } from './useBookingSteps';
@@ -27,9 +27,23 @@ export const useBookingAppointment = ({
 }: UseBookingAppointmentProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { isWithinFreeLimit, checkInsurancePlanLimit } = useAppointments();
+  const isProcessing = useRef(false); // Prevent duplicate submissions
 
-  // Complete booking process with enhanced validation
+  // Complete booking process with enhanced validation and duplicate prevention
   const completeBooking = async () => {
+    // Prevent duplicate submissions
+    if (isProcessing.current || isLoading) {
+      console.log("Booking already in progress, ignoring duplicate request");
+      return false;
+    }
+
+    // Check if appointment already exists
+    if (bookingData.appointmentId) {
+      console.log("Appointment already exists, ignoring duplicate request");
+      return true;
+    }
+
+    isProcessing.current = true;
     setIsLoading(true);
     
     try {
@@ -161,6 +175,7 @@ export const useBookingAppointment = ({
       return false;
     } finally {
       setIsLoading(false);
+      isProcessing.current = false;
     }
   };
 

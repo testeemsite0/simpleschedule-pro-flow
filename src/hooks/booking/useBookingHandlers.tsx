@@ -11,6 +11,8 @@ interface UseBookingHandlersProps {
   setClientInfo: (name: string, email: string, phone?: string, notes?: string) => void;
   completeBooking: () => Promise<boolean>;
   refreshData: () => void;
+  resetBooking: () => void;
+  goToStep: (step: string) => void;
 }
 
 export const useBookingHandlers = ({
@@ -21,7 +23,9 @@ export const useBookingHandlers = ({
   setTime,
   setClientInfo,
   completeBooking,
-  refreshData
+  refreshData,
+  resetBooking,
+  goToStep
 }: UseBookingHandlersProps) => {
 
   const handleTeamMemberChange = useCallback((teamMemberId: string) => {
@@ -82,7 +86,7 @@ export const useBookingHandlers = ({
       
       if (success) {
         console.log("useBookingHandlers: Booking completed successfully");
-        toast.success("Agendamento realizado com sucesso!");
+        // Don't show toast here as it's already shown in useBookingAppointment
       } else {
         console.error("useBookingHandlers: Booking completion failed");
         toast.error("Erro ao finalizar agendamento");
@@ -101,6 +105,14 @@ export const useBookingHandlers = ({
     refreshData();
   }, [refreshData]);
 
+  // New handler specifically for when the user clicks "Concluir" in BookingConfirmation
+  const handleBookingConclude = useCallback(() => {
+    console.log("useBookingHandlers: Concluding booking and resetting to start");
+    resetBooking();
+    goToStep('team-member');
+    toast.success("Agendamento concluído! Você pode fazer um novo agendamento.");
+  }, [resetBooking, goToStep]);
+
   return {
     handleTeamMemberChange,
     handleServiceChange,
@@ -109,6 +121,7 @@ export const useBookingHandlers = ({
     handleTimeChange,
     handleClientInfoSubmit,
     handleCompleteBooking,
-    handleRefresh
+    handleRefresh,
+    handleBookingConclude
   };
 };

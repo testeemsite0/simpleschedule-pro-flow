@@ -36,6 +36,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     maintenanceMode,
     goToNextStep,
     goToPreviousStep,
+    goToStep,
     setTeamMember,
     setService,
     setInsurance,
@@ -57,7 +58,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     handleTimeChange,
     handleClientInfoSubmit,
     handleCompleteBooking,
-    handleRefresh
+    handleRefresh,
+    handleBookingConclude
   } = useBookingHandlers({
     setTeamMember,
     setService,
@@ -66,7 +68,9 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     setTime,
     setClientInfo,
     completeBooking,
-    refreshData
+    refreshData,
+    resetBooking,
+    goToStep
   });
   
   // Log component rendering and data
@@ -140,7 +144,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           handleDateChange={handleDateChange}
           handleTimeChange={handleTimeChange}
           handleClientInfoSubmit={handleClientInfoSubmit}
-          handleCompleteBooking={handleCompleteBooking}
+          handleCompleteBooking={handleBookingConclude} // Use the new conclude handler
           goToPreviousStep={goToPreviousStep}
           getAvailableServicesForTeamMember={getAvailableServicesForTeamMember}
           checkInsuranceLimitReached={checkInsuranceLimitReached}

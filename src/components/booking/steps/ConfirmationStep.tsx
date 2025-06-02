@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { BookingData } from '@/hooks/booking/useBookingSteps';
 import { Card } from '@/components/ui/card';
 import { CheckCircle } from 'lucide-react';
@@ -71,24 +70,6 @@ export const ConfirmationStep: React.FC<ConfirmationStepProps> = ({
           </div>
         </div>
       </Card>
-
-      <div className="flex flex-col sm:flex-row justify-between space-y-3 sm:space-y-0 sm:space-x-3">
-        <Button
-          variant="outline"
-          onClick={onEdit}
-          disabled={isLoading}
-          className="order-2 sm:order-1"
-        >
-          Editar informações
-        </Button>
-        <Button
-          onClick={onConfirm}
-          disabled={isLoading}
-          className="bg-green-600 hover:bg-green-700 order-1 sm:order-2"
-        >
-          {isLoading ? 'Agendando...' : 'Confirmar agendamento'}
-        </Button>
-      </div>
     </div>
   );
 };

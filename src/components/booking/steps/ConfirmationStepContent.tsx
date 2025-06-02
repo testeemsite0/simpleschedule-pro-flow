@@ -25,16 +25,20 @@ export const ConfirmationStepContent: React.FC<ConfirmationStepContentProps> = (
           name: bookingData.professionalName || 'Profissional', 
           id: bookingData.teamMemberId || '',
           address: '',
-          email: bookingData.professionalEmail || 'email@example.com', // Added email property
-          profession: bookingData.professionalRole || 'Profissional', // Added profession property
-          slug: bookingData.professionalSlug || 'professional-slug' // Added slug property
+          email: bookingData.professionalEmail || 'email@example.com',
+          profession: bookingData.professionalRole || 'Profissional',
+          slug: bookingData.professionalSlug || 'professional-slug'
         }}
         clientName={bookingData.clientName || ''}
         date={bookingData.date || new Date()}
         startTime={bookingData.startTime || ''}
         endTime={bookingData.endTime || ''}
         appointmentId={bookingData.appointmentId}
-        onClose={() => onConfirm()}
+        onClose={() => {
+          // Reset the booking data and go back to start
+          console.log("BookingConfirmation: Closing and resetting booking");
+          onConfirm(); // This should reset and go to first step
+        }}
       />
     );
   }
