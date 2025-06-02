@@ -4,6 +4,13 @@ import { useUnifiedBookingFlow } from '@/hooks/booking/useUnifiedBookingFlow';
 import { BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
 import { TeamMember, Service, InsurancePlan } from '@/types';
 
+interface AvailableSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  teamMemberId?: string;
+}
+
 interface UnifiedBookingContextType {
   // Step management
   currentStep: BookingStep;
@@ -17,7 +24,7 @@ interface UnifiedBookingContextType {
   services: Service[];
   insurancePlans: InsurancePlan[];
   availableDates: Date[];
-  availableSlots: string[];
+  availableSlots: AvailableSlot[]; // Fix: Use proper slot objects instead of string[]
   
   // State
   isLoading: boolean;
@@ -85,9 +92,7 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
     ...unifiedBookingData,
     error: typeof unifiedBookingData.error === 'string' ? unifiedBookingData.error : unifiedBookingData.error?.message || null,
     availableSlots: Array.isArray(unifiedBookingData.availableSlots) 
-      ? unifiedBookingData.availableSlots.map(slot => 
-          typeof slot === 'string' ? slot : slot.startTime
-        )
+      ? unifiedBookingData.availableSlots
       : []
   };
 

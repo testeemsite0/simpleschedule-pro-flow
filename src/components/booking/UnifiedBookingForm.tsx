@@ -30,7 +30,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     services,
     insurancePlans,
     availableDates,
-    availableSlots, // This is now string[] from the context
+    availableSlots, // This is now properly typed as AvailableSlot[]
     isLoading,
     error,
     maintenanceMode,
@@ -137,7 +137,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           services={services}
           insurancePlans={insurancePlans}
           availableDates={availableDates}
-          availableSlots={availableSlots} // Now correctly typed as string[]
+          availableSlots={availableSlots} // Now correctly typed as AvailableSlot[]
           isLoading={isLoading}
           handleTeamMemberChange={handleTeamMemberChange}
           handleServiceChange={handleServiceChange}
