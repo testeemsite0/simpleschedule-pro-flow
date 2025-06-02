@@ -6,7 +6,6 @@ interface DateStepContentProps {
   availableDates: Date[];
   selectedDate: Date | null;
   onDateSelect: (date: Date) => void;
-  onBack: () => void;
   isLoading?: boolean;
 }
 
@@ -14,7 +13,6 @@ export const DateStepContent: React.FC<DateStepContentProps> = ({
   availableDates,
   selectedDate,
   onDateSelect,
-  onBack,
   isLoading = false
 }) => {
   // Log available dates for debugging
@@ -28,7 +26,6 @@ export const DateStepContent: React.FC<DateStepContentProps> = ({
       availableDates={availableDates}
       selectedDate={selectedDate}
       onDateSelect={onDateSelect}
-      onBack={onBack}
     />
   );
 };

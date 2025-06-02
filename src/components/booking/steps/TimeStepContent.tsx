@@ -18,7 +18,6 @@ interface TimeStepContentProps {
   selectedEndTime: string | undefined;
   onTimeSlotSelect: (date: Date, startTime: string, endTime: string) => void;
   isLoading: boolean;
-  onBack: () => void;
 }
 
 export const TimeStepContent: React.FC<TimeStepContentProps> = ({
@@ -27,8 +26,7 @@ export const TimeStepContent: React.FC<TimeStepContentProps> = ({
   selectedStartTime,
   selectedEndTime,
   onTimeSlotSelect,
-  isLoading,
-  onBack
+  isLoading
 }) => {
   // Filter slots for the selected date
   const filteredSlots = selectedDate 
@@ -67,15 +65,6 @@ export const TimeStepContent: React.FC<TimeStepContentProps> = ({
             Por favor, tente selecionar outra data.
           </AlertDescription>
         </Alert>
-        
-        <div className="mt-4">
-          <button 
-            className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
-            onClick={onBack}
-          >
-            Voltar para seleção de data
-          </button>
-        </div>
       </div>
     );
   }
@@ -88,7 +77,6 @@ export const TimeStepContent: React.FC<TimeStepContentProps> = ({
       selectedEndTime={selectedEndTime}
       onTimeSlotSelect={onTimeSlotSelect}
       isLoading={isLoading}
-      onBack={onBack}
     />
   );
 };

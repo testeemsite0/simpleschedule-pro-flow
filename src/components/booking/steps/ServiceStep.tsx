@@ -50,9 +50,9 @@ export const ServiceStep: React.FC<ServiceStepProps> = ({
                 {service.description && (
                   <span className="text-sm text-muted-foreground mt-1">{service.description}</span>
                 )}
-                {service.duration && (
+                {service.duration_minutes && (
                   <span className="text-xs text-muted-foreground mt-1">
-                    Duração: {service.duration} minutos
+                    Duração: {service.duration_minutes} minutos
                   </span>
                 )}
               </div>
