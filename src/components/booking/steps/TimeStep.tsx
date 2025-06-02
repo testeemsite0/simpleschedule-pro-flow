@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import TimeSlotSelector from '../TimeSlotSelector';
 
 interface AvailableSlot {
@@ -20,7 +19,7 @@ interface TimeStepProps {
   onDateChange?: (date: Date) => void;
   onTimeChange?: (startTime: string, endTime: string) => void;
   isLoading?: boolean;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export const TimeStep: React.FC<TimeStepProps> = ({
@@ -58,14 +57,8 @@ export const TimeStep: React.FC<TimeStepProps> = ({
       <TimeSlotSelector 
         availableSlots={availableSlots}
         onSelectSlot={handleSelectSlot}
-        showConfirmButton={false}  // Changed to false to make selection immediate
+        showConfirmButton={false}
       />
-      
-      <div className="flex justify-between mt-4">
-        <Button variant="outline" onClick={onBack} disabled={isLoading}>
-          Voltar
-        </Button>
-      </div>
     </div>
   );
 };

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
 
 interface ClientInfoStepProps {
   onClientInfoSubmit: (name: string, email: string, phone: string, notes?: string) => void;
@@ -47,38 +46,40 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
     if (defaultValues.notes !== undefined) setNotes(defaultValues.notes);
   }, [defaultValues]);
 
-  const validateForm = () => {
+  const validateAndSubmit = () => {
+    console.log("ClientInfoStep: Validating and submitting form:", { name, email, phone, notes });
+    
     if (!name || !name.trim()) {
       setError("Nome é obrigatório");
-      return false;
+      return;
     }
     
     if (!email || !email.trim()) {
       setError("Email é obrigatório");
-      return false;
+      return;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Email em formato inválido");
-      return false;
-    }
-    
-    setError('');
-    return true;
-  };
-
-  const handleSubmit = () => {
-    console.log("ClientInfoStep: Form submitted with:", { name, email, phone, notes });
-    
-    if (!validateForm()) {
-      console.error("ClientInfoStep: Form validation failed");
       return;
     }
     
+    setError('');
     console.log("ClientInfoStep: Form validation passed, calling onClientInfoSubmit");
     onClientInfoSubmit(name, email, phone, notes);
   };
+
+  // Auto-submit when all required fields are filled and valid
+  useEffect(() => {
+    if (name.trim() && email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      const timeoutId = setTimeout(() => {
+        validateAndSubmit();
+      }, 1000); // Delay to allow user to finish typing
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [name, email, phone, notes]);
 
   return (
     <div className="space-y-4">
@@ -97,7 +98,7 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
           value={name}
           onChange={(e) => {
             setName(e.target.value);
-            if (error) setError(''); // Clear error when user starts typing
+            if (error) setError('');
           }}
           required
           disabled={isLoading}
@@ -113,7 +114,7 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
-            if (error) setError(''); // Clear error when user starts typing
+            if (error) setError('');
           }}
           required
           disabled={isLoading}
@@ -144,19 +145,6 @@ export const ClientInfoStep: React.FC<ClientInfoStepProps> = ({
           disabled={isLoading}
         />
       </div>
-      
-      {!hideButtons && (
-        <div className="flex justify-between mt-4">
-          {onBack && (
-            <Button variant="outline" onClick={onBack} disabled={isLoading}>
-              Voltar
-            </Button>
-          )}
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Processando..." : "Avançar"}
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

@@ -66,8 +66,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     setTime,
     setClientInfo,
     completeBooking,
-    refreshData,
-    goToNextStep
+    refreshData
   });
   
   // Log component rendering and data
@@ -151,6 +150,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       
       <BookingNavigationButtons 
         currentStep={currentStep}
+        bookingData={bookingData}
         isLoading={isLoading}
         goToPreviousStep={goToPreviousStep}
         goToNextStep={goToNextStep}

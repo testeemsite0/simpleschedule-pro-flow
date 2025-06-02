@@ -1,37 +1,54 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { BookingStep } from '@/hooks/booking/useBookingSteps';
+import { BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
 
 interface BookingNavigationButtonsProps {
   currentStep: BookingStep;
+  bookingData: BookingData;
   isLoading: boolean;
   goToPreviousStep: () => void;
   goToNextStep: () => void;
   handleCompleteBooking: () => void;
-  showNextButton?: boolean;
 }
 
 export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> = ({
   currentStep,
+  bookingData,
   isLoading,
   goToPreviousStep,
   goToNextStep,
-  handleCompleteBooking,
-  showNextButton = false
+  handleCompleteBooking
 }) => {
-  // Only show next button on client-info step, which is the final step before confirmation
-  const shouldShowNextButton = currentStep === 'client-info';
-    
-  // Only show confirmation button in confirmation step
+  // Determine if we can advance to next step based on current step and data
+  const canAdvance = () => {
+    switch (currentStep) {
+      case 'team-member':
+        return !!bookingData.teamMemberId;
+      case 'service':
+        return !!bookingData.serviceId;
+      case 'insurance':
+        return !!bookingData.insuranceId;
+      case 'date':
+        return !!bookingData.date;
+      case 'time':
+        return !!bookingData.startTime && !!bookingData.endTime;
+      case 'client-info':
+        return !!bookingData.clientName && !!bookingData.clientEmail;
+      default:
+        return false;
+    }
+  };
+
+  // Show confirmation button only on confirmation step
   const showConfirmButton = currentStep === 'confirmation';
   
-  // Auto-advancing steps should not show the next button
-  const isAutoAdvancingStep = ['team-member', 'insurance', 'service'].includes(currentStep);
+  // Show next button for all steps except confirmation and client-info (which handles its own advancement)
+  const showNextButton = !showConfirmButton && currentStep !== 'client-info';
 
   return (
-    <div className="flex justify-between">
-      {/* Only show back button if not on first step */}
+    <div className="flex justify-between pt-4 border-t">
+      {/* Show back button if not on first step */}
       {currentStep !== 'team-member' && (
         <Button
           onClick={goToPreviousStep}
@@ -42,11 +59,11 @@ export const BookingNavigationButtons: React.FC<BookingNavigationButtonsProps> =
         </Button>
       )}
       
-      {/* Only show next button on client-info step */}
-      {!isAutoAdvancingStep && shouldShowNextButton && !showConfirmButton && (
+      {/* Show next button for most steps */}
+      {showNextButton && (
         <Button
           onClick={goToNextStep}
-          disabled={isLoading}
+          disabled={isLoading || !canAdvance()}
           className="ml-auto"
         >
           Avançar
