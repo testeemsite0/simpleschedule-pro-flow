@@ -49,12 +49,10 @@ const UnifiedBookingFormWrapper: React.FC<{
   }
   
   if (error) {
-    // Fix: Handle both string and Error types properly
-    const errorMessage = typeof error === 'string' ? error : error?.message || 'Erro desconhecido';
-    
+    // Fix: Error is already a string in the context, so no need for complex type checking
     return (
       <ErrorHandler
-        error={errorMessage}
+        error={error}
         resetError={resetBooking}
         title="Erro no sistema de agendamento"
       />

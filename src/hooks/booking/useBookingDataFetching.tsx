@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { prewarmBookingDataCache, unifiedDataFetch, clearBookingCache } from './api/dataLoader';
 import { TeamMember, Service, InsurancePlan, TimeSlot, Appointment } from '@/types';
@@ -7,12 +6,14 @@ import { fetchTeamMembers, fetchServices, fetchInsurancePlans, fetchTimeSlots, f
 
 interface UseBookingDataFetchingProps {
   professionalId?: string;
+  professionalSlug?: string; // Fix: Add professionalSlug to interface
   onDataLoaded?: () => void;
   onError?: (error: Error) => void;
 }
 
 export const useBookingDataFetching = ({
   professionalId,
+  professionalSlug, // Fix: Accept professionalSlug parameter
   onDataLoaded,
   onError
 }: UseBookingDataFetchingProps = {}) => {

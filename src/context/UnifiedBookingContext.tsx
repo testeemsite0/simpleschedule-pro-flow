@@ -80,9 +80,10 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
     });
   }, [unifiedBookingData.teamMembers, unifiedBookingData.services, unifiedBookingData.isLoading, unifiedBookingData.error, professionalSlug, professionalId]);
 
-  // Fix: Convert complex availableSlots to simple string array for the context
+  // Fix: Convert error to string and availableSlots to simple string array for the context
   const contextValue: UnifiedBookingContextType = {
     ...unifiedBookingData,
+    error: typeof unifiedBookingData.error === 'string' ? unifiedBookingData.error : unifiedBookingData.error?.message || null,
     availableSlots: Array.isArray(unifiedBookingData.availableSlots) 
       ? unifiedBookingData.availableSlots.map(slot => 
           typeof slot === 'string' ? slot : slot.startTime

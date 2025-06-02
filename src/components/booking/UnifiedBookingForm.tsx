@@ -30,7 +30,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     services,
     insurancePlans,
     availableDates,
-    availableSlots,
+    availableSlots, // This is now string[] from the context
     isLoading,
     error,
     maintenanceMode,
@@ -82,6 +82,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       currentStep,
       teamMembersCount: teamMembers?.length || 0,
       servicesCount: services?.length || 0,
+      availableSlotsCount: availableSlots?.length || 0,
       isLoading,
       hasError: !!error
     });
@@ -91,7 +92,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       console.log("UnifiedBookingForm: No team members available but not loading, forcing refresh");
       handleRefresh();
     }
-  }, [teamMembers, isLoading, error, handleRefresh]);
+  }, [teamMembers, isLoading, error, handleRefresh, availableSlots]);
   
   const handleForceRefresh = () => {
     console.log("UnifiedBookingForm: Force refreshing data");
@@ -136,7 +137,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           services={services}
           insurancePlans={insurancePlans}
           availableDates={availableDates}
-          availableSlots={availableSlots}
+          availableSlots={availableSlots} // Now correctly typed as string[]
           isLoading={isLoading}
           handleTeamMemberChange={handleTeamMemberChange}
           handleServiceChange={handleServiceChange}
