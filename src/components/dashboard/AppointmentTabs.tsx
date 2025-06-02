@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Appointment } from '@/types';
 import AppointmentList from './AppointmentList';
+import { useAppointmentsRealtime } from '@/hooks/useAppointmentsRealtime';
+import { useAuth } from '@/context/AuthContext';
 
 interface AppointmentTabsProps {
   upcomingAppointments: Appointment[];
@@ -12,6 +14,7 @@ interface AppointmentTabsProps {
   activeTab: string;
   onTabChange: (value: string) => void;
   onAppointmentCanceled?: (id: string) => void;
+  onRefreshNeeded?: () => void;
 }
 
 const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
@@ -21,11 +24,24 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
   loading,
   activeTab,
   onTabChange,
-  onAppointmentCanceled
+  onAppointmentCanceled,
+  onRefreshNeeded
 }) => {
+  const { user } = useAuth();
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>(initialUpcoming);
   const [pastAppointments, setPastAppointments] = useState<Appointment[]>(initialPast);
   const [canceledAppointments, setCanceledAppointments] = useState<Appointment[]>(initialCanceled);
+  
+  // Set up real-time updates
+  useAppointmentsRealtime({
+    professionalId: user?.id || '',
+    onAppointmentChange: () => {
+      console.log('Real-time change detected, refreshing appointments');
+      if (onRefreshNeeded) {
+        onRefreshNeeded();
+      }
+    }
+  });
   
   useEffect(() => {
     setUpcomingAppointments(initialUpcoming);
@@ -34,15 +50,14 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
   }, [initialUpcoming, initialPast, initialCanceled]);
   
   const handleAppointmentCanceled = (id: string) => {
-    // Encontrar o agendamento cancelado
+    // Find the canceled appointment
     const canceledApp = upcomingAppointments.find(app => app.id === id);
     if (canceledApp) {
-      // Remover dos próximos
+      // Remove from upcoming
       const updatedUpcoming = upcomingAppointments.filter(app => app.id !== id);
       setUpcomingAppointments(updatedUpcoming);
       
-      // Adicionar aos cancelados com status atualizado como 'canceled'
-      // Corrigindo o problema de tipagem especificando 'canceled' como valor literal
+      // Add to canceled with updated status
       const updatedCanceled: Appointment[] = [
         { ...canceledApp, status: 'canceled' as const },
         ...canceledAppointments
@@ -50,7 +65,7 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
       setCanceledAppointments(updatedCanceled);
     }
     
-    // Notificar o componente pai se necessário
+    // Notify parent component
     if (onAppointmentCanceled) {
       onAppointmentCanceled(id);
     }

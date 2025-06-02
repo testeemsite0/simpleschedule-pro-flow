@@ -210,7 +210,10 @@ export type Database = {
         Row: {
           avatar: string | null
           bio: string | null
+          company_name: string | null
+          company_type: string | null
           created_at: string | null
+          display_name: string | null
           email: string
           id: string
           name: string
@@ -221,7 +224,10 @@ export type Database = {
         Insert: {
           avatar?: string | null
           bio?: string | null
+          company_name?: string | null
+          company_type?: string | null
           created_at?: string | null
+          display_name?: string | null
           email: string
           id: string
           name: string
@@ -232,7 +238,10 @@ export type Database = {
         Update: {
           avatar?: string | null
           bio?: string | null
+          company_name?: string | null
+          company_type?: string | null
           created_at?: string | null
+          display_name?: string | null
           email?: string
           id?: string
           name?: string

@@ -1,160 +1,81 @@
 
-import React from 'react';
-import {
-  BrowserRouter as Router,
-  Route,
-  Routes,
-  Navigate,
-} from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { AppointmentProvider } from './context/AppointmentContext';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Booking from './pages/Booking';
-import Pricing from './pages/Pricing';
-import DashboardSchedules from './pages/DashboardSchedules';
-import DashboardTeam from './pages/DashboardTeam';
-import TeamMemberSchedules from './pages/TeamMemberSchedules';
-import DashboardServices from './pages/DashboardServices';
-import DashboardReports from './pages/DashboardReports';
-import DashboardClients from './pages/DashboardClients';
-import DashboardBookingLink from './pages/DashboardBookingLink';
-import DashboardPreferences from './pages/DashboardPreferences';
-import DashboardInsurance from './pages/DashboardInsurance';
-import DashboardUnifiedBooking from './pages/DashboardUnifiedBooking';
-import AdminPanel from './pages/AdminPanel';
-import Index from './pages/Index';
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { AppointmentProvider } from "./context/AppointmentContext";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import DashboardAppointments from "./pages/DashboardAppointments";
+import DashboardServices from "./pages/DashboardServices";
+import DashboardTeam from "./pages/DashboardTeam";
+import DashboardSchedules from "./pages/DashboardSchedules";
+import DashboardPreferences from "./pages/DashboardPreferences";
+import DashboardBookingLink from "./pages/DashboardBookingLink";
+import DashboardUnifiedBooking from "./pages/DashboardUnifiedBooking";
+import DashboardReports from "./pages/DashboardReports";
+import DashboardInsurance from "./pages/DashboardInsurance";
+import DashboardCompany from "./pages/DashboardCompany";
+import DashboardClients from "./pages/DashboardClients";
+import TeamMemberSchedules from "./pages/TeamMemberSchedules";
+import Booking from "./pages/Booking";
+import AdminPanel from "./pages/AdminPanel";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import Features from "./pages/Features";
+import Pricing from "./pages/Pricing";
+import About from "./pages/About";
+import NotFound from "./pages/NotFound";
 
-// Protected route that ensures the AppointmentProvider is always available
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
+const queryClient = new QueryClient();
 
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
+function App() {
   return (
-    <AppointmentProvider>
-      {children}
-    </AppointmentProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppointmentProvider>
+          <TooltipProvider>
+            <Toaster />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/features" element={<Features />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/appointments" element={<DashboardAppointments />} />
+                <Route path="/dashboard/services" element={<DashboardServices />} />
+                <Route path="/dashboard/team" element={<DashboardTeam />} />
+                <Route path="/dashboard/schedules" element={<DashboardSchedules />} />
+                <Route path="/dashboard/preferences" element={<DashboardPreferences />} />
+                <Route path="/dashboard/booking-link" element={<DashboardBookingLink />} />
+                <Route path="/dashboard/unified-booking" element={<DashboardUnifiedBooking />} />
+                <Route path="/dashboard/reports" element={<DashboardReports />} />
+                <Route path="/dashboard/insurance" element={<DashboardInsurance />} />
+                <Route path="/dashboard/company" element={<DashboardCompany />} />
+                <Route path="/dashboard/clients" element={<DashboardClients />} />
+                <Route path="/dashboard/team/:teamMemberId/schedules" element={<TeamMemberSchedules />} />
+                <Route path="/booking/:slug" element={<Booking />} />
+                <Route path="/admin" element={<AdminPanel />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AppointmentProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
-};
-
-const App = () => {
-  return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/booking/:slug" element={
-            <AppointmentProvider>
-              <Booking />
-            </AppointmentProvider>
-          } />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/unified-booking"
-            element={
-              <ProtectedRoute>
-                <DashboardUnifiedBooking />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/schedules"
-            element={
-              <ProtectedRoute>
-                <DashboardSchedules />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/team"
-            element={
-              <ProtectedRoute>
-                <DashboardTeam />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/services"
-            element={
-              <ProtectedRoute>
-                <DashboardServices />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/reports"
-            element={
-              <ProtectedRoute>
-                <DashboardReports />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/clients"
-            element={
-              <ProtectedRoute>
-                <DashboardClients />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/booking-link"
-            element={
-              <ProtectedRoute>
-                <DashboardBookingLink />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/insurance"
-            element={
-              <ProtectedRoute>
-                <DashboardInsurance />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/preferences"
-            element={
-              <ProtectedRoute>
-                <DashboardPreferences />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/admin"
-            element={
-              <ProtectedRoute>
-                <AdminPanel />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/team/:memberId/schedules"
-            element={
-              <ProtectedRoute>
-                <TeamMemberSchedules />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
-    </AuthProvider>
-  );
-};
+}
 
 export default App;

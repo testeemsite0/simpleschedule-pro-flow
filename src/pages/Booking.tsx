@@ -1,54 +1,99 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { useParams } from 'react-router-dom';
-import Header from '@/components/layout/Header';
-import Footer from '@/components/layout/Footer';
 import { UnifiedBookingProvider } from '@/context/UnifiedBookingContext';
-import BookingContent from '@/components/booking/BookingContent';
-import BookingLoadingState from '@/components/booking/BookingLoadingState';
-import { ErrorHandler } from '@/components/ui/error-handler';
+import { UnifiedBookingForm } from '@/components/booking/UnifiedBookingForm';
 import { usePublicProfessionalData } from '@/hooks/booking/usePublicProfessionalData';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
+import { Calendar, Clock, MapPin } from 'lucide-react';
 
-const Booking: React.FC = () => {
+const Booking = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { professional, loading, error, retry } = usePublicProfessionalData(slug);
-  
-  // Track if we've already attempted to render with the professional data
-  const [hasAttemptedRender, setHasAttemptedRender] = useState(false);
-  
-  // Update the hasAttemptedRender flag when professional data arrives
-  useEffect(() => {
-    if (!loading && (professional || error)) {
-      setHasAttemptedRender(true);
-    }
-  }, [loading, professional, error]);
+  const { professional, isLoading, error } = usePublicProfessionalData(slug || '');
 
-  // We're going to let BookingContent handle its own UnifiedBookingProvider wrapping
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 py-8 px-4">
-        <div className="container max-w-4xl mx-auto">
-          {loading && !hasAttemptedRender && (
-            <div className="space-y-4">
-              <Skeleton className="h-12 w-3/4 mb-6" />
-              <BookingLoadingState />
+  console.log('Booking page: Loading state:', { slug, professional, isLoading, error });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Carregando sistema de agendamento...</p>
             </div>
-          )}
-          
-          {error && (
-            <ErrorHandler 
-              error={error}
-              retryAction={retry}
-              title="Erro ao carregar dados do profissional"
-            />
-          )}
-          
-          {professional && <BookingContent professional={professional} />}
+          </div>
         </div>
-      </main>
-      <Footer />
+      </div>
+    );
+  }
+
+  if (error || !professional) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <Card className="p-8 text-center">
+              <h1 className="text-2xl font-bold text-gray-800 mb-4">
+                Sistema de Agendamento Indisponível
+              </h1>
+              <p className="text-gray-600 mb-4">
+                {error || 'Não foi possível carregar o sistema de agendamento.'}
+              </p>
+              <p className="text-sm text-gray-500">
+                Por favor, verifique o link ou entre em contato diretamente para agendar.
+              </p>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              Agendar com {professional.name}
+            </h1>
+            <p className="text-gray-600 mb-4">{professional.profession}</p>
+            
+            {professional.bio && (
+              <p className="text-gray-700 max-w-2xl mx-auto mb-6">
+                {professional.bio}
+              </p>
+            )}
+            
+            <div className="flex justify-center items-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>Agendamento Online</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                <span>Confirmação Imediata</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Form */}
+          <Card className="p-6">
+            <UnifiedBookingProvider 
+              professionalSlug={slug}
+              professionalId={professional.id}
+              isAdminView={false}
+            >
+              <UnifiedBookingForm 
+                showStepIndicator={true}
+                isAdminView={false}
+              />
+            </UnifiedBookingProvider>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

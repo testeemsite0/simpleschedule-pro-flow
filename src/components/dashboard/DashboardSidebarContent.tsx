@@ -1,97 +1,130 @@
 
 import React from 'react';
+import { useLocation, Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { 
-  CalendarDays, 
-  Users, 
-  PieChart, 
-  Clock, 
-  Settings, 
-  CreditCard, 
   Calendar, 
-  Briefcase, 
-  Shield, 
-  UserPlus 
+  Users, 
+  Settings, 
+  BarChart3, 
+  Clock, 
+  Link as LinkIcon,
+  Shield,
+  Building2,
+  User
 } from 'lucide-react';
-import { SidebarLink } from '@/components/layout/Sidebar';
-import { Separator } from '@/components/ui/separator';
-import { navItems } from './DashboardNavigation';
 
-export function DashboardSidebarContent() {
+const navigationItems = [
+  {
+    title: 'Visão Geral',
+    href: '/dashboard',
+    icon: BarChart3,
+  },
+  {
+    title: 'Agendamentos',
+    icon: Calendar,
+    children: [
+      {
+        title: 'Ver Agendamentos',
+        href: '/dashboard/appointments',
+      },
+      {
+        title: 'Criar Agendamento',
+        href: '/dashboard/unified-booking',
+      },
+    ],
+  },
+  {
+    title: 'Configurações',
+    icon: Settings,
+    children: [
+      {
+        title: 'Dados da Empresa',
+        href: '/dashboard/company',
+        icon: Building2,
+      },
+      {
+        title: 'Preferências',
+        href: '/dashboard/preferences',
+        icon: User,
+      },
+      {
+        title: 'Horários',
+        href: '/dashboard/schedules',
+        icon: Clock,
+      },
+      {
+        title: 'Equipe',
+        href: '/dashboard/team',
+        icon: Users,
+      },
+      {
+        title: 'Serviços',
+        href: '/dashboard/services',
+      },
+      {
+        title: 'Convênios',
+        href: '/dashboard/insurance',
+        icon: Shield,
+      },
+      {
+        title: 'Link de Agendamento',
+        href: '/dashboard/booking-link',
+        icon: LinkIcon,
+      },
+    ],
+  },
+  {
+    title: 'Relatórios',
+    href: '/dashboard/reports',
+    icon: BarChart3,
+  },
+];
+
+export const DashboardSidebarContent = () => {
+  const location = useLocation();
+
+  const renderNavItem = (item: any, depth = 0) => {
+    const isActive = location.pathname === item.href;
+    const hasChildren = item.children && item.children.length > 0;
+
+    if (hasChildren) {
+      return (
+        <div key={item.title} className="space-y-1">
+          <div className="px-3 py-2 text-sm font-medium text-gray-600 uppercase tracking-wider">
+            <div className="flex items-center gap-2">
+              {item.icon && <item.icon className="h-4 w-4" />}
+              {item.title}
+            </div>
+          </div>
+          <div className="space-y-1 ml-2">
+            {item.children.map((child: any) => renderNavItem(child, depth + 1))}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.title}
+        to={item.href}
+        className={cn(
+          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent',
+          isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground',
+          depth > 0 && 'ml-6'
+        )}
+      >
+        {item.icon && <item.icon className="h-4 w-4" />}
+        {item.title}
+      </Link>
+    );
+  };
+
   return (
-    <>
-      <div className="py-2">
-        <h2 className="mb-2 px-4 text-lg font-semibold">Agendamentos</h2>
-        <div className="space-y-1">
-          <SidebarLink
-            to="/dashboard"
-            icon={<CalendarDays className="mr-2 h-4 w-4" />}
-            label="Dashboard"
-          />
-          <SidebarLink
-            to="/dashboard/unified-booking"
-            icon={<Calendar className="mr-2 h-4 w-4" />}
-            label="Agendamentos"
-          />
-          <SidebarLink
-            to="/dashboard/schedules"
-            icon={<Clock className="mr-2 h-4 w-4" />}
-            label="Horários"
-          />
-        </div>
+    <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+      <div className="space-y-2">
+        {navigationItems.map((item) => renderNavItem(item))}
       </div>
-      <Separator />
-      <div className="py-2">
-        <h2 className="mb-2 px-4 text-lg font-semibold">Serviços</h2>
-        <div className="space-y-1">
-          <SidebarLink
-            to="/dashboard/services"
-            icon={<Briefcase className="mr-2 h-4 w-4" />}
-            label="Meus Serviços"
-          />
-          <SidebarLink
-            to="/dashboard/team"
-            icon={<UserPlus className="mr-2 h-4 w-4" />}
-            label="Equipe"
-          />
-          <SidebarLink
-            to="/dashboard/insurance"
-            icon={<Shield className="mr-2 h-4 w-4" />}
-            label="Convênios"
-          />
-        </div>
-      </div>
-      <Separator />
-      <div className="py-2">
-        <h2 className="mb-2 px-4 text-lg font-semibold">Relatórios</h2>
-        <div className="space-y-1">
-          <SidebarLink
-            to="/dashboard/reports"
-            icon={<PieChart className="mr-2 h-4 w-4" />}
-            label="Relatórios"
-          />
-          <SidebarLink
-            to="/dashboard/clients"
-            icon={<Users className="mr-2 h-4 w-4" />}
-            label="Clientes"
-          />
-        </div>
-      </div>
-      <Separator />
-      <div className="py-2">
-        <h2 className="mb-2 px-4 text-lg font-semibold">Configurações</h2>
-        <div className="space-y-1">
-          <SidebarLink
-            to="/dashboard/booking-link"
-            icon={<CreditCard className="mr-2 h-4 w-4" />}
-            label="Link de Agendamento"
-          />
-          <SidebarLink
-            to="/dashboard/preferences"
-            icon={<Settings className="mr-2 h-4 w-4" />}
-            label="Preferências"
-          />
-        </div>
-      </div>
-    </>
+    </nav>
   );
-}
+};

@@ -1,104 +1,92 @@
 
-import React, { createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
-import { useBookingSteps, BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useUnifiedBookingFlow } from '@/hooks/booking/useUnifiedBookingFlow';
-import { Service, TeamMember, InsurancePlan, TimeSlot, Appointment } from '@/types';
-
-// Define an interface for available time slots that matches what TimeStep component expects
-interface AvailableSlot {
-  date: Date;
-  startTime: string;
-  endTime: string;
-  teamMemberId?: string;
-}
+import { BookingStep, BookingData } from '@/hooks/booking/useBookingSteps';
+import { TeamMember, Service, InsurancePlan } from '@/types';
 
 interface UnifiedBookingContextType {
-  // Estado do agendamento
+  // Step management
   currentStep: BookingStep;
-  bookingData: BookingData;
-  isLoading: boolean;
-  error: string | Error | null;
-  maintenanceMode: boolean;
-  
-  // Dados
-  teamMembers: TeamMember[];
-  services: Service[];
-  insurancePlans: InsurancePlan[];
-  timeSlots: TimeSlot[];
-  appointments: Appointment[];
-  availableDates: Date[];
-  availableSlots: AvailableSlot[];
-  
-  // Funções de navegação
   goToNextStep: () => void;
   goToPreviousStep: () => void;
   goToStep: (step: BookingStep) => void;
   
-  // Funções de atualização
-  setTeamMember: (teamMember: TeamMember | string) => void;
-  setService: (service: Service | string) => void;
-  setInsurance: (insurance: InsurancePlan | string) => void;
+  // Data
+  bookingData: BookingData;
+  teamMembers: TeamMember[];
+  services: Service[];
+  insurancePlans: InsurancePlan[];
+  availableDates: Date[];
+  availableSlots: string[];
+  
+  // State
+  isLoading: boolean;
+  error: string | null;
+  maintenanceMode: boolean;
+  
+  // Actions
+  setTeamMember: (teamMemberId: string) => void;
+  setService: (serviceId: string) => void;
+  setInsurance: (insuranceId: string) => void;
   setDate: (date: Date) => void;
   setTime: (startTime: string, endTime: string) => void;
-  setClientInfo: (name: string, email: string, phone: string, notes?: string) => void;
-  
-  // Ações
+  setClientInfo: (name: string, email: string, phone?: string, notes?: string) => void;
   completeBooking: () => Promise<boolean>;
   resetBooking: () => void;
-  setMaintenanceMode: (enabled: boolean) => void;
-  refreshData: () => void;
   
-  // Funções utilitárias
+  // Utility functions
   getAvailableServicesForTeamMember: (teamMemberId: string) => Service[];
-  checkInsuranceLimitReached: (insuranceId: string, teamMemberId?: string) => boolean;
+  checkInsuranceLimitReached: (insuranceId: string, teamMemberId: string) => boolean;
+  refreshData: () => void;
 }
 
 const UnifiedBookingContext = createContext<UnifiedBookingContextType | undefined>(undefined);
 
 interface UnifiedBookingProviderProps {
   children: ReactNode;
+  professionalSlug?: string;
   professionalId?: string;
   isAdminView?: boolean;
-  initialStep?: BookingStep;
 }
 
-export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
-  children,
+export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({ 
+  children, 
+  professionalSlug,
   professionalId,
-  isAdminView = false,
-  initialStep,
+  isAdminView = false 
 }) => {
-  // Instantiate the unified booking flow with memoization
-  const unifiedBookingFlow = useUnifiedBookingFlow({
-    professionalId,
-    isAdminView,
-    initialStep
+  console.log('UnifiedBookingProvider: Initializing with:', { 
+    professionalSlug, 
+    professionalId, 
+    isAdminView 
   });
-  
-  // Use useMemo to prevent unnecessary context value recreation
-  const contextValue = useMemo(() => ({
-    ...unifiedBookingFlow
-  }), [
-    // List essential dependencies that should trigger a context update
-    unifiedBookingFlow.currentStep,
-    unifiedBookingFlow.bookingData,
-    unifiedBookingFlow.isLoading,
-    unifiedBookingFlow.error,
-    unifiedBookingFlow.teamMembers,
-    unifiedBookingFlow.services,
-    unifiedBookingFlow.insurancePlans,
-    unifiedBookingFlow.availableDates,
-    unifiedBookingFlow.availableSlots
-  ]);
+
+  const unifiedBookingData = useUnifiedBookingFlow({
+    professionalSlug,
+    professionalId,
+    isAdminView
+  });
+
+  // Debug the professional data loading
+  React.useEffect(() => {
+    console.log('UnifiedBookingProvider: Data update:', {
+      teamMembersCount: unifiedBookingData.teamMembers?.length || 0,
+      servicesCount: unifiedBookingData.services?.length || 0,
+      isLoading: unifiedBookingData.isLoading,
+      error: unifiedBookingData.error,
+      professionalSlug,
+      professionalId
+    });
+  }, [unifiedBookingData.teamMembers, unifiedBookingData.services, unifiedBookingData.isLoading, unifiedBookingData.error, professionalSlug, professionalId]);
 
   return (
-    <UnifiedBookingContext.Provider value={contextValue}>
+    <UnifiedBookingContext.Provider value={unifiedBookingData}>
       {children}
     </UnifiedBookingContext.Provider>
   );
 };
 
-export const useUnifiedBooking = () => {
+export const useUnifiedBooking = (): UnifiedBookingContextType => {
   const context = useContext(UnifiedBookingContext);
   if (context === undefined) {
     throw new Error('useUnifiedBooking must be used within a UnifiedBookingProvider');
