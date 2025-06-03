@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Save } from 'lucide-react';
+import { Building2, Save, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CompanyData {
   company_name: string;
@@ -19,9 +19,9 @@ interface CompanyData {
 
 const DashboardCompany = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [companyData, setCompanyData] = useState<CompanyData>({
     company_name: '',
     display_name: '',
@@ -34,30 +34,38 @@ const DashboardCompany = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (saved) {
+      const timer = setTimeout(() => setSaved(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [saved]);
+
   const fetchCompanyData = async () => {
     if (!user) return;
     
     try {
+      console.log('DashboardCompany: Fetching company data for user:', user.id);
       const { data, error } = await supabase
         .from('profiles')
         .select('company_name, display_name, company_type')
         .eq('id', user.id)
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error('DashboardCompany: Error fetching company data:', error);
+        throw error;
+      }
       
+      console.log('DashboardCompany: Company data loaded:', data);
       setCompanyData({
         company_name: data?.company_name || '',
         display_name: data?.display_name || user.name || '',
         company_type: data?.company_type || 'individual'
       });
     } catch (error) {
-      console.error('Error fetching company data:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar os dados da empresa',
-        variant: 'destructive',
-      });
+      console.error('DashboardCompany: Error fetching company data:', error);
+      toast.error('Erro ao carregar dados da empresa');
     } finally {
       setLoading(false);
     }
@@ -69,6 +77,7 @@ const DashboardCompany = () => {
     setSaving(true);
     
     try {
+      console.log('DashboardCompany: Saving company data:', companyData);
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -78,18 +87,20 @@ const DashboardCompany = () => {
         })
         .eq('id', user.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error('DashboardCompany: Error saving company data:', error);
+        throw error;
+      }
       
-      toast({
-        title: 'Sucesso',
-        description: 'Dados da empresa atualizados com sucesso',
+      console.log('DashboardCompany: Company data saved successfully');
+      setSaved(true);
+      toast.success('Dados da empresa salvos com sucesso!', {
+        description: 'As informações foram atualizadas no sistema.',
       });
     } catch (error) {
-      console.error('Error saving company data:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao salvar os dados da empresa',
-        variant: 'destructive',
+      console.error('DashboardCompany: Error saving company data:', error);
+      toast.error('Erro ao salvar dados da empresa', {
+        description: 'Tente novamente em alguns instantes.',
       });
     } finally {
       setSaving(false);
@@ -101,12 +112,16 @@ const DashboardCompany = () => {
       ...prev,
       [field]: value
     }));
+    setSaved(false);
   };
 
   if (loading) {
     return (
       <DashboardLayout title="Dados da Empresa">
-        <p>Carregando...</p>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2">Carregando...</span>
+        </div>
       </DashboardLayout>
     );
   }
@@ -184,7 +199,15 @@ const DashboardCompany = () => {
                 className="min-w-32"
               >
                 {saving ? (
-                  'Salvando...'
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : saved ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Salvo!
+                  </>
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />

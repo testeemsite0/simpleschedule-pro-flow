@@ -6,7 +6,7 @@ import { UnifiedBookingForm } from '@/components/booking/UnifiedBookingForm';
 import { usePublicProfessionalData } from '@/hooks/booking/usePublicProfessionalData';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, RefreshCw, AlertCircle } from 'lucide-react';
 
 const Booking = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -40,6 +40,7 @@ const Booking = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <Card className="p-8 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
               <h1 className="text-2xl font-bold text-gray-800 mb-4">
                 Sistema de Agendamento Indisponível
               </h1>
@@ -60,8 +61,8 @@ const Booking = () => {
     );
   }
 
-  // Get display name from professional data
-  const displayName = professional.name;
+  // Get display name from professional data - use display_name if available, otherwise name
+  const displayName = professional.name; // This now comes from display_name or name in the hook
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

@@ -59,9 +59,10 @@ export const usePublicProfessionalData = (slug: string): PublicProfessionalData 
         console.log('usePublicProfessionalData: Professional data found:', data);
 
         // Map the data to the Professional type
+        // Priority: display_name > name for the display name
         const professionalData: Professional = {
           id: data.id,
-          name: data.display_name || data.name,
+          name: data.display_name || data.name, // Use display_name first, fallback to name
           email: data.email,
           profession: data.profession,
           bio: data.bio || undefined,
@@ -70,7 +71,7 @@ export const usePublicProfessionalData = (slug: string): PublicProfessionalData 
         };
 
         setProfessional(professionalData);
-        console.log('usePublicProfessionalData: Professional data set successfully');
+        console.log('usePublicProfessionalData: Professional data set successfully:', professionalData);
 
       } catch (err: any) {
         const errorMessage = err.message || 'Erro ao carregar dados do profissional';
