@@ -5,13 +5,18 @@ import { UnifiedBookingProvider } from '@/context/UnifiedBookingContext';
 import { UnifiedBookingForm } from '@/components/booking/UnifiedBookingForm';
 import { usePublicProfessionalData } from '@/hooks/booking/usePublicProfessionalData';
 import { Card } from '@/components/ui/card';
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, Clock, RefreshCw } from 'lucide-react';
 
 const Booking = () => {
   const { slug } = useParams<{ slug: string }>();
   const { professional, isLoading, error } = usePublicProfessionalData(slug || '');
 
   console.log('Booking page: Loading state:', { slug, professional, isLoading, error });
+
+  const handleRetry = () => {
+    window.location.reload();
+  };
 
   if (isLoading) {
     return (
@@ -21,6 +26,7 @@ const Booking = () => {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-4 text-gray-600">Carregando sistema de agendamento...</p>
+              <p className="mt-2 text-sm text-gray-500">Aguarde enquanto buscamos os dados do profissional</p>
             </div>
           </div>
         </div>
@@ -40,15 +46,22 @@ const Booking = () => {
               <p className="text-gray-600 mb-4">
                 {error || 'Não foi possível carregar o sistema de agendamento.'}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 mb-6">
                 Por favor, verifique o link ou entre em contato diretamente para agendar.
               </p>
+              <Button onClick={handleRetry} variant="outline" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Tentar Novamente
+              </Button>
             </Card>
           </div>
         </div>
       </div>
     );
   }
+
+  // Get display name from professional data
+  const displayName = professional.name;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -57,7 +70,7 @@ const Booking = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Agendar com {professional.name}
+              Agendar com {displayName}
             </h1>
             <p className="text-gray-600 mb-4">{professional.profession}</p>
             
@@ -85,6 +98,7 @@ const Booking = () => {
               professionalSlug={slug}
               professionalId={professional.id}
               isAdminView={false}
+              key={`booking-provider-${professional.id}-${slug}`}
             >
               <UnifiedBookingForm 
                 showStepIndicator={true}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useBookingSteps, BookingStep } from './useBookingSteps';
@@ -42,13 +41,14 @@ export const useUnifiedBookingFlow = ({
     }
   }, [bookingSteps]);
   
-  // Booking data fetching with optimized loading
+  // Booking data fetching with optimized loading - now supports both ID and slug
   const {
     teamMembers,
     services,
     insurancePlans,
     timeSlots,
     appointments,
+    resolvedProfessionalId,
     maintenanceMode,
     setMaintenanceMode,
     isLoading: dataLoading,
@@ -80,12 +80,12 @@ export const useUnifiedBookingFlow = ({
     date: bookingSteps.bookingData.date
   });
   
-  // Appointment creation hook
+  // Appointment creation hook - use resolved professional ID
   const {
     isLoading: appointmentLoading,
     completeBooking
   } = useBookingAppointment({
-    professionalId,
+    professionalId: resolvedProfessionalId || professionalId,
     isAdminView,
     bookingData: bookingSteps.bookingData,
     onSuccess: () => {
@@ -93,32 +93,35 @@ export const useUnifiedBookingFlow = ({
     },
     goToStep: bookingSteps.goToStep,
     updateErrorState: bookingSteps.updateErrorState,
-    resetBooking: bookingSteps.resetBooking // Pass the resetBooking function
+    resetBooking: bookingSteps.resetBooking
   });
   
   // Handle professional ID changes
   useEffect(() => {
+    const currentIdentifier = professionalId || professionalSlug;
+    const previousIdentifier = professionalIdRef.current;
+    
     // Skip if nothing changed
-    if (professionalId === professionalIdRef.current) {
+    if (currentIdentifier === previousIdentifier) {
       return;
     }
     
-    // Track the new professional ID
-    console.log(`useUnifiedBookingFlow: Professional ID changed from ${professionalIdRef.current} to ${professionalId}`);
+    // Track the new professional identifier
+    console.log(`useUnifiedBookingFlow: Professional identifier changed from ${previousIdentifier} to ${currentIdentifier}`);
     professionalIdRef.current = professionalId;
     isInitialized.current = false;
     
     // Clear error state and cache when changing professional
     bookingSteps.updateErrorState(null);
-    if (professionalId) {
-      clearBookingCache(professionalId);
+    if (resolvedProfessionalId) {
+      clearBookingCache(resolvedProfessionalId);
     }
-  }, [professionalId, bookingSteps]);
+  }, [professionalId, professionalSlug, bookingSteps, resolvedProfessionalId]);
   
   // Initial data loading - with optimization to prevent excessive loading
   useEffect(() => {
-    // Skip if already initialized or no professional ID
-    if (isInitialized.current || !professionalId) {
+    // Skip if already initialized or no professional identifier
+    if (isInitialized.current || (!professionalId && !professionalSlug)) {
       return;
     }
     
@@ -131,7 +134,7 @@ export const useUnifiedBookingFlow = ({
     }
     
     // Otherwise proceed with initialization
-    console.log(`useUnifiedBookingFlow: Initializing flow for professional ${professionalId}`);
+    console.log(`useUnifiedBookingFlow: Initializing flow for professional ${professionalId || professionalSlug}`);
     isInitialized.current = true;
     lastUpdate.current = now;
     
@@ -139,7 +142,7 @@ export const useUnifiedBookingFlow = ({
     if (dataError) {
       handleDataError(dataError);
     }
-  }, [professionalId, dataError, handleDataError]);
+  }, [professionalId, professionalSlug, dataError, handleDataError]);
   
   // Monitor the teamMembers data
   useEffect(() => {
@@ -171,13 +174,13 @@ export const useUnifiedBookingFlow = ({
     bookingSteps.updateErrorState(null);
     
     // Clear the cache for the current professional
-    if (professionalId) {
-      clearBookingCache(professionalId);
+    if (resolvedProfessionalId) {
+      clearBookingCache(resolvedProfessionalId);
     }
     
     // Force refresh all data
     refreshAllData(true);
-  }, [bookingSteps, refreshAllData, professionalId]);
+  }, [bookingSteps, refreshAllData, resolvedProfessionalId]);
   
   const resetBooking = useCallback(() => {
     console.log("useUnifiedBookingFlow: Resetting booking state");
@@ -196,6 +199,7 @@ export const useUnifiedBookingFlow = ({
     currentStep: bookingSteps.currentStep,
     isLoading,
     hasError: !!bookingSteps.error || !!dataError,
+    resolvedProfessionalId,
   });
   
   return {
@@ -215,6 +219,7 @@ export const useUnifiedBookingFlow = ({
     completeBooking,
     setMaintenanceMode,
     resetBooking,
-    refreshData
+    refreshData,
+    resolvedProfessionalId
   };
 };

@@ -1,19 +1,21 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { prewarmBookingDataCache, unifiedDataFetch, clearBookingCache } from './api/dataLoader';
 import { TeamMember, Service, InsurancePlan, TimeSlot, Appointment } from '@/types';
 import { useMaintenanceMode } from './useMaintenanceMode';
 import { fetchTeamMembers, fetchServices, fetchInsurancePlans, fetchTimeSlots, fetchAppointments } from './api/dataLoader';
+import { fetchProfessionalBySlug } from './api/professionalApi';
 
 interface UseBookingDataFetchingProps {
   professionalId?: string;
-  professionalSlug?: string; // Fix: Add professionalSlug to interface
+  professionalSlug?: string;
   onDataLoaded?: () => void;
   onError?: (error: Error) => void;
 }
 
 export const useBookingDataFetching = ({
   professionalId,
-  professionalSlug, // Fix: Accept professionalSlug parameter
+  professionalSlug,
   onDataLoaded,
   onError
 }: UseBookingDataFetchingProps = {}) => {
@@ -26,6 +28,7 @@ export const useBookingDataFetching = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [dataError, setDataError] = useState<Error | null>(null);
   const [allDataLoaded, setAllDataLoaded] = useState<boolean>(false);
+  const [resolvedProfessionalId, setResolvedProfessionalId] = useState<string | undefined>(professionalId);
   
   // Prevent re-fetching loops
   const isFetchingRef = useRef(false);
@@ -44,11 +47,46 @@ export const useBookingDataFetching = ({
       onError(error);
     }
   }, [onError]);
+
+  // Function to resolve professional slug to ID
+  const resolveProfessionalId = useCallback(async () => {
+    if (professionalId) {
+      console.log("useBookingDataFetching: Using provided professionalId:", professionalId);
+      setResolvedProfessionalId(professionalId);
+      return professionalId;
+    }
+    
+    if (professionalSlug) {
+      console.log("useBookingDataFetching: Resolving professionalSlug to ID:", professionalSlug);
+      try {
+        const { data: professional, error } = await fetchProfessionalBySlug(professionalSlug);
+        if (error) {
+          throw new Error(error);
+        }
+        if (!professional) {
+          throw new Error(`Professional not found for slug: ${professionalSlug}`);
+        }
+        console.log("useBookingDataFetching: Resolved professional:", professional);
+        setResolvedProfessionalId(professional.id);
+        return professional.id;
+      } catch (err: any) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        handleError('resolveProfessionalId', error);
+        return null;
+      }
+    }
+    
+    console.log("useBookingDataFetching: No professionalId or professionalSlug provided");
+    return null;
+  }, [professionalId, professionalSlug, handleError]);
   
   // Unified data loading function that loads all data types at once
   const loadAllData = useCallback(async (forceRefresh: boolean = false) => {
-    if (!professionalId) {
-      console.log("useBookingDataFetching: No professionalId provided, skipping data load");
+    // First resolve the professional ID
+    const finalProfessionalId = await resolveProfessionalId();
+    
+    if (!finalProfessionalId) {
+      console.log("useBookingDataFetching: No professionalId resolved, skipping data load");
       setIsLoading(false);
       return;
     }
@@ -60,9 +98,9 @@ export const useBookingDataFetching = ({
     }
     
     // Log if professional ID changed
-    if (professionalIdRef.current !== professionalId) {
-      console.log(`useBookingDataFetching: Professional ID changed from ${professionalIdRef.current} to ${professionalId}`);
-      professionalIdRef.current = professionalId;
+    if (professionalIdRef.current !== finalProfessionalId) {
+      console.log(`useBookingDataFetching: Professional ID changed from ${professionalIdRef.current} to ${finalProfessionalId}`);
+      professionalIdRef.current = finalProfessionalId;
     }
     
     // Generate a unique fetch ID to detect stale loads
@@ -77,26 +115,26 @@ export const useBookingDataFetching = ({
     // Force cache refresh if requested
     if (forceRefresh) {
       console.log("useBookingDataFetching: Forcing cache refresh");
-      clearBookingCache(professionalId);
+      clearBookingCache(finalProfessionalId);
     }
     
     try {
-      console.log("useBookingDataFetching: Starting unified data load for professional:", professionalId);
+      console.log("useBookingDataFetching: Starting unified data load for professional:", finalProfessionalId);
       const controller = new AbortController();
       const signal = controller.signal;
       
       // Setup query functions map
       const queryFns = {
-        teamMembers: () => fetchTeamMembers(professionalId, signal),
-        services: () => fetchServices(professionalId, signal),
-        insurancePlans: () => fetchInsurancePlans(professionalId, signal),
-        timeSlots: () => fetchTimeSlots(professionalId, signal),
-        appointments: () => fetchAppointments(professionalId, signal)
+        teamMembers: () => fetchTeamMembers(finalProfessionalId, signal),
+        services: () => fetchServices(finalProfessionalId, signal),
+        insurancePlans: () => fetchInsurancePlans(finalProfessionalId, signal),
+        timeSlots: () => fetchTimeSlots(finalProfessionalId, signal),
+        appointments: () => fetchAppointments(finalProfessionalId, signal)
       };
       
       // Load all data types in an optimized batch
       const results = await unifiedDataFetch<any>(
-        professionalId,
+        finalProfessionalId,
         ['teamMembers', 'services', 'insurancePlans', 'timeSlots', 'appointments'],
         queryFns,
         signal
@@ -148,14 +186,16 @@ export const useBookingDataFetching = ({
         console.log("useBookingDataFetching: Data loading complete");
       }
     }
-  }, [professionalId, handleError, onDataLoaded]);
+  }, [resolveProfessionalId, handleError, onDataLoaded]);
   
   // Initialize data fetching
   useEffect(() => {
-    // Reset state when professional ID changes
-    if (professionalId !== undefined && professionalId !== professionalIdRef.current) {
-      console.log(`useBookingDataFetching: Professional ID changed to ${professionalId}, resetting state`);
-      professionalIdRef.current = professionalId;
+    // Reset state when professional ID or slug changes
+    const currentIdentifier = professionalId || professionalSlug;
+    const previousIdentifier = professionalIdRef.current;
+    
+    if (currentIdentifier !== previousIdentifier) {
+      console.log(`useBookingDataFetching: Professional identifier changed to ${currentIdentifier}, resetting state`);
       loadAttempted.current = false;
       // Reset the data states
       setTeamMembers([]);
@@ -163,17 +203,18 @@ export const useBookingDataFetching = ({
       setInsurancePlans([]);
       setTimeSlots([]);
       setAppointments([]);
+      setResolvedProfessionalId(undefined);
     }
     
-    if (professionalId !== undefined) {
+    if (professionalId || professionalSlug) {
       // Only fetch if we haven't attempted yet for this professional
       if (!loadAttempted.current) {
-        console.log(`useBookingDataFetching: First load for professional ${professionalId}`);
+        console.log(`useBookingDataFetching: First load for professional ${professionalId || professionalSlug}`);
         loadAllData(true); // Force refresh on first load
       }
     } else {
-      // No professional ID provided
-      console.log("useBookingDataFetching: No professionalId, clearing data");
+      // No professional ID or slug provided
+      console.log("useBookingDataFetching: No professionalId or professionalSlug, clearing data");
       setIsLoading(false);
       setTeamMembers([]);
       setServices([]);
@@ -181,7 +222,7 @@ export const useBookingDataFetching = ({
       setTimeSlots([]);
       setAppointments([]);
     }
-  }, [professionalId, loadAllData]);
+  }, [professionalId, professionalSlug, loadAllData]);
   
   // Function to refresh all data - exposed for manual refresh
   const refreshAllData = useCallback((forceRefresh: boolean = true) => {
@@ -202,6 +243,7 @@ export const useBookingDataFetching = ({
     insurancePlans,
     timeSlots,
     appointments,
+    resolvedProfessionalId,
     
     // Status
     isLoading,
