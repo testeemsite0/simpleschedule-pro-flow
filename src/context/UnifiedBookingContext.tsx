@@ -24,12 +24,13 @@ interface UnifiedBookingContextType {
   services: Service[];
   insurancePlans: InsurancePlan[];
   availableDates: Date[];
-  availableSlots: AvailableSlot[]; // Fix: Use proper slot objects instead of string[]
+  availableSlots: AvailableSlot[];
   
   // State
   isLoading: boolean;
   error: string | null;
   maintenanceMode: boolean;
+  resolvedProfessionalId?: string; // Add the missing property
   
   // Actions
   setTeamMember: (teamMemberId: string) => void;
@@ -93,7 +94,8 @@ export const UnifiedBookingProvider: React.FC<UnifiedBookingProviderProps> = ({
     error: typeof unifiedBookingData.error === 'string' ? unifiedBookingData.error : unifiedBookingData.error?.message || null,
     availableSlots: Array.isArray(unifiedBookingData.availableSlots) 
       ? unifiedBookingData.availableSlots
-      : []
+      : [],
+    resolvedProfessionalId: professionalId // Add the resolved professional ID
   };
 
   return (

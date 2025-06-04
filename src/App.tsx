@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppointmentProvider } from "@/context/AppointmentContext";
-const Home = lazy(() => import("./pages/Home"));
+const Home = lazy(() => import("./pages/Index"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Login = lazy(() => import("./pages/Login"));
@@ -25,7 +25,6 @@ const DashboardPreferences = lazy(() => import("./pages/DashboardPreferences"));
 const DashboardUnifiedBooking = lazy(() => import("./pages/DashboardUnifiedBooking"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
-const LoadingScreen = lazy(() => import("./components/LoadingScreen"));
 const DashboardCompany = lazy(() => import("./pages/DashboardCompany"));
 const DashboardSubscription = lazy(() => import("./pages/DashboardSubscription"));
 const queryClient = new QueryClient();
@@ -43,7 +42,7 @@ function App() {
                 <Route
                   path="/"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <Home />
                     </Suspense>
                   }
@@ -51,7 +50,7 @@ function App() {
                 <Route
                   path="/pricing"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <Pricing />
                     </Suspense>
                   }
@@ -59,7 +58,7 @@ function App() {
                 <Route
                   path="/contact"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <Contact />
                     </Suspense>
                   }
@@ -67,7 +66,7 @@ function App() {
                 <Route
                   path="/login"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <Login />
                     </Suspense>
                   }
@@ -75,7 +74,7 @@ function App() {
                 <Route
                   path="/register"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <Register />
                     </Suspense>
                   }
@@ -83,7 +82,7 @@ function App() {
                 <Route
                   path="/booking/:slug"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <Booking />
                     </Suspense>
                   }
@@ -91,7 +90,7 @@ function App() {
                 <Route
                   path="/public-booking/:professionalId"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <PublicBooking />
                     </Suspense>
                   }
@@ -99,7 +98,7 @@ function App() {
                 <Route
                   path="/dashboard"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <Dashboard />
                     </Suspense>
                   }
@@ -107,7 +106,7 @@ function App() {
                 <Route
                   path="/dashboard/appointments"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardAppointments />
                     </Suspense>
                   }
@@ -115,7 +114,7 @@ function App() {
                 <Route
                   path="/dashboard/schedules"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardSchedules />
                     </Suspense>
                   }
@@ -123,7 +122,7 @@ function App() {
                 <Route
                   path="/dashboard/team"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardTeam />
                     </Suspense>
                   }
@@ -131,7 +130,7 @@ function App() {
                 <Route
                   path="/dashboard/services"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardServices />
                     </Suspense>
                   }
@@ -139,7 +138,7 @@ function App() {
                 <Route
                   path="/dashboard/insurance"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardInsurance />
                     </Suspense>
                   }
@@ -147,7 +146,7 @@ function App() {
                 <Route
                   path="/dashboard/clients"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardClients />
                     </Suspense>
                   }
@@ -155,7 +154,7 @@ function App() {
                 <Route
                   path="/dashboard/booking-link"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardBookingLink />
                     </Suspense>
                   }
@@ -163,7 +162,7 @@ function App() {
                 <Route
                   path="/dashboard/reports"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardReports />
                     </Suspense>
                   }
@@ -171,7 +170,7 @@ function App() {
                 <Route
                   path="/dashboard/preferences"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardPreferences />
                     </Suspense>
                   }
@@ -179,7 +178,7 @@ function App() {
                 <Route
                   path="/dashboard/unified-booking"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardUnifiedBooking />
                     </Suspense>
                   }
@@ -187,7 +186,7 @@ function App() {
                 <Route
                   path="/dashboard/company"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <DashboardCompany />
                     </Suspense>
                   }
@@ -197,7 +196,7 @@ function App() {
                 <Route
                   path="*"
                   element={
-                    <Suspense fallback={<LoadingScreen />}>
+                    <Suspense fallback={<div>Loading...</div>}>
                       <NotFound />
                     </Suspense>
                   }

@@ -44,7 +44,7 @@ export const useBookingAppointment = ({
     }
 
     isProcessing.current = true;
-    setLoading(true);
+    setIsLoading(true);
     
     try {
       // Log the current booking data for debugging
