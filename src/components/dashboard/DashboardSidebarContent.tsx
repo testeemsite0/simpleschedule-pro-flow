@@ -11,7 +11,8 @@ import {
   Link as LinkIcon,
   Shield,
   Building2,
-  User
+  User,
+  Crown
 } from 'lucide-react';
 
 const navigationItems = [
@@ -73,6 +74,11 @@ const navigationItems = [
         icon: LinkIcon,
       },
     ],
+  },
+  {
+    title: 'Meu Plano',
+    href: '/dashboard/subscription',
+    icon: Crown,
   },
   {
     title: 'Relatórios',

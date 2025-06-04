@@ -48,7 +48,7 @@ export const countMonthlyAppointments = async (professionalId: ProfessionalId): 
   }
 };
 
-// Simplified version to avoid TypeScript inference issues
+// Improved version that properly checks subscription limits
 export const isWithinFreeLimit = async (professionalId: string): Promise<boolean> => {
   if (!professionalId) {
     console.log('No professional ID provided');
@@ -58,23 +58,17 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
   try {
     console.log(`Checking free tier limit for professional ${professionalId}`);
     
-    // Use direct fetch call to avoid TypeScript inference issues
-    const response = await fetch(`https://iabhmwqracdcdnevtpzt.supabase.co/functions/v1/check-subscription`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYmhtd3FyYWNkY2RuZXZ0cHp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4MDY5OTcsImV4cCI6MjA2MTM4Mjk5N30.ITy9iYrYUqYGvXsLL_OempEACnzFGDe3jB9WaIX9HqA'
-      },
-      body: JSON.stringify({ userId: professionalId })
+    // Use the corrected check-subscription function
+    const { data, error } = await supabase.functions.invoke('check-subscription', {
+      body: { userId: professionalId }
     });
     
-    // Handle potential errors first
-    if (!response.ok) {
-      console.error('Error checking subscription status:', response.statusText);
+    if (error) {
+      console.error('Error checking subscription status:', error);
       return false;
     }
     
-    const data = await response.json();
+    console.log('Subscription check result:', data);
     
     // Premium users have no limits
     if (data && data.isPremium === true) {
@@ -82,27 +76,18 @@ export const isWithinFreeLimit = async (professionalId: string): Promise<boolean
       return true;
     }
     
-    // Use pre-calculated value if available
+    // Use the calculated value from the edge function
     if (data && typeof data.isWithinFreeLimit === 'boolean') {
-      console.log(`Using edge calculation: within limit = ${data.isWithinFreeLimit}`);
+      console.log(`Within free limit: ${data.isWithinFreeLimit}`);
       return data.isWithinFreeLimit;
     }
     
-    // Get appointment count from the best available source
-    let appointmentCount = 0;
-    
-    if (data && typeof data.monthlyAppointments === 'number') {
-      appointmentCount = data.monthlyAppointments;
-      console.log(`Using appointment count from edge: ${appointmentCount}`);
-    } else {
-      appointmentCount = await countMonthlyAppointments(professionalId);
-      console.log(`Using appointment count from DB: ${appointmentCount}`);
-    }
-    
-    // Apply free tier limit (less than 5)
+    // Fallback to manual counting if edge function fails
+    const appointmentCount = await countMonthlyAppointments(professionalId);
     const isWithinLimit = appointmentCount < 5;
-    console.log(`Professional has ${appointmentCount} appointments, within limit: ${isWithinLimit}`);
+    console.log(`Fallback check - Professional has ${appointmentCount} appointments, within limit: ${isWithinLimit}`);
     return isWithinLimit;
+    
   } catch (error) {
     console.error('Error checking appointment limits:', error);
     return false;

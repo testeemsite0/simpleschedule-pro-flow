@@ -29,7 +29,7 @@ export const useBookingAppointment = ({
   const { isWithinFreeLimit, checkInsurancePlanLimit } = useAppointments();
   const isProcessing = useRef(false); // Prevent duplicate submissions
 
-  // Complete booking process with enhanced validation and duplicate prevention
+  // Complete booking process with enhanced validation and context-specific limits
   const completeBooking = async () => {
     // Prevent duplicate submissions
     if (isProcessing.current || isLoading) {
@@ -44,7 +44,7 @@ export const useBookingAppointment = ({
     }
 
     isProcessing.current = true;
-    setIsLoading(true);
+    setLoading(true);
     
     try {
       // Log the current booking data for debugging
@@ -83,28 +83,28 @@ export const useBookingAppointment = ({
       
       const formattedDate = format(bookingData.date, 'yyyy-MM-dd');
       
-      // Check appointment limits for free tier and insurance plans
-      if (!isAdminView) {
-        // Only check limits for client-initiated bookings
-        console.log("Checking free tier limits for professional:", professionalId);
+      // Check appointment limits based on context (admin vs public)
+      console.log("Checking appointment limits for professional:", professionalId);
+      
+      const withinFreeLimit = await isWithinFreeLimit(professionalId);
+      console.log("Free limit check result:", withinFreeLimit);
+      
+      if (!withinFreeLimit) {
+        // Different messages based on context
+        const limitErrorMessage = isAdminView 
+          ? "Você atingiu o limite de agendamentos do seu plano. Faça upgrade para continuar criando agendamentos."
+          : "A agenda está temporariamente cheia. Este profissional atingiu o limite de agendamentos mensais. Tente novamente no próximo mês ou entre em contato diretamente.";
         
-        const withinFreeLimit = await isWithinFreeLimit(professionalId);
-        console.log("Free limit check result:", withinFreeLimit);
-        
-        if (!withinFreeLimit) {
-          // This is a critical error - very important to show to users
-          const limitErrorMessage = "Limite de agendamentos gratuitos atingido. Entre em contato com o profissional diretamente ou assine o plano premium.";
-          toast.error(limitErrorMessage);
-          throw new Error(limitErrorMessage);
-        }
-        
-        // Check insurance plan limits if using one
-        if (bookingData.insuranceId && bookingData.insuranceId !== "none") {
-          console.log("Checking insurance plan limits for:", bookingData.insuranceId);
-          const withinInsuranceLimit = await checkInsurancePlanLimit(bookingData.insuranceId);
-          if (!withinInsuranceLimit) {
-            throw new Error("Limite de agendamentos para este convênio foi atingido.");
-          }
+        toast.error(limitErrorMessage);
+        throw new Error(limitErrorMessage);
+      }
+      
+      // Check insurance plan limits if using one
+      if (bookingData.insuranceId && bookingData.insuranceId !== "none") {
+        console.log("Checking insurance plan limits for:", bookingData.insuranceId);
+        const withinInsuranceLimit = await checkInsurancePlanLimit(bookingData.insuranceId);
+        if (!withinInsuranceLimit) {
+          throw new Error("Limite de agendamentos para este convênio foi atingido.");
         }
       }
       
@@ -118,7 +118,8 @@ export const useBookingAppointment = ({
         startTime: bookingData.startTime,
         endTime: bookingData.endTime,
         serviceId: bookingData.serviceId || null,
-        insuranceId: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null
+        insuranceId: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null,
+        context: isAdminView ? 'admin' : 'public'
       });
       
       // Create appointmentData object with all required fields
@@ -136,7 +137,7 @@ export const useBookingAppointment = ({
         source: isAdminView ? 'manual' : 'client',
         insurance_plan_id: bookingData.insuranceId === "none" ? null : bookingData.insuranceId || null,
         service_id: bookingData.serviceId || null,
-        free_tier_used: !isAdminView // Track that this counts against free tier limits
+        free_tier_used: true // Always count against free tier limits
       };
       
       console.log("Sending final appointment data to API:", JSON.stringify(appointmentData, null, 2));
@@ -150,13 +151,18 @@ export const useBookingAppointment = ({
       
       if (data && data.length > 0) {
         console.log("Appointment created successfully:", data[0]);
-        toast.success("Agendamento realizado com sucesso!");
+        
+        const successMessage = isAdminView 
+          ? "Agendamento criado com sucesso!"
+          : "Agendamento realizado com sucesso! Você receberá uma confirmação por email.";
+        
+        toast.success(successMessage);
         
         // Update bookingData with the real appointmentId from the API
         const newAppointmentId = data[0].id;
         bookingData.appointmentId = newAppointmentId;
         
-        // Move to confirmation step and update with appointment ID
+        // Move to confirmation step
         goToStep("confirmation");
         
         // Return successful completion
@@ -171,7 +177,11 @@ export const useBookingAppointment = ({
       console.error("Error creating appointment:", error);
       const errorMessage = error.message || "Erro ao processar agendamento";
       updateErrorState(errorMessage);
-      toast.error(errorMessage);
+      
+      // Don't show toast if error message is already shown in UI
+      if (!errorMessage.includes("limite")) {
+        toast.error(errorMessage);
+      }
       return false;
     } finally {
       setIsLoading(false);

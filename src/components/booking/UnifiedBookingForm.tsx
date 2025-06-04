@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { BookingStepIndicator } from './BookingStepIndicator';
 import { MaintenanceNotice } from './MaintenanceNotice';
 import { BookingErrorHandler } from './BookingErrorHandler';
+import { LimitWarning } from './LimitWarning';
 import { useUnifiedBooking } from '@/context/UnifiedBookingContext';
 import { useBookingHandlers } from '@/hooks/booking/useBookingHandlers';
 import { BookingStepContent } from './form/BookingStepContent';
@@ -30,7 +31,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     services,
     insurancePlans,
     availableDates,
-    availableSlots, // This is now properly typed as AvailableSlot[]
+    availableSlots,
     isLoading,
     error,
     maintenanceMode,
@@ -47,7 +48,8 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     resetBooking,
     getAvailableServicesForTeamMember,
     checkInsuranceLimitReached,
-    refreshData
+    refreshData,
+    resolvedProfessionalId
   } = useUnifiedBooking();
   
   const {
@@ -108,6 +110,14 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
       )}
       
       {maintenanceMode && <MaintenanceNotice />}
+
+      {/* Add limit warning for admin view */}
+      {isAdminView && resolvedProfessionalId && (
+        <LimitWarning 
+          professionalId={resolvedProfessionalId}
+          isAdminView={isAdminView}
+        />
+      )}
 
       {error && (
         <BookingErrorHandler 

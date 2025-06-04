@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,18 +21,20 @@ serve(async (req) => {
 
     console.log("Checking subscription for user ID:", userId);
 
+    // Create Supabase client with service role key
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     // Get subscriber data from database
-    const { data: subscribers, error: subscriberError } = await fetch(
-      `${Deno.env.get('SUPABASE_URL')}/rest/v1/subscribers?select=*&user_id=eq.${userId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-          apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
-        },
-      }
-    ).then(res => res.json());
+    const { data: subscribers, error: subscriberError } = await supabase
+      .from('subscribers')
+      .select('*')
+      .eq('user_id', userId);
 
     if (subscriberError) {
+      console.error('Error fetching subscriber:', subscriberError);
       throw subscriberError;
     }
 
@@ -48,29 +51,27 @@ serve(async (req) => {
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
-    console.log(`Checking appointments from ${firstDay} to ${lastDay}`);
+    console.log(`Checking appointments from ${firstDay} to ${lastDay} for professional: ${userId}`);
 
-    // Use content-range header to get exact count
-    const appointmentsResponse = await fetch(
-      `${Deno.env.get('SUPABASE_URL')}/rest/v1/appointments?select=id&professional_id=eq.${userId}&date=gte.${firstDay}&date=lte.${lastDay}&free_tier_used=eq.true`,
-      {
-        headers: {
-          Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-          apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
-          'Prefer': 'count=exact',
-        },
-      }
-    );
+    // Count appointments that count against free tier limit
+    const { count, error: countError } = await supabase
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .eq('professional_id', userId)
+      .eq('free_tier_used', true)
+      .gte('date', firstDay)
+      .lte('date', lastDay);
     
-    // Properly parse the count from content-range header
-    const contentRange = appointmentsResponse.headers.get('content-range');
-    const appointmentCount = contentRange ? parseInt(contentRange.split('/')[1]) : 0;
+    if (countError) {
+      console.error('Error counting appointments:', countError);
+      throw countError;
+    }
     
+    const appointmentCount = count || 0;
     console.log("Monthly appointments count:", appointmentCount);
-    console.log("Content-Range header:", contentRange);
 
     // The free tier limit is 5 appointments per month
-    // Important: We strictly enforce this limit (less than 5, not less than or equal to 5)
+    // Premium users have no limits
     const isWithinFreeLimit = isPremium || appointmentCount < 5;
     
     console.log("Is Premium:", isPremium);
