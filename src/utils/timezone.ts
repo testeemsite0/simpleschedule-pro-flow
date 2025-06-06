@@ -1,34 +1,34 @@
 
 import { format, parseISO, addDays, startOfDay, isAfter, isBefore, setHours, setMinutes } from 'date-fns';
-import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 // Timezone configuration for Brazil (UTC-3)
 export const BRAZIL_TIMEZONE = 'America/Sao_Paulo';
 
 // Get current date/time in Brazil timezone
 export const getCurrentBrazilTime = (): Date => {
-  return utcToZonedTime(new Date(), BRAZIL_TIMEZONE);
+  return toZonedTime(new Date(), BRAZIL_TIMEZONE);
 };
 
 // Convert a local date to UTC for database storage
 export const localDateToUTC = (localDate: Date): Date => {
-  return zonedTimeToUtc(localDate, BRAZIL_TIMEZONE);
+  return fromZonedTime(localDate, BRAZIL_TIMEZONE);
 };
 
 // Convert UTC date from database to local Brazil time
 export const utcToLocalDate = (utcDate: Date): Date => {
-  return utcToZonedTime(utcDate, BRAZIL_TIMEZONE);
+  return toZonedTime(utcDate, BRAZIL_TIMEZONE);
 };
 
 // Format date for display in Brazil timezone
 export const formatBrazilDate = (date: Date, formatString: string = 'dd/MM/yyyy'): string => {
-  const localDate = utcToZonedTime(date, BRAZIL_TIMEZONE);
+  const localDate = toZonedTime(date, BRAZIL_TIMEZONE);
   return format(localDate, formatString);
 };
 
 // Format time for display in Brazil timezone
 export const formatBrazilTime = (date: Date, formatString: string = 'HH:mm'): string => {
-  const localDate = utcToZonedTime(date, BRAZIL_TIMEZONE);
+  const localDate = toZonedTime(date, BRAZIL_TIMEZONE);
   return format(localDate, formatString);
 };
 
@@ -51,13 +51,13 @@ export const getBrazilToday = (): Date => {
 // Check if a date is today in Brazil timezone
 export const isBrazilToday = (date: Date): boolean => {
   const today = getBrazilToday();
-  const compareDate = startOfDay(utcToZonedTime(date, BRAZIL_TIMEZONE));
+  const compareDate = startOfDay(toZonedTime(date, BRAZIL_TIMEZONE));
   return format(today, 'yyyy-MM-dd') === format(compareDate, 'yyyy-MM-dd');
 };
 
 // Get date string for appointment storage (YYYY-MM-DD format in Brazil timezone)
 export const getAppointmentDateString = (date: Date): string => {
-  const localDate = utcToZonedTime(date, BRAZIL_TIMEZONE);
+  const localDate = toZonedTime(date, BRAZIL_TIMEZONE);
   return format(localDate, 'yyyy-MM-dd');
 };
 
@@ -65,5 +65,5 @@ export const getAppointmentDateString = (date: Date): string => {
 export const parseAppointmentDate = (dateString: string): Date => {
   // Parse as Brazil date and return as UTC for consistency
   const localDate = parseISO(`${dateString}T12:00:00`);
-  return zonedTimeToUtc(localDate, BRAZIL_TIMEZONE);
+  return fromZonedTime(localDate, BRAZIL_TIMEZONE);
 };
