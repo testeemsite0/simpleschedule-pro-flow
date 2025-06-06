@@ -9,7 +9,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { AppointmentProvider } from "@/context/AppointmentContext";
 const Home = lazy(() => import("@/pages/Index"));
 const Pricing = lazy(() => import("./pages/Pricing"));
-const Contact = lazy(() => import("@/pages/Index")); // Fixed: temporarily pointing to Index
+const Contact = lazy(() => import("./pages/Contact"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Booking = lazy(() => import("./pages/Booking"));
@@ -25,7 +25,7 @@ const DashboardReports = lazy(() => import("./pages/DashboardReports"));
 const DashboardPreferences = lazy(() => import("./pages/DashboardPreferences"));
 const DashboardUnifiedBooking = lazy(() => import("./pages/DashboardUnifiedBooking"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const PublicBooking = lazy(() => import("@/pages/Booking")); // Fixed: temporarily pointing to Booking
+const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const DashboardCompany = lazy(() => import("./pages/DashboardCompany"));
 const DashboardSubscription = lazy(() => import("./pages/DashboardSubscription"));
 const queryClient = new QueryClient();
