@@ -5,6 +5,7 @@ import { UnifiedBookingProvider } from '@/context/UnifiedBookingContext';
 import { UnifiedBookingForm } from '@/components/booking/UnifiedBookingForm';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { ImprovedLoading } from '@/components/ui/improved-loading';
 
 const PublicBooking = () => {
   const { professionalId } = useParams<{ professionalId: string }>();
@@ -49,9 +50,20 @@ const PublicBooking = () => {
             professionalId={professionalId}
             isAdminView={false}
           >
-            <div className="bg-white rounded-lg shadow-sm border">
-              <UnifiedBookingForm />
-            </div>
+            <React.Suspense 
+              fallback={
+                <div className="bg-white rounded-lg shadow-sm border p-6">
+                  <ImprovedLoading 
+                    variant="form" 
+                    message="Carregando formulário de agendamento..."
+                  />
+                </div>
+              }
+            >
+              <div className="bg-white rounded-lg shadow-sm border">
+                <UnifiedBookingForm />
+              </div>
+            </React.Suspense>
           </UnifiedBookingProvider>
         </div>
       </main>

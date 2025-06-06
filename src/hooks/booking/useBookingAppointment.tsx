@@ -1,10 +1,10 @@
 
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 import { BookingData } from './useBookingSteps';
 import { createAppointment } from './api/dataFetcher';
 import { useAppointments } from '@/context/AppointmentContext';
+import { getAppointmentDateString } from '@/utils/timezone';
 
 interface UseBookingAppointmentProps {
   professionalId?: string;
@@ -29,7 +29,7 @@ export const useBookingAppointment = ({
   const { isWithinFreeLimit, checkInsurancePlanLimit } = useAppointments();
   const isProcessing = useRef(false); // Prevent duplicate submissions
 
-  // Complete booking process with enhanced validation and context-specific limits
+  // Complete booking process with enhanced validation and timezone handling
   const completeBooking = async () => {
     // Prevent duplicate submissions
     if (isProcessing.current || isLoading) {
@@ -81,7 +81,9 @@ export const useBookingAppointment = ({
         throw new Error("Email do cliente em formato inválido");
       }
       
-      const formattedDate = format(bookingData.date, 'yyyy-MM-dd');
+      // Use proper timezone handling for date formatting
+      const formattedDate = getAppointmentDateString(bookingData.date);
+      console.log("Formatted date for appointment:", formattedDate);
       
       // Check appointment limits based on context (admin vs public)
       console.log("Checking appointment limits for professional:", professionalId);

@@ -3,7 +3,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { isAfter, isSameDay, format } from 'date-fns';
+import { filterPastSlots } from './improved-time-utils';
+import { ImprovedLoading } from '@/components/ui/improved-loading';
 
 interface AvailableSlot {
   date: Date;
@@ -16,46 +17,23 @@ interface TimeSlotSelectorProps {
   availableSlots: AvailableSlot[];
   onSelectSlot: (date: Date, startTime: string, endTime: string, teamMemberId?: string) => void;
   showConfirmButton?: boolean;
+  isLoading?: boolean;
 }
 
 const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
   availableSlots,
   onSelectSlot,
-  showConfirmButton = false
+  showConfirmButton = false,
+  isLoading = false
 }) => {
   const [selectedSlot, setSelectedSlot] = React.useState<AvailableSlot | null>(null);
 
-  // Filter slots that have already passed
+  // Filter out past slots using improved timezone handling
   const filteredSlots = React.useMemo(() => {
-    const now = new Date();
-    
-    return availableSlots.filter(slot => {
-      // Check if the slot date is today or future
-      const slotDate = new Date(slot.date);
-      const isToday = isSameDay(slotDate, now);
-      const isFutureDay = isAfter(slotDate, now) && !isToday;
-      
-      // If it's a future day, it's always valid
-      if (isFutureDay) {
-        return true;
-      }
-      
-      // If it's today, check if the time has already passed
-      if (isToday) {
-        // Parse the time string to get hours and minutes
-        const [hours, minutes] = slot.startTime.split(':').map(Number);
-        
-        // Create a new date object with today's date but with the slot's time
-        const slotDateTime = new Date();
-        slotDateTime.setHours(hours, minutes, 0, 0);
-        
-        // Return true only if the time hasn't passed yet
-        return isAfter(slotDateTime, now);
-      }
-      
-      // For past dates, return false
-      return false;
-    });
+    console.log('TimeSlotSelector: Filtering', availableSlots.length, 'slots');
+    const filtered = filterPastSlots(availableSlots);
+    console.log('TimeSlotSelector: After filtering past slots:', filtered.length, 'remaining');
+    return filtered;
   }, [availableSlots]);
 
   const handleSelectSlot = (slot: AvailableSlot) => {
@@ -79,6 +57,10 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
       );
     }
   };
+
+  if (isLoading) {
+    return <ImprovedLoading variant="calendar" message="Carregando horários disponíveis..." />;
+  }
 
   return (
     <div className="space-y-4">

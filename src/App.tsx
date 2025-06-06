@@ -7,6 +7,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppointmentProvider } from "@/context/AppointmentContext";
+import { ImprovedLoading } from "@/components/ui/improved-loading";
+
+// Lazy load components with better loading states
 const Home = lazy(() => import("@/pages/Index"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -28,7 +31,26 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const DashboardCompany = lazy(() => import("./pages/DashboardCompany"));
 const DashboardSubscription = lazy(() => import("./pages/DashboardSubscription"));
-const queryClient = new QueryClient();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// Enhanced loading component for pages
+const PageLoadingFallback = ({ message }: { message?: string }) => (
+  <ImprovedLoading 
+    variant="page" 
+    message={message || "Carregando página..."}
+    showProgress={true}
+  />
+);
 
 function App() {
   return (
@@ -43,7 +65,7 @@ function App() {
                 <Route
                   path="/"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando página inicial..." />}>
                       <Home />
                     </Suspense>
                   }
@@ -51,7 +73,7 @@ function App() {
                 <Route
                   path="/pricing"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando preços..." />}>
                       <Pricing />
                     </Suspense>
                   }
@@ -59,7 +81,7 @@ function App() {
                 <Route
                   path="/contact"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando contato..." />}>
                       <Contact />
                     </Suspense>
                   }
@@ -67,7 +89,7 @@ function App() {
                 <Route
                   path="/login"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando login..." />}>
                       <Login />
                     </Suspense>
                   }
@@ -75,7 +97,7 @@ function App() {
                 <Route
                   path="/register"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando cadastro..." />}>
                       <Register />
                     </Suspense>
                   }
@@ -83,7 +105,7 @@ function App() {
                 <Route
                   path="/booking/:slug"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando agendamento..." />}>
                       <Booking />
                     </Suspense>
                   }
@@ -91,7 +113,7 @@ function App() {
                 <Route
                   path="/public-booking/:professionalId"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando agendamento..." />}>
                       <PublicBooking />
                     </Suspense>
                   }
@@ -99,7 +121,7 @@ function App() {
                 <Route
                   path="/dashboard"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando dashboard..." />}>
                       <Dashboard />
                     </Suspense>
                   }
@@ -107,7 +129,7 @@ function App() {
                 <Route
                   path="/dashboard/appointments"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando agendamentos..." />}>
                       <DashboardAppointments />
                     </Suspense>
                   }
@@ -115,7 +137,7 @@ function App() {
                 <Route
                   path="/dashboard/schedules"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando horários..." />}>
                       <DashboardSchedules />
                     </Suspense>
                   }
@@ -123,7 +145,7 @@ function App() {
                 <Route
                   path="/dashboard/team"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando equipe..." />}>
                       <DashboardTeam />
                     </Suspense>
                   }
@@ -131,7 +153,7 @@ function App() {
                 <Route
                   path="/dashboard/services"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando serviços..." />}>
                       <DashboardServices />
                     </Suspense>
                   }
@@ -139,7 +161,7 @@ function App() {
                 <Route
                   path="/dashboard/insurance"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando convênios..." />}>
                       <DashboardInsurance />
                     </Suspense>
                   }
@@ -147,7 +169,7 @@ function App() {
                 <Route
                   path="/dashboard/clients"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando clientes..." />}>
                       <DashboardClients />
                     </Suspense>
                   }
@@ -155,7 +177,7 @@ function App() {
                 <Route
                   path="/dashboard/booking-link"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando link de agendamento..." />}>
                       <DashboardBookingLink />
                     </Suspense>
                   }
@@ -163,7 +185,7 @@ function App() {
                 <Route
                   path="/dashboard/reports"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando relatórios..." />}>
                       <DashboardReports />
                     </Suspense>
                   }
@@ -171,7 +193,7 @@ function App() {
                 <Route
                   path="/dashboard/preferences"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando preferências..." />}>
                       <DashboardPreferences />
                     </Suspense>
                   }
@@ -179,7 +201,7 @@ function App() {
                 <Route
                   path="/dashboard/unified-booking"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando agendamento..." />}>
                       <DashboardUnifiedBooking />
                     </Suspense>
                   }
@@ -187,17 +209,24 @@ function App() {
                 <Route
                   path="/dashboard/company"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando empresa..." />}>
                       <DashboardCompany />
                     </Suspense>
                   }
                 />
                 
-                <Route path="/dashboard/subscription" element={<DashboardSubscription />} />
+                <Route 
+                  path="/dashboard/subscription" 
+                  element={
+                    <Suspense fallback={<PageLoadingFallback message="Carregando assinatura..." />}>
+                      <DashboardSubscription />
+                    </Suspense>
+                  } 
+                />
                 <Route
                   path="*"
                   element={
-                    <Suspense fallback={<div>Loading...</div>}>
+                    <Suspense fallback={<PageLoadingFallback message="Carregando..." />}>
                       <NotFound />
                     </Suspense>
                   }
