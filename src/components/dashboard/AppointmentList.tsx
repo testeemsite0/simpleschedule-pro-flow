@@ -3,20 +3,23 @@ import React, { useState, useEffect } from 'react';
 import { Appointment } from '@/types';
 import { useAppointments } from '@/context/AppointmentContext';
 import { useToast } from '@/hooks/use-toast';
-import AppointmentCard from './appointments/AppointmentCard';
+import AppointmentsByProfessional from './appointments/AppointmentsByProfessional';
 import AppointmentEmptyState from './appointments/AppointmentEmptyState';
-import { useAppointmentAdditionalData } from './appointments/useAppointmentAdditionalData';
 
 interface AppointmentListProps {
   appointments: Appointment[];
   onAppointmentCanceled?: (id: string) => void;
+  onRefreshNeeded?: () => void;
 }
 
-const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initialAppointments, onAppointmentCanceled }) => {
+const AppointmentList: React.FC<AppointmentListProps> = ({ 
+  appointments: initialAppointments, 
+  onAppointmentCanceled,
+  onRefreshNeeded 
+}) => {
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const { cancelAppointment } = useAppointments();
   const { toast } = useToast();
-  const { teamMembers, insurancePlans } = useAppointmentAdditionalData(appointments);
   
   // Handle cancellation of appointments
   const handleCancel = async (id: string) => {
@@ -56,17 +59,11 @@ const AppointmentList: React.FC<AppointmentListProps> = ({ appointments: initial
   }
   
   return (
-    <div className="space-y-4">
-      {appointments.map((appointment) => (
-        <AppointmentCard
-          key={appointment.id}
-          appointment={appointment}
-          teamMemberName={appointment.team_member_id ? teamMembers[appointment.team_member_id] : undefined}
-          insurancePlanName={appointment.insurance_plan_id ? insurancePlans[appointment.insurance_plan_id] : undefined}
-          onCancel={handleCancel}
-        />
-      ))}
-    </div>
+    <AppointmentsByProfessional
+      appointments={appointments}
+      onAppointmentCanceled={handleCancel}
+      onRefreshNeeded={onRefreshNeeded}
+    />
   );
 };
 

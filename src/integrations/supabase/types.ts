@@ -9,6 +9,91 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      appointment_payments: {
+        Row: {
+          amount: number
+          appointment_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          recorded_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          appointment_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_status_history: {
+        Row: {
+          appointment_id: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_status: string
+          notes: string | null
+          old_status: string | null
+        }
+        Insert: {
+          appointment_id: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_status: string
+          notes?: string | null
+          old_status?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_status?: string
+          notes?: string | null
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_status_history_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           client_email: string
@@ -293,6 +378,33 @@ export type Database = {
           profession?: string
           slug?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      secretary_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          professional_id: string
+          secretary_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          professional_id: string
+          secretary_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          professional_id?: string
+          secretary_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -650,6 +762,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -673,9 +806,21 @@ export type Database = {
           count: number
         }[]
       }
+      get_secretary_professionals: {
+        Args: { secretary_user_id: string }
+        Returns: {
+          professional_id: string
+        }[]
+      }
+      is_secretary_for_professional: {
+        Args: { secretary_user_id: string; target_professional_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      payment_method: "cash" | "debit" | "credit" | "pix" | "insurance"
+      payment_status: "pending" | "paid" | "partial" | "refunded"
+      user_role: "professional" | "secretary" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -790,6 +935,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      payment_method: ["cash", "debit", "credit", "pix", "insurance"],
+      payment_status: ["pending", "paid", "partial", "refunded"],
+      user_role: ["professional", "secretary", "admin"],
+    },
   },
 } as const

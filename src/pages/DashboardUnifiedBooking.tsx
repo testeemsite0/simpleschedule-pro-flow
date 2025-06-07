@@ -7,25 +7,48 @@ import { UnifiedBookingProvider } from '@/context/UnifiedBookingContext';
 import { useAuth } from '@/context/AuthContext';
 import AppointmentTabs from '@/components/dashboard/AppointmentTabs';
 import { useAppointments } from '@/context/AppointmentContext';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { Appointment } from '@/types';
 import { useAppointmentsRealtime } from '@/hooks/useAppointmentsRealtime';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
 
 const DashboardUnifiedBooking = () => {
   const [activeTab, setActiveTab] = useState("appointments");
   const { user } = useAuth();
   const { getAppointmentsByProfessional } = useAppointments();
+  const { userRole, isSecretary, managedProfessionals, loading: rolesLoading } = useUserRoles();
   
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Determine which professional ID to use
+  const effectiveProfessionalId = isSecretary && managedProfessionals.length > 0 
+    ? managedProfessionals[0] // For now, use the first managed professional
+    : user?.id;
+
   const fetchAppointments = async () => {
-    if (!user) return;
+    if (!effectiveProfessionalId) return;
     
     try {
       setLoading(true);
-      const data = await getAppointmentsByProfessional(user.id);
-      console.log('DashboardUnifiedBooking: Fetched appointments:', data.length);
-      setAppointments(data);
+      
+      let allAppointments: Appointment[] = [];
+      
+      if (isSecretary) {
+        // Fetch appointments for all managed professionals
+        for (const professionalId of managedProfessionals) {
+          const data = await getAppointmentsByProfessional(professionalId);
+          allAppointments = [...allAppointments, ...data];
+        }
+      } else {
+        // Fetch appointments for the current user
+        const data = await getAppointmentsByProfessional(effectiveProfessionalId);
+        allAppointments = data;
+      }
+      
+      console.log('DashboardUnifiedBooking: Fetched appointments:', allAppointments.length);
+      setAppointments(allAppointments);
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -35,7 +58,7 @@ const DashboardUnifiedBooking = () => {
 
   // Set up real-time updates
   useAppointmentsRealtime({
-    professionalId: user?.id || '',
+    professionalId: effectiveProfessionalId || '',
     onAppointmentChange: () => {
       console.log('DashboardUnifiedBooking: Real-time change detected, refreshing');
       fetchAppointments();
@@ -43,10 +66,10 @@ const DashboardUnifiedBooking = () => {
   });
   
   useEffect(() => {
-    if (user) {
+    if (effectiveProfessionalId && !rolesLoading) {
       fetchAppointments();
     }
-  }, [user]);
+  }, [effectiveProfessionalId, rolesLoading, managedProfessionals]);
   
   // Categorize appointments properly - considering all statuses and proper date filtering
   const categorizeAppointments = (appointments: Appointment[]) => {
@@ -62,9 +85,9 @@ const DashboardUnifiedBooking = () => {
       
       if (appointment.status === 'canceled') {
         canceled.push(appointment);
-      } else if (appointmentDate >= today && appointment.status === 'scheduled') {
+      } else if (appointmentDate >= today && (appointment.status === 'scheduled')) {
         upcoming.push(appointment);
-      } else if (appointmentDate < today || appointment.status === 'completed') {
+      } else if (appointmentDate < today || ['completed', 'no_show'].includes(appointment.status)) {
         past.push(appointment);
       }
     });
@@ -108,10 +131,44 @@ const DashboardUnifiedBooking = () => {
     // Switch to appointments view to show the new appointment
     setActiveTab("appointments");
   };
+
+  if (rolesLoading) {
+    return (
+      <DashboardLayout title="Agendamentos">
+        <div className="flex items-center justify-center py-8">
+          <p className="text-muted-foreground">Carregando permissões...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show different interface for secretary
+  if (isSecretary && managedProfessionals.length === 0) {
+    return (
+      <DashboardLayout title="Agendamentos">
+        <Alert>
+          <InfoIcon className="h-4 w-4" />
+          <AlertDescription>
+            Você é uma secretária, mas ainda não foi atribuída a nenhum profissional. 
+            Entre em contato com o administrador para configurar suas permissões.
+          </AlertDescription>
+        </Alert>
+      </DashboardLayout>
+    );
+  }
   
   return (
     <DashboardLayout title="Agendamentos">
       <div className="space-y-8">
+        {isSecretary && (
+          <Alert>
+            <InfoIcon className="h-4 w-4" />
+            <AlertDescription>
+              Você está visualizando os agendamentos como secretária para {managedProfessionals.length} profissional(is).
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Tabs defaultValue="appointments" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="appointments" className="flex items-center gap-2">
@@ -136,8 +193,8 @@ const DashboardUnifiedBooking = () => {
           </TabsContent>
           
           <TabsContent value="new-booking" className="space-y-6 pt-4">
-            {user ? (
-              <UnifiedBookingProvider professionalId={user.id} isAdminView={true} key={`booking-provider-${user.id}`}>
+            {effectiveProfessionalId ? (
+              <UnifiedBookingProvider professionalId={effectiveProfessionalId} isAdminView={true} key={`booking-provider-${effectiveProfessionalId}`}>
                 <UnifiedBookingForm 
                   title="Novo Agendamento" 
                   showStepIndicator={true}

@@ -46,21 +46,22 @@ export interface Service {
 export interface Appointment {
   id: string;
   professional_id: string;
+  team_member_id?: string;
+  service_id?: string;
+  insurance_plan_id?: string;
   client_name: string;
   client_email: string;
   client_phone?: string;
-  date: string;
-  start_time: string;
-  end_time: string;
+  date: string; // YYYY-MM-DD format
+  start_time: string; // HH:MM format
+  end_time: string; // HH:MM format
   notes?: string;
-  status: 'scheduled' | 'completed' | 'canceled';
+  status: 'scheduled' | 'completed' | 'canceled' | 'no_show';
+  source?: 'client' | 'manual';
+  price?: number;
+  free_tier_used: boolean;
   created_at?: string;
   updated_at?: string;
-  source?: 'client' | 'manual';
-  service_id?: string;
-  price?: number;
-  team_member_id?: string;
-  insurance_plan_id?: string;
 }
 
 export interface SubscriptionPlan {
