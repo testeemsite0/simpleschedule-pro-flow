@@ -5,6 +5,7 @@ import { BookingData } from './useBookingSteps';
 import { createAppointment } from './api/dataFetcher';
 import { useAppointments } from '@/context/AppointmentContext';
 import { getAppointmentDateString } from '@/utils/timezone';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UseBookingAppointmentProps {
   professionalId?: string;
@@ -28,6 +29,36 @@ export const useBookingAppointment = ({
   const [isLoading, setIsLoading] = useState(false);
   const { isWithinFreeLimit, checkInsurancePlanLimit } = useAppointments();
   const isProcessing = useRef(false); // Prevent duplicate submissions
+
+  // Check for existing appointment at the same time slot
+  const checkAppointmentConflict = async () => {
+    if (!professionalId || !bookingData.date || !bookingData.startTime || !bookingData.teamMemberId) {
+      return false;
+    }
+
+    try {
+      const formattedDate = getAppointmentDateString(bookingData.date);
+      
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('professional_id', professionalId)
+        .eq('team_member_id', bookingData.teamMemberId)
+        .eq('date', formattedDate)
+        .eq('start_time', bookingData.startTime)
+        .eq('status', 'scheduled');
+
+      if (error) {
+        console.error('Error checking appointment conflict:', error);
+        return false;
+      }
+
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Error in conflict check:', error);
+      return false;
+    }
+  };
 
   // Complete booking process with enhanced validation and timezone handling
   const completeBooking = async () => {
@@ -79,6 +110,12 @@ export const useBookingAppointment = ({
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(bookingData.clientEmail)) {
         throw new Error("Email do cliente em formato inválido");
+      }
+
+      // Check for appointment conflicts
+      const hasConflict = await checkAppointmentConflict();
+      if (hasConflict) {
+        throw new Error("Já existe um agendamento para este profissional nesta data e horário. Por favor, escolha outro horário.");
       }
       
       // Use proper timezone handling for date formatting
@@ -164,6 +201,11 @@ export const useBookingAppointment = ({
         const newAppointmentId = data[0].id;
         bookingData.appointmentId = newAppointmentId;
         
+        // Call onSuccess to trigger data refresh
+        if (onSuccess) {
+          onSuccess();
+        }
+        
         // Move to confirmation step
         goToStep("confirmation");
         
@@ -181,7 +223,7 @@ export const useBookingAppointment = ({
       updateErrorState(errorMessage);
       
       // Don't show toast if error message is already shown in UI
-      if (!errorMessage.includes("limite")) {
+      if (!errorMessage.includes("limite") && !errorMessage.includes("existe")) {
         toast.error(errorMessage);
       }
       return false;

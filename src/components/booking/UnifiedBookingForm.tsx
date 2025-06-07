@@ -15,6 +15,7 @@ interface UnifiedBookingFormProps {
   showStepIndicator?: boolean;
   isAdminView?: boolean;
   allowWalkIn?: boolean;
+  onSuccess?: () => void;
 }
 
 export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
@@ -22,6 +23,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
   showStepIndicator = false,
   isAdminView = false,
   allowWalkIn = false,
+  onSuccess
 }) => {
   // This hook must be used within a UnifiedBookingProvider context
   const { 
@@ -69,7 +71,13 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
     setDate,
     setTime,
     setClientInfo,
-    completeBooking,
+    completeBooking: async () => {
+      const success = await completeBooking();
+      if (success && onSuccess) {
+        onSuccess();
+      }
+      return success;
+    },
     refreshData,
     resetBooking,
     goToStep
@@ -147,7 +155,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           services={services}
           insurancePlans={insurancePlans}
           availableDates={availableDates}
-          availableSlots={availableSlots} // Now correctly typed as AvailableSlot[]
+          availableSlots={availableSlots}
           isLoading={isLoading}
           handleTeamMemberChange={handleTeamMemberChange}
           handleServiceChange={handleServiceChange}
@@ -155,7 +163,7 @@ export const UnifiedBookingForm: React.FC<UnifiedBookingFormProps> = ({
           handleDateChange={handleDateChange}
           handleTimeChange={handleTimeChange}
           handleClientInfoSubmit={handleClientInfoSubmit}
-          handleCompleteBooking={handleBookingConclude} // Use the new conclude handler
+          handleCompleteBooking={handleBookingConclude}
           goToPreviousStep={goToPreviousStep}
           getAvailableServicesForTeamMember={getAvailableServicesForTeamMember}
           checkInsuranceLimitReached={checkInsuranceLimitReached}
