@@ -1,11 +1,13 @@
 
 import React from 'react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Appointment } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Appointment } from '@/types';
+import { formatDateTimeInTimezone, formatDateInTimezone, formatTimeInTimezone } from '@/utils/dynamicTimezone';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
+import { Calendar, Clock, User, Phone, Mail, MapPin, CreditCard, X } from 'lucide-react';
+import { parseISO } from 'date-fns';
 
 interface AppointmentCardProps {
   appointment: Appointment;
@@ -14,99 +16,152 @@ interface AppointmentCardProps {
   onCancel: (id: string) => void;
 }
 
-const AppointmentCard = ({
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case 'scheduled':
+      return 'bg-blue-500';
+    case 'completed':
+      return 'bg-green-500';
+    case 'canceled':
+      return 'bg-red-500';
+    case 'no-show':
+      return 'bg-orange-500';
+    default:
+      return 'bg-gray-500';
+  }
+};
+
+const getStatusLabel = (status: string): string => {
+  switch (status) {
+    case 'scheduled':
+      return 'Agendado';
+    case 'completed':
+      return 'Concluído';
+    case 'canceled':
+      return 'Cancelado';
+    case 'no-show':
+      return 'Faltou';
+    default:
+      return status;
+  }
+};
+
+const AppointmentCard: React.FC<AppointmentCardProps> = ({
   appointment,
   teamMemberName,
   insurancePlanName,
   onCancel
-}: AppointmentCardProps) => {
-  const appointmentDate = new Date(appointment.date);
-  const formattedDate = format(appointmentDate, "dd 'de' MMMM, yyyy", { locale: ptBR });
+}) => {
+  const { settings } = useCompanySettings();
+  const timezone = settings?.timezone || 'America/Sao_Paulo';
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'canceled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Parse the appointment date correctly
+  const appointmentDate = parseISO(appointment.date);
   
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'scheduled':
-        return 'Agendado';
-      case 'completed':
-        return 'Concluído';
-      case 'canceled':
-        return 'Cancelado';
-      default:
-        return status;
-    }
-  };
+  console.log('AppointmentCard: Rendering appointment', {
+    id: appointment.id,
+    rawDate: appointment.date,
+    parsedDate: appointmentDate,
+    timezone,
+    startTime: appointment.start_time,
+    endTime: appointment.end_time
+  });
 
   return (
-    <Card key={appointment.id} className="p-4">
-      <div className="flex flex-col sm:flex-row justify-between">
-        <div>
-          <div className="flex items-center mb-2">
-            <h3 className="font-medium mr-3">{appointment.client_name}</h3>
-            <Badge variant="outline" className={getStatusColor(appointment.status)}>
-              {getStatusText(appointment.status)}
+    <Card className="w-full">
+      <CardContent className="p-6">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant="secondary" 
+              className={`text-white ${getStatusColor(appointment.status)}`}
+            >
+              {getStatusLabel(appointment.status)}
             </Badge>
+            {appointment.source && (
+              <Badge variant="outline">
+                {appointment.source === 'client' ? 'Cliente' : 'Dashboard'}
+              </Badge>
+            )}
           </div>
-          <p className="text-sm text-gray-600">
-            {formattedDate} • {appointment.start_time} - {appointment.end_time}
-          </p>
-          <p className="text-sm text-gray-600 mt-1">{appointment.client_email}</p>
-          {appointment.client_phone && (
-            <p className="text-sm text-gray-600">{appointment.client_phone}</p>
-          )}
           
-          {/* Additional information: team member and insurance plan */}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {teamMemberName && (
-              <Badge variant="secondary" className="text-xs font-normal">
-                Profissional: {teamMemberName}
-              </Badge>
-            )}
-            
-            {insurancePlanName ? (
-              <Badge variant="secondary" className="text-xs font-normal">
-                Convênio: {insurancePlanName}
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="text-xs font-normal">
-                Particular
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        <div className="mt-3 sm:mt-0">
           {appointment.status === 'scheduled' && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => onCancel(appointment.id)}
-              className="text-red-600 border-red-200 hover:bg-red-50"
+              className="text-red-600 hover:text-red-800 hover:bg-red-50"
             >
+              <X className="h-4 w-4" />
               Cancelar
             </Button>
           )}
         </div>
-      </div>
-      
-      {appointment.notes && (
-        <div className="mt-3 text-sm border-t pt-2">
-          <span className="font-medium">Notas: </span>
-          {appointment.notes}
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <span className="font-medium">
+              {formatDateInTimezone(appointmentDate, timezone, 'EEEE, dd \'de\' MMMM \'de\' yyyy')}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="h-4 w-4 text-gray-500" />
+            <span>
+              {appointment.start_time} - {appointment.end_time}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm">
+            <User className="h-4 w-4 text-gray-500" />
+            <span className="font-medium">{appointment.client_name}</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm">
+            <Mail className="h-4 w-4 text-gray-500" />
+            <span>{appointment.client_email}</span>
+          </div>
+
+          {appointment.client_phone && (
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="h-4 w-4 text-gray-500" />
+              <span>{appointment.client_phone}</span>
+            </div>
+          )}
+
+          {teamMemberName && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="h-4 w-4 text-gray-500" />
+              <span>Profissional: {teamMemberName}</span>
+            </div>
+          )}
+
+          {insurancePlanName && (
+            <div className="flex items-center gap-2 text-sm">
+              <CreditCard className="h-4 w-4 text-gray-500" />
+              <span>Convênio: {insurancePlanName}</span>
+            </div>
+          )}
+
+          {appointment.price && (
+            <div className="flex items-center gap-2 text-sm">
+              <CreditCard className="h-4 w-4 text-gray-500" />
+              <span className="font-medium">
+                R$ {appointment.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          )}
+
+          {appointment.notes && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-md">
+              <p className="text-sm text-gray-700">
+                <strong>Observações:</strong> {appointment.notes}
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </CardContent>
     </Card>
   );
 };

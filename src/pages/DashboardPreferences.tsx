@@ -1,197 +1,83 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { PreferencesForm, PreferencesFormData } from '@/components/preferences/PreferencesForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PreferencesForm } from '@/components/preferences/PreferencesForm';
+import { CompanyProfileTab } from '@/components/preferences/CompanyProfileTab';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
-
-// Define the correct type for calendar_view
-type CalendarView = 'day' | 'week' | 'month';
+import { toast } from 'sonner';
+import { Settings, Building2 } from 'lucide-react';
 
 const DashboardPreferences = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [preferences, setPreferences] = useState<PreferencesFormData | null>(null);
-  
-  useEffect(() => {
-    if (user) {
-      fetchPreferences();
-    }
-  }, [user]);
-  
-  const fetchPreferences = async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
-      
-      // Check if preferences exist for this user
-      const { data, error } = await supabase
-        .from('system_preferences')
-        .select('*')
-        .eq('professional_id', user.id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error code
-        throw error;
-      }
-      
-      if (data) {
-        // Ensure calendar_view is one of the allowed values
-        let calendarView: CalendarView = 'week';
-        if (data.calendar_view === 'day' || data.calendar_view === 'week' || data.calendar_view === 'month') {
-          calendarView = data.calendar_view as CalendarView;
-        }
-        
-        setPreferences({
-          default_appointment_duration: data.default_appointment_duration || 60,
-          appointment_buffer_minutes: data.appointment_buffer_minutes || 0,
-          working_hours_start: data.working_hours_start || '08:00',
-          working_hours_end: data.working_hours_end || '18:00',
-          working_days: data.working_days || [1, 2, 3, 4, 5],
-          notifications_enabled: data.notifications_enabled !== null ? data.notifications_enabled : true,
-          reminder_hours_before: data.reminder_hours_before || 24,
-          calendar_view: calendarView
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching preferences:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar as preferências',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleSubmit = async (data: PreferencesFormData) => {
+
+  const handlePreferencesSubmit = async (data: any) => {
     if (!user) return;
     
     setIsSubmitting(true);
     
     try {
-      // Check if preferences exist for this user
-      const { data: existingData, error: existingError } = await supabase
+      console.log('DashboardPreferences: Saving preferences:', data);
+      
+      const { error } = await supabase
         .from('system_preferences')
-        .select('id')
-        .eq('professional_id', user.id)
-        .single();
-      
-      let result;
-      
-      if (existingData) {
-        // Update existing preferences
-        result = await supabase
-          .from('system_preferences')
-          .update({
-            default_appointment_duration: data.default_appointment_duration,
-            appointment_buffer_minutes: data.appointment_buffer_minutes,
-            notifications_enabled: data.notifications_enabled,
-            reminder_hours_before: data.reminder_hours_before,
-            calendar_view: data.calendar_view,
-            updated_at: new Date().toISOString()
-          })
-          .eq('professional_id', user.id);
-      } else {
-        // Insert new preferences
-        result = await supabase
-          .from('system_preferences')
-          .insert({
-            professional_id: user.id,
-            default_appointment_duration: data.default_appointment_duration,
-            appointment_buffer_minutes: data.appointment_buffer_minutes,
-            notifications_enabled: data.notifications_enabled,
-            reminder_hours_before: data.reminder_hours_before,
-            calendar_view: data.calendar_view
-          });
+        .upsert({
+          professional_id: user.id,
+          ...data
+        });
+        
+      if (error) {
+        console.error('DashboardPreferences: Error saving preferences:', error);
+        throw error;
       }
       
-      if (result.error) throw result.error;
-      
-      // Update local state
-      setPreferences(data);
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Preferências salvas com sucesso',
+      console.log('DashboardPreferences: Preferences saved successfully');
+      toast.success('Preferências salvas com sucesso!', {
+        description: 'Suas configurações foram atualizadas.',
       });
     } catch (error) {
-      console.error('Error saving preferences:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível salvar as preferências',
-        variant: 'destructive',
+      console.error('DashboardPreferences: Error:', error);
+      toast.error('Erro ao salvar preferências', {
+        description: 'Tente novamente em alguns instantes.',
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   return (
     <DashboardLayout title="Preferências">
       <div className="space-y-6">
-        <p className="text-muted-foreground">
-          Personalize as configurações do seu sistema de agendamentos
-        </p>
-        
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="general">Geral</TabsTrigger>
-            <TabsTrigger value="notifications">Notificações</TabsTrigger>
+        <div className="flex items-center gap-3">
+          <Settings className="h-6 w-6 text-blue-600" />
+          <p className="text-muted-foreground">
+            Configure suas preferências pessoais e da empresa para personalizar a experiência do sistema.
+          </p>
+        </div>
+
+        <Tabs defaultValue="company" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="company" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Perfil da Empresa
+            </TabsTrigger>
+            <TabsTrigger value="system" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Preferências do Sistema
+            </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="general">
-            <Alert className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                As configurações de horários de trabalho e dias disponíveis foram movidas para a página de{" "}
-                <Link to="/dashboard/schedules" className="font-medium underline">
-                  Horários
-                </Link>
-                .
-              </AlertDescription>
-            </Alert>
-            
-            {loading ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Carregando...</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Carregando suas preferências...</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <PreferencesForm 
-                initialData={preferences || undefined}
-                onSubmit={handleSubmit}
-                isSubmitting={isSubmitting}
-                simplified={true} // Add a flag to indicate simplified form
-              />
-            )}
+
+          <TabsContent value="company">
+            <CompanyProfileTab />
           </TabsContent>
-          
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações de Notificações</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade de configuração detalhada de notificações será implementada em breve.
-                </p>
-              </CardContent>
-            </Card>
+
+          <TabsContent value="system">
+            <PreferencesForm
+              onSubmit={handlePreferencesSubmit}
+              isSubmitting={isSubmitting}
+            />
           </TabsContent>
         </Tabs>
       </div>

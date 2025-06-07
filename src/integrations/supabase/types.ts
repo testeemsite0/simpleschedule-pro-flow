@@ -143,6 +143,51 @@ export type Database = {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          address: string | null
+          company_name: string | null
+          company_type: string
+          created_at: string
+          display_name: string
+          id: string
+          logo_url: string | null
+          phone: string | null
+          professional_id: string
+          timezone: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          company_name?: string | null
+          company_type?: string
+          created_at?: string
+          display_name: string
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          professional_id: string
+          timezone?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          company_name?: string | null
+          company_type?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          professional_id?: string
+          timezone?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       insurance_plans: {
         Row: {
           created_at: string

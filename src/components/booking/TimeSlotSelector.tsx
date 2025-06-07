@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { filterPastSlots } from './improved-time-utils';
 import { ImprovedLoading } from '@/components/ui/improved-loading';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
 
 interface AvailableSlot {
   date: Date;
@@ -26,15 +27,17 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
   showConfirmButton = false,
   isLoading = false
 }) => {
+  const { settings } = useCompanySettings();
+  const timezone = settings?.timezone || 'America/Sao_Paulo';
   const [selectedSlot, setSelectedSlot] = React.useState<AvailableSlot | null>(null);
 
-  // Filter out past slots using improved timezone handling
+  // Filter out past slots using improved timezone handling with company timezone
   const filteredSlots = React.useMemo(() => {
-    console.log('TimeSlotSelector: Filtering', availableSlots.length, 'slots');
-    const filtered = filterPastSlots(availableSlots);
+    console.log('TimeSlotSelector: Filtering', availableSlots.length, 'slots in timezone', timezone);
+    const filtered = filterPastSlots(availableSlots, timezone);
     console.log('TimeSlotSelector: After filtering past slots:', filtered.length, 'remaining');
     return filtered;
-  }, [availableSlots]);
+  }, [availableSlots, timezone]);
 
   const handleSelectSlot = (slot: AvailableSlot) => {
     setSelectedSlot(slot);

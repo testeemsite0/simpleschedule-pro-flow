@@ -2,7 +2,8 @@
 import { useMemo } from 'react';
 import { TimeSlot, Appointment } from '@/types';
 import { generateAvailableTimeSlots } from '@/components/booking/improved-time-utils';
-import { getCurrentBrazilTime, getBrazilToday } from '@/utils/timezone';
+import { getTodayInTimezone } from '@/utils/dynamicTimezone';
+import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { addDays, isAfter, startOfDay, format } from 'date-fns';
 
 interface UseAvailabilityCalculationProps {
@@ -18,15 +19,17 @@ export const useAvailabilityCalculation = ({
   teamMemberId,
   date
 }: UseAvailabilityCalculationProps) => {
+  const { settings } = useCompanySettings();
+  const timezone = settings?.timezone || 'America/Sao_Paulo';
   
-  // Calculate available dates (next 30 days from today in Brazil timezone)
+  // Calculate available dates (next 30 days from today in company timezone)
   const availableDates = useMemo(() => {
     if (!timeSlots || timeSlots.length === 0) {
       console.log("No time slots available for date calculation");
       return [];
     }
 
-    const today = getBrazilToday();
+    const today = getTodayInTimezone(timezone);
     const dates: Date[] = [];
     
     // Get unique days of week that have time slots
@@ -36,7 +39,7 @@ export const useAvailabilityCalculation = ({
         .map(slot => slot.day_of_week)
     )];
     
-    console.log("Available days of week:", availableDaysOfWeek);
+    console.log("Available days of week:", availableDaysOfWeek, "in timezone:", timezone);
     
     // Generate dates for the next 30 days
     for (let i = 0; i < 30; i++) {
@@ -49,9 +52,9 @@ export const useAvailabilityCalculation = ({
       }
     }
     
-    console.log(`Generated ${dates.length} available dates`);
+    console.log(`Generated ${dates.length} available dates in timezone ${timezone}`);
     return dates;
-  }, [timeSlots, teamMemberId]);
+  }, [timeSlots, teamMemberId, timezone]);
 
   // Calculate available time slots for selected date
   const availableSlots = useMemo(() => {
@@ -61,7 +64,7 @@ export const useAvailabilityCalculation = ({
     }
 
     const dayOfWeek = date.getDay();
-    console.log(`Calculating slots for ${format(date, 'yyyy-MM-dd')}, day of week: ${dayOfWeek}`);
+    console.log(`Calculating slots for ${format(date, 'yyyy-MM-dd')}, day of week: ${dayOfWeek} in timezone: ${timezone}`);
     
     // Filter time slots for the selected day and team member
     const daySlots = timeSlots.filter(slot => {
@@ -91,12 +94,12 @@ export const useAvailabilityCalculation = ({
     
     console.log(`Found ${dayAppointments.length} existing appointments for ${dateString}`);
     
-    // Generate available slots using improved timezone handling
-    const slots = generateAvailableTimeSlots(daySlots, dayAppointments, date);
+    // Generate available slots using improved timezone handling with company timezone
+    const slots = generateAvailableTimeSlots(daySlots, dayAppointments, date, timezone);
     
-    console.log(`Generated ${slots.length} available slots for ${format(date, 'yyyy-MM-dd')}`);
+    console.log(`Generated ${slots.length} available slots for ${format(date, 'yyyy-MM-dd')} in timezone ${timezone}`);
     return slots;
-  }, [timeSlots, appointments, teamMemberId, date]);
+  }, [timeSlots, appointments, teamMemberId, date, timezone]);
 
   return {
     availableDates,

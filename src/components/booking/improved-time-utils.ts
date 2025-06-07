@@ -1,7 +1,7 @@
 
-import { getCurrentBrazilTime, isSlotInPast, isBrazilToday } from '@/utils/timezone';
+import { isSlotInPastInTimezone, isTodayInTimezone } from '@/utils/dynamicTimezone';
 import { TimeSlot, Appointment } from '@/types';
-import { format, isSameDay } from 'date-fns';
+import { format } from 'date-fns';
 
 interface AvailableSlot {
   date: Date;
@@ -42,14 +42,14 @@ export const doTimeSlotsOverlap = (
 export const generateAvailableTimeSlots = (
   daySlots: TimeSlot[],
   bookedAppointments: Appointment[],
-  date: Date
+  date: Date,
+  timezone: string = 'America/Sao_Paulo'
 ): AvailableSlot[] => {
   const slots: AvailableSlot[] = [];
-  const now = getCurrentBrazilTime();
-  const isToday = isBrazilToday(date);
+  const isToday = isTodayInTimezone(date, timezone);
   
-  console.log(`Generating slots for ${format(date, 'yyyy-MM-dd')} with ${daySlots.length} day slots`);
-  console.log(`Is today: ${isToday}, Current Brazil time:`, now);
+  console.log(`Generating slots for ${format(date, 'yyyy-MM-dd')} with ${daySlots.length} day slots in timezone ${timezone}`);
+  console.log(`Is today: ${isToday}`);
   
   daySlots.forEach(slot => {
     // Convert times to minutes for easier calculation
@@ -77,8 +77,8 @@ export const generateAvailableTimeSlots = (
       const endTime = minutesToTime(time + duration);
       
       // Skip past times using proper timezone handling
-      if (isSlotInPast(date, startTime)) {
-        console.log(`Skipping past slot: ${startTime} on ${format(date, 'yyyy-MM-dd')}`);
+      if (isSlotInPastInTimezone(date, startTime, timezone)) {
+        console.log(`Skipping past slot: ${startTime} on ${format(date, 'yyyy-MM-dd')} in timezone ${timezone}`);
         continue;
       }
       
@@ -104,11 +104,11 @@ export const generateAvailableTimeSlots = (
     }
   });
   
-  console.log(`Generated ${slots.length} available slots for ${format(date, 'yyyy-MM-dd')}`);
+  console.log(`Generated ${slots.length} available slots for ${format(date, 'yyyy-MM-dd')} in timezone ${timezone}`);
   return slots;
 };
 
 // Filter out past slots with timezone awareness
-export const filterPastSlots = (slots: AvailableSlot[]): AvailableSlot[] => {
-  return slots.filter(slot => !isSlotInPast(slot.date, slot.startTime));
+export const filterPastSlots = (slots: AvailableSlot[], timezone: string = 'America/Sao_Paulo'): AvailableSlot[] => {
+  return slots.filter(slot => !isSlotInPastInTimezone(slot.date, slot.startTime, timezone));
 };
