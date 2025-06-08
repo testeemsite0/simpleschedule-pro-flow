@@ -44,14 +44,14 @@ export const useBookingCalendar = ({
     availableDates,
     availableSlots,
     selectedDate,
-    filteredTimeSlots
+    filteredTimeSlots,
+    isLoading: slotsLoading
   } = useBookingSlots({
+    professionalId,
+    teamMemberId: selectedTeamMember,
+    selectedDate: stepSelectedDate,
     timeSlots,
-    appointments,
-    selectedTeamMember,
-    selectedService,
-    isOverLimit,
-    currentStep
+    appointments
   });
   
   // Merge the date from steps and slots
@@ -77,8 +77,8 @@ export const useBookingCalendar = ({
     selectedInsurance,
     insurancePlans,
     isOverLimit,
-    loading,
-    currentStep,  // Making sure currentStep is returned
+    loading: loading || slotsLoading,
+    currentStep,
     error,
     filteredTimeSlots,
     handleTeamMemberChange,

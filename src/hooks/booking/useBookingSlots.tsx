@@ -4,31 +4,41 @@ import { useBookingAvailability } from './useBookingAvailability';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { getAppointmentDateString } from '@/utils/timezone';
+import { TimeSlot, Appointment } from '@/types';
 
 interface UseBookingSlotsProps {
   professionalId?: string;
   teamMemberId?: string;
   selectedDate?: Date;
   serviceDuration?: number;
+  timeSlots: TimeSlot[];
+  appointments: Appointment[];
 }
 
-export interface TimeSlot {
-  start: string;
-  end: string;
-  available: boolean;
+export interface AvailableSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  teamMemberId?: string;
 }
 
 export const useBookingSlots = ({
   professionalId,
   teamMemberId,
   selectedDate,
-  serviceDuration = 60
+  serviceDuration = 60,
+  timeSlots,
+  appointments
 }: UseBookingSlotsProps) => {
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const { calculateAvailableSlots } = useBookingAvailability();
+  const { availableDates, availableSlots, calculateAvailableSlots } = useBookingAvailability({
+    timeSlots,
+    appointments,
+    selectedTeamMemberId: teamMemberId,
+    selectedDate
+  });
 
   // Fetch booked slots for the selected date
   const fetchBookedSlots = async () => {
@@ -66,61 +76,19 @@ export const useBookingSlots = ({
     fetchBookedSlots();
   }, [professionalId, teamMemberId, selectedDate]);
 
-  useEffect(() => {
-    const generateSlots = async () => {
-      if (!professionalId || !teamMemberId || !selectedDate) {
-        setAvailableSlots([]);
-        return;
-      }
-
-      setIsLoading(true);
-      
-      try {
-        console.log('Generating slots for:', {
-          professionalId,
-          teamMemberId,
-          selectedDate: selectedDate.toISOString(),
-          serviceDuration,
-          bookedSlots
-        });
-
-        const slots = await calculateAvailableSlots({
-          professionalId,
-          teamMemberId,
-          date: selectedDate,
-          serviceDuration
-        });
-
-        console.log('Raw calculated slots:', slots);
-
-        // Filter out booked slots
-        const filteredSlots = slots.filter(slot => {
-          const isBooked = bookedSlots.includes(slot.start);
-          console.log(`Slot ${slot.start}: ${isBooked ? 'BOOKED' : 'AVAILABLE'}`);
-          return !isBooked;
-        });
-
-        console.log('Filtered available slots:', filteredSlots);
-        
-        setAvailableSlots(filteredSlots);
-      } catch (error) {
-        console.error('Error generating slots:', error);
-        setAvailableSlots([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    generateSlots();
-  }, [professionalId, teamMemberId, selectedDate, serviceDuration, bookedSlots, calculateAvailableSlots]);
-
   // Memoize the result to prevent unnecessary re-renders
   const result = useMemo(() => ({
+    availableDates,
     availableSlots,
+    selectedDate,
+    filteredTimeSlots: timeSlots.filter(slot => 
+      slot.professional_id === professionalId &&
+      (!teamMemberId || slot.team_member_id === teamMemberId)
+    ),
     isLoading,
     bookedSlots,
     refreshSlots: fetchBookedSlots
-  }), [availableSlots, isLoading, bookedSlots]);
+  }), [availableDates, availableSlots, selectedDate, timeSlots, professionalId, teamMemberId, isLoading, bookedSlots]);
 
   return result;
 };

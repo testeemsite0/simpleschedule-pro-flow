@@ -70,6 +70,7 @@ export const appointments: Appointment[] = [
     end_time: "10:00",
     notes: "Primeira consulta",
     status: "scheduled",
+    free_tier_used: false,
   },
   {
     id: "2",
@@ -82,6 +83,7 @@ export const appointments: Appointment[] = [
     end_time: "15:00",
     notes: "Sessão de acompanhamento",
     status: "scheduled",
+    free_tier_used: false,
   },
   {
     id: "3",
@@ -94,6 +96,7 @@ export const appointments: Appointment[] = [
     end_time: "09:00",
     notes: "Avaliação física",
     status: "scheduled",
+    free_tier_used: false,
   },
 ];
 
