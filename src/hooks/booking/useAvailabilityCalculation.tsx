@@ -4,13 +4,20 @@ import { TimeSlot, Appointment } from '@/types';
 import { generateAvailableTimeSlots } from '@/components/booking/improved-time-utils';
 import { getTodayInTimezone } from '@/utils/dynamicTimezone';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
-import { addDays, isAfter, startOfDay, format } from 'date-fns';
+import { addDays, format } from 'date-fns';
 
 interface UseAvailabilityCalculationProps {
   timeSlots: TimeSlot[];
   appointments: Appointment[];
   teamMemberId?: string;
   date?: Date | null;
+}
+
+interface AvailableSlot {
+  date: Date;
+  startTime: string;
+  endTime: string;
+  teamMemberId?: string;
 }
 
 export const useAvailabilityCalculation = ({
@@ -81,7 +88,7 @@ export const useAvailabilityCalculation = ({
       return [];
     }
 
-    // Filter appointments for the selected date
+    // Filter appointments for the selected date and team member - CRITICAL FIX
     const dateString = format(date, 'yyyy-MM-dd');
     const dayAppointments = appointments.filter(app => {
       const appDateString = format(new Date(app.date), 'yyyy-MM-dd');
@@ -89,15 +96,19 @@ export const useAvailabilityCalculation = ({
       const matchesTeamMember = !teamMemberId || app.team_member_id === teamMemberId;
       const isScheduled = app.status === 'scheduled';
       
+      console.log(`Appointment check: ${app.id}, date match: ${matchesDate}, team match: ${matchesTeamMember}, scheduled: ${isScheduled}`);
+      
       return matchesDate && matchesTeamMember && isScheduled;
     });
     
-    console.log(`Found ${dayAppointments.length} existing appointments for ${dateString}`);
+    console.log(`Found ${dayAppointments.length} existing appointments for ${dateString}`, dayAppointments.map(a => `${a.start_time}-${a.end_time}`));
     
     // Generate available slots using improved timezone handling with company timezone
     const slots = generateAvailableTimeSlots(daySlots, dayAppointments, date, timezone);
     
     console.log(`Generated ${slots.length} available slots for ${format(date, 'yyyy-MM-dd')} in timezone ${timezone}`);
+    console.log('Available slots:', slots.map(s => s.startTime));
+    
     return slots;
   }, [timeSlots, appointments, teamMemberId, date, timezone]);
 

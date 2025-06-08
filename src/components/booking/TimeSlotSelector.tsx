@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -32,14 +32,19 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
   const [selectedSlot, setSelectedSlot] = React.useState<AvailableSlot | null>(null);
 
   // Filter out past slots using improved timezone handling with company timezone
-  const filteredSlots = React.useMemo(() => {
+  const filteredSlots = useMemo(() => {
     console.log('TimeSlotSelector: Filtering', availableSlots.length, 'slots in timezone', timezone);
+    console.log('Available slots before filtering:', availableSlots.map(s => s.startTime));
+    
     const filtered = filterPastSlots(availableSlots, timezone);
     console.log('TimeSlotSelector: After filtering past slots:', filtered.length, 'remaining');
+    console.log('Available slots after filtering:', filtered.map(s => s.startTime));
+    
     return filtered;
   }, [availableSlots, timezone]);
 
   const handleSelectSlot = (slot: AvailableSlot) => {
+    console.log("TimeSlotSelector: Selecting slot", slot);
     setSelectedSlot(slot);
     
     // Only call the parent component's onSelectSlot function if showConfirmButton is false
@@ -71,8 +76,11 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
       
       {filteredSlots.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-2">
             Não há horários disponíveis para esta data.
+          </p>
+          <p className="text-sm text-gray-500">
+            Todos os horários podem estar ocupados ou não há configuração de horários para este dia.
           </p>
         </div>
       ) : (
@@ -99,7 +107,7 @@ const TimeSlotSelector: React.FC<TimeSlotSelectorProps> = ({
           {showConfirmButton && selectedSlot && (
             <div className="flex justify-end mt-4">
               <Button onClick={handleConfirmSelection} className="bg-primary hover:bg-primary/90">
-                Confirmar Horário
+                Confirmar Horário ({selectedSlot.startTime})
               </Button>
             </div>
           )}

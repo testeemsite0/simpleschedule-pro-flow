@@ -33,14 +33,14 @@ export const useBookingSlots = ({
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  const { availableDates, availableSlots, calculateAvailableSlots } = useBookingAvailability({
+  const { availableDates, availableSlots } = useBookingAvailability({
     timeSlots,
     appointments,
     selectedTeamMemberId: teamMemberId,
     selectedDate
   });
 
-  // Fetch booked slots for the selected date
+  // Fetch additional booked slots for the selected date (backup check)
   const fetchBookedSlots = async () => {
     if (!professionalId || !selectedDate || !teamMemberId) {
       setBookedSlots([]);
@@ -48,11 +48,14 @@ export const useBookingSlots = ({
     }
 
     try {
+      setIsLoading(true);
       const formattedDate = getAppointmentDateString(selectedDate);
+      
+      console.log(`Fetching booked slots for ${formattedDate}, professional: ${professionalId}, team member: ${teamMemberId}`);
       
       const { data, error } = await supabase
         .from('appointments')
-        .select('start_time, end_time')
+        .select('start_time, end_time, id')
         .eq('professional_id', professionalId)
         .eq('team_member_id', teamMemberId)
         .eq('date', formattedDate)
@@ -63,12 +66,16 @@ export const useBookingSlots = ({
         return;
       }
 
+      console.log('Fetched booked appointments:', data);
+      
       // Create an array of all booked time ranges
       const booked = data?.map(appointment => appointment.start_time) || [];
       setBookedSlots(booked);
       
     } catch (error) {
       console.error('Error in fetchBookedSlots:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -76,10 +83,19 @@ export const useBookingSlots = ({
     fetchBookedSlots();
   }, [professionalId, teamMemberId, selectedDate]);
 
+  // Filter out any slots that are in bookedSlots (double protection)
+  const filteredAvailableSlots = useMemo(() => {
+    if (bookedSlots.length === 0) return availableSlots;
+    
+    const filtered = availableSlots.filter(slot => !bookedSlots.includes(slot.startTime));
+    console.log(`Filtered ${availableSlots.length - filtered.length} booked slots from available slots`);
+    return filtered;
+  }, [availableSlots, bookedSlots]);
+
   // Memoize the result to prevent unnecessary re-renders
   const result = useMemo(() => ({
     availableDates,
-    availableSlots,
+    availableSlots: filteredAvailableSlots,
     selectedDate,
     filteredTimeSlots: timeSlots.filter(slot => 
       slot.professional_id === professionalId &&
@@ -88,7 +104,7 @@ export const useBookingSlots = ({
     isLoading,
     bookedSlots,
     refreshSlots: fetchBookedSlots
-  }), [availableDates, availableSlots, selectedDate, timeSlots, professionalId, teamMemberId, isLoading, bookedSlots]);
+  }), [availableDates, filteredAvailableSlots, selectedDate, timeSlots, professionalId, teamMemberId, isLoading, bookedSlots]);
 
   return result;
 };

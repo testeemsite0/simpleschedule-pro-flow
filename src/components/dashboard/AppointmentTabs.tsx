@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Appointment } from '@/types';
-import AppointmentList from './AppointmentList';
+import AppointmentsByProfessional from './appointments/AppointmentsByProfessional';
 import { useAppointmentsRealtime } from '@/hooks/useAppointmentsRealtime';
 import { useAuth } from '@/context/AuthContext';
 
@@ -89,9 +89,10 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
         {loading ? (
           <p>Carregando agendamentos...</p>
         ) : (
-          <AppointmentList 
+          <AppointmentsByProfessional 
             appointments={upcomingAppointments} 
-            onAppointmentCanceled={handleAppointmentCanceled} 
+            onAppointmentCanceled={handleAppointmentCanceled}
+            onRefreshNeeded={onRefreshNeeded}
           />
         )}
       </TabsContent>
@@ -100,7 +101,10 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
         {loading ? (
           <p>Carregando agendamentos...</p>
         ) : (
-          <AppointmentList appointments={pastAppointments} />
+          <AppointmentsByProfessional 
+            appointments={pastAppointments}
+            onRefreshNeeded={onRefreshNeeded}
+          />
         )}
       </TabsContent>
       
@@ -108,7 +112,10 @@ const AppointmentTabs: React.FC<AppointmentTabsProps> = ({
         {loading ? (
           <p>Carregando agendamentos...</p>
         ) : (
-          <AppointmentList appointments={canceledAppointments} />
+          <AppointmentsByProfessional 
+            appointments={canceledAppointments}
+            onRefreshNeeded={onRefreshNeeded}
+          />
         )}
       </TabsContent>
     </Tabs>

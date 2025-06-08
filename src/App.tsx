@@ -1,4 +1,3 @@
-
 import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -31,6 +30,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const DashboardCompany = lazy(() => import("./pages/DashboardCompany"));
 const DashboardSubscription = lazy(() => import("./pages/DashboardSubscription"));
+const DashboardSecretaries = lazy(() => import("./pages/DashboardSecretaries"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -222,6 +222,10 @@ function App() {
                       <DashboardSubscription />
                     </Suspense>
                   } 
+                />
+                <Route
+                  path="/dashboard/secretaries"
+                  element={<DashboardSecretaries />}
                 />
                 <Route
                   path="*"
