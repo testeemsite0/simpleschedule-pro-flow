@@ -54,27 +54,28 @@ const DashboardSecretaries = () => {
     try {
       setLoading(true);
 
-      // Fetch secretaries (users with secretary role)
-      const { data: secretaryData, error: secretaryError } = await supabase
+      // First, fetch user roles that are secretaries
+      const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id,
-          role,
-          profiles!inner(
-            id,
-            name,
-            email
-          )
-        `)
+        .select('user_id, role')
         .eq('role', 'secretary');
 
-      if (secretaryError) throw secretaryError;
+      if (rolesError) throw rolesError;
 
-      const secretaryList = secretaryData?.map(item => ({
-        id: item.user_id,
-        name: item.profiles.name,
-        email: item.profiles.email,
-        role: item.role,
+      // Then fetch profiles for those users
+      const secretaryIds = userRoles?.map(role => role.user_id) || [];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', secretaryIds);
+
+      if (profilesError) throw profilesError;
+
+      const secretaryList = profilesData?.map(profile => ({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        role: 'secretary',
         created_at: new Date().toISOString()
       })) || [];
 
@@ -94,28 +95,27 @@ const DashboardSecretaries = () => {
 
       setProfessionals(professionalList);
 
-      // Fetch assignments
+      // Fetch assignments with manual joins
       const { data: assignmentData, error: assignmentError } = await supabase
         .from('secretary_assignments')
-        .select(`
-          id,
-          secretary_id,
-          professional_id,
-          is_active,
-          secretary:profiles!secretary_assignments_secretary_id_fkey(name),
-          professional:profiles!secretary_assignments_professional_id_fkey(name, display_name)
-        `);
+        .select('id, secretary_id, professional_id, is_active');
 
       if (assignmentError) throw assignmentError;
 
-      const assignmentList = assignmentData?.map(item => ({
-        id: item.id,
-        secretary_id: item.secretary_id,
-        professional_id: item.professional_id,
-        is_active: item.is_active,
-        secretary_name: item.secretary?.name || 'Nome não encontrado',
-        professional_name: item.professional?.display_name || item.professional?.name || 'Nome não encontrado'
-      })) || [];
+      // Manually join with profiles data
+      const assignmentList = assignmentData?.map(assignment => {
+        const secretary = profilesData?.find(p => p.id === assignment.secretary_id);
+        const professional = professionalData?.find(p => p.id === assignment.professional_id);
+        
+        return {
+          id: assignment.id,
+          secretary_id: assignment.secretary_id,
+          professional_id: assignment.professional_id,
+          is_active: assignment.is_active,
+          secretary_name: secretary?.name || 'Nome não encontrado',
+          professional_name: professional?.display_name || professional?.name || 'Nome não encontrado'
+        };
+      }) || [];
 
       setAssignments(assignmentList);
 
