@@ -1,16 +1,12 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const usePasswordChangeRequired = (userId?: string) => {
   const [isPasswordChangeRequired, setIsPasswordChangeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    checkPasswordChangeRequired();
-  }, [userId]);
-
-  const checkPasswordChangeRequired = async () => {
+  const checkPasswordChangeRequired = useCallback(async () => {
     if (!userId) {
       setLoading(false);
       return;
@@ -40,13 +36,26 @@ export const usePasswordChangeRequired = (userId?: string) => {
           // Se não tem o campo ou é false, precisa mudar a senha
           setIsPasswordChangeRequired(!profile?.password_changed);
         }
+      } else {
+        // Não é secretária, não precisa mudar senha
+        setIsPasswordChangeRequired(false);
       }
     } catch (error) {
       console.error('Error checking password change requirement:', error);
+      setIsPasswordChangeRequired(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    // Use a small delay to avoid synchronous suspension
+    const timeoutId = setTimeout(() => {
+      checkPasswordChangeRequired();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [checkPasswordChangeRequired]);
 
   const markPasswordChanged = async () => {
     if (!userId) return;
