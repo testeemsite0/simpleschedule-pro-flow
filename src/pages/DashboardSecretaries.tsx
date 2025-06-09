@@ -168,9 +168,15 @@ const DashboardSecretaries = () => {
 
       if (roleError) throw roleError;
 
+      // Marcar que precisa trocar senha
+      await supabase
+        .from('profiles')
+        .update({ password_changed: false })
+        .eq('id', existingUser.id);
+
       toast({
         title: "Sucesso",
-        description: "Secretária criada com sucesso!"
+        description: "Secretária criada com sucesso! Ela será obrigada a trocar a senha no primeiro acesso."
       });
 
       setNewSecretaryEmail('');
@@ -256,9 +262,7 @@ const DashboardSecretaries = () => {
   if (loading) {
     return (
       <DashboardLayout title="Gerenciar Secretárias">
-        <div className="flex items-center justify-center py-8">
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
+        <EnhancedLoading variant="dashboard" />
       </DashboardLayout>
     );
   }
