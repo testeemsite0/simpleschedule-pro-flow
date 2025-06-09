@@ -23,18 +23,23 @@ export const usePasswordChangeRequired = (userId?: string) => {
         .select('role')
         .eq('user_id', userId)
         .eq('role', 'secretary')
-        .single();
+        .maybeSingle();
 
       if (userRole) {
-        // Verifica se já mudou a senha (usando um campo na tabela profiles ou um flag)
-        const { data: profile } = await supabase
+        // Verifica se já mudou a senha
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('password_changed')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
 
-        // Se não tem o campo ou é false, precisa mudar a senha
-        setIsPasswordChangeRequired(!profile?.password_changed);
+        if (error) {
+          console.error('Error checking password change requirement:', error);
+          setIsPasswordChangeRequired(false);
+        } else {
+          // Se não tem o campo ou é false, precisa mudar a senha
+          setIsPasswordChangeRequired(!profile?.password_changed);
+        }
       }
     } catch (error) {
       console.error('Error checking password change requirement:', error);
@@ -47,12 +52,16 @@ export const usePasswordChangeRequired = (userId?: string) => {
     if (!userId) return;
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ password_changed: true })
         .eq('id', userId);
 
-      setIsPasswordChangeRequired(false);
+      if (error) {
+        console.error('Error marking password as changed:', error);
+      } else {
+        setIsPasswordChangeRequired(false);
+      }
     } catch (error) {
       console.error('Error marking password as changed:', error);
     }

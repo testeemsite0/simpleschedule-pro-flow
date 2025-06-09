@@ -347,6 +347,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          password_changed: boolean | null
           profession: string
           slug: string
           updated_at: string | null
@@ -361,6 +362,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          password_changed?: boolean | null
           profession: string
           slug: string
           updated_at?: string | null
@@ -375,6 +377,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          password_changed?: boolean | null
           profession?: string
           slug?: string
           updated_at?: string | null

@@ -66,7 +66,7 @@ const DashboardSecretaries = () => {
         .from('secretary_assignments')
         .select(`
           secretary_id,
-          profiles!secretary_assignments_secretary_id_fkey (
+          profiles:secretary_id (
             id,
             name,
             email,
@@ -77,15 +77,21 @@ const DashboardSecretaries = () => {
         .eq('professional_id', user.id)
         .eq('is_active', true);
 
-      if (assignmentsError) throw assignmentsError;
+      if (assignmentsError) {
+        console.error('Error fetching secretary assignments:', assignmentsError);
+        throw assignmentsError;
+      }
 
-      const secretariesData = assignments?.map(assignment => ({
-        id: assignment.profiles?.id || '',
-        name: assignment.profiles?.name || '',
-        email: assignment.profiles?.email || '',
-        created_at: assignment.profiles?.created_at || '',
-        password_changed: assignment.profiles?.password_changed || false
-      })) || [];
+      const secretariesData = assignments?.map(assignment => {
+        const profile = assignment.profiles as any;
+        return {
+          id: profile?.id || '',
+          name: profile?.name || '',
+          email: profile?.email || '',
+          created_at: profile?.created_at || '',
+          password_changed: profile?.password_changed || false
+        };
+      }).filter(secretary => secretary.id) || [];
 
       setSecretaries(secretariesData);
     } catch (error) {
