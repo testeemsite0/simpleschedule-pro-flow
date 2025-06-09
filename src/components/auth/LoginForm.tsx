@@ -20,7 +20,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginForm = () => {
-  const { login } = useAuth();
+  const { login, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -62,6 +62,17 @@ const LoginForm = () => {
       setIsLoading(false);
     }
   };
+  
+  // Show loading if auth is still loading
+  if (authLoading) {
+    return (
+      <Card className="w-full max-w-md p-6 shadow-lg">
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </Card>
+    );
+  }
   
   return (
     <Card className="w-full max-w-md p-6 shadow-lg">

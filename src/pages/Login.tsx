@@ -6,8 +6,18 @@ import Logo from '@/components/ui/Logo';
 import { useAuth } from '@/context/AuthContext';
 
 const Login = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   
+  // Show loading while checking authentication status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-secondary">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  // If already authenticated, redirect to dashboard
   if (isAuthenticated) {
     return <Navigate to="/dashboard" />;
   }
