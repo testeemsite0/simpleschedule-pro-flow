@@ -11,7 +11,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuthState();
   const { login, register, logout } = useAuthMethods();
-  const { isPasswordChangeRequired, loading: passwordCheckLoading, markPasswordChanged } = usePasswordChangeRequired();
+  const { isPasswordChangeRequired, loading: passwordCheckLoading, markPasswordChanged } = usePasswordChangeRequired(user?.id);
   
   // Se ainda está carregando, mostra loading
   if (isLoading || passwordCheckLoading) {

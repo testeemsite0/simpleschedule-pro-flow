@@ -1,19 +1,17 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/AuthContext';
 
-export const usePasswordChangeRequired = () => {
-  const { user } = useAuth();
+export const usePasswordChangeRequired = (userId?: string) => {
   const [isPasswordChangeRequired, setIsPasswordChangeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkPasswordChangeRequired();
-  }, [user]);
+  }, [userId]);
 
   const checkPasswordChangeRequired = async () => {
-    if (!user) {
+    if (!userId) {
       setLoading(false);
       return;
     }
@@ -23,7 +21,7 @@ export const usePasswordChangeRequired = () => {
       const { data: userRole } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('role', 'secretary')
         .single();
 
@@ -32,7 +30,7 @@ export const usePasswordChangeRequired = () => {
         const { data: profile } = await supabase
           .from('profiles')
           .select('password_changed')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single();
 
         // Se não tem o campo ou é false, precisa mudar a senha
@@ -46,13 +44,13 @@ export const usePasswordChangeRequired = () => {
   };
 
   const markPasswordChanged = async () => {
-    if (!user) return;
+    if (!userId) return;
 
     try {
       await supabase
         .from('profiles')
         .update({ password_changed: true })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       setIsPasswordChangeRequired(false);
     } catch (error) {

@@ -6,10 +6,10 @@ import { useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface DashboardHeaderProps {
-  title: string;
+  title?: string;
 }
 
-export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title }) => {
+export const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title = "Dashboard" }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   

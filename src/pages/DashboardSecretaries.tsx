@@ -1,129 +1,98 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { UserPlus, Users, Shield } from 'lucide-react';
+import { EnhancedLoading } from '@/components/ui/enhanced-loading';
+import { Plus, Mail, User, Calendar, Trash2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface Secretary {
   id: string;
   name: string;
   email: string;
-  role: string;
   created_at: string;
-}
-
-interface SecretaryAssignment {
-  id: string;
-  secretary_id: string;
-  professional_id: string;
-  is_active: boolean;
-  secretary_name: string;
-  professional_name: string;
+  password_changed: boolean;
 }
 
 const DashboardSecretaries = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [secretaries, setSecretaries] = useState<Secretary[]>([]);
-  const [assignments, setAssignments] = useState<SecretaryAssignment[]>([]);
-  const [professionals, setProfessionals] = useState<{id: string; name: string}[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Form states
-  const [newSecretaryEmail, setNewSecretaryEmail] = useState('');
-  const [newSecretaryName, setNewSecretaryName] = useState('');
-  const [selectedSecretary, setSelectedSecretary] = useState('');
-  const [selectedProfessional, setSelectedProfessional] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
 
   useEffect(() => {
-    fetchData();
+    fetchSecretaries();
   }, [user]);
 
-  const fetchData = async () => {
+  const fetchSecretaries = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
-
-      // First, fetch user roles that are secretaries
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role')
-        .eq('role', 'secretary');
-
-      if (rolesError) throw rolesError;
-
-      // Then fetch profiles for those users
-      const secretaryIds = userRoles?.map(role => role.user_id) || [];
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .in('id', secretaryIds);
-
-      if (profilesError) throw profilesError;
-
-      const secretaryList = profilesData?.map(profile => ({
-        id: profile.id,
-        name: profile.name,
-        email: profile.email,
-        role: 'secretary',
-        created_at: new Date().toISOString()
-      })) || [];
-
-      setSecretaries(secretaryList);
-
-      // Fetch professionals
-      const { data: professionalData, error: professionalError } = await supabase
-        .from('profiles')
-        .select('id, name, display_name');
-
-      if (professionalError) throw professionalError;
-
-      const professionalList = professionalData?.map(p => ({
-        id: p.id,
-        name: p.display_name || p.name
-      })) || [];
-
-      setProfessionals(professionalList);
-
-      // Fetch assignments with manual joins
-      const { data: assignmentData, error: assignmentError } = await supabase
+      
+      // Buscar todas as secretárias associadas ao profissional
+      const { data: assignments, error: assignmentsError } = await supabase
         .from('secretary_assignments')
-        .select('id, secretary_id, professional_id, is_active');
+        .select(`
+          secretary_id,
+          profiles!secretary_assignments_secretary_id_fkey (
+            id,
+            name,
+            email,
+            created_at,
+            password_changed
+          )
+        `)
+        .eq('professional_id', user.id)
+        .eq('is_active', true);
 
-      if (assignmentError) throw assignmentError;
+      if (assignmentsError) throw assignmentsError;
 
-      // Manually join with profiles data
-      const assignmentList = assignmentData?.map(assignment => {
-        const secretary = profilesData?.find(p => p.id === assignment.secretary_id);
-        const professional = professionalData?.find(p => p.id === assignment.professional_id);
-        
-        return {
-          id: assignment.id,
-          secretary_id: assignment.secretary_id,
-          professional_id: assignment.professional_id,
-          is_active: assignment.is_active,
-          secretary_name: secretary?.name || 'Nome não encontrado',
-          professional_name: professional?.display_name || professional?.name || 'Nome não encontrado'
-        };
-      }) || [];
+      const secretariesData = assignments?.map(assignment => ({
+        id: assignment.profiles?.id || '',
+        name: assignment.profiles?.name || '',
+        email: assignment.profiles?.email || '',
+        created_at: assignment.profiles?.created_at || '',
+        password_changed: assignment.profiles?.password_changed || false
+      })) || [];
 
-      setAssignments(assignmentList);
-
+      setSecretaries(secretariesData);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Erro ao buscar secretárias:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar dados das secretárias.",
+        description: "Não foi possível carregar as secretárias.",
         variant: "destructive"
       });
     } finally {
@@ -131,60 +100,74 @@ const DashboardSecretaries = () => {
     }
   };
 
-  const createSecretary = async () => {
-    if (!newSecretaryEmail || !newSecretaryName) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos.",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleCreateSecretary = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!user) return;
 
     try {
-      // Check if user exists
-      const { data: existingUser } = await supabase
+      // 1. Criar usuário no Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: formData.password,
+        user_metadata: {
+          name: formData.name,
+          profession: 'Secretária'
+        },
+        email_confirm: true
+      });
+
+      if (authError) throw authError;
+
+      const userId = authData.user?.id;
+      if (!userId) throw new Error('ID do usuário não encontrado');
+
+      // 2. Criar perfil na tabela profiles
+      const { error: profileError } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('email', newSecretaryEmail)
-        .single();
-
-      if (!existingUser) {
-        toast({
-          title: "Erro",
-          description: "Usuário não encontrado. O usuário deve se registrar primeiro na plataforma.",
-          variant: "destructive"
+        .insert({
+          id: userId,
+          name: formData.name,
+          email: formData.email,
+          profession: 'Secretária',
+          slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
+          password_changed: false
         });
-        return;
-      }
 
-      // Create secretary role
+      if (profileError) throw profileError;
+
+      // 3. Adicionar role de secretária
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
-          user_id: existingUser.id,
+          user_id: userId,
           role: 'secretary'
         });
 
       if (roleError) throw roleError;
 
-      // Marcar que precisa trocar senha
-      await supabase
-        .from('profiles')
-        .update({ password_changed: false })
-        .eq('id', existingUser.id);
+      // 4. Criar assignment com o profissional
+      const { error: assignmentError } = await supabase
+        .from('secretary_assignments')
+        .insert({
+          secretary_id: userId,
+          professional_id: user.id,
+          is_active: true
+        });
+
+      if (assignmentError) throw assignmentError;
 
       toast({
         title: "Sucesso",
-        description: "Secretária criada com sucesso! Ela será obrigada a trocar a senha no primeiro acesso."
+        description: "Secretária criada com sucesso!"
       });
 
-      setNewSecretaryEmail('');
-      setNewSecretaryName('');
-      fetchData();
+      setFormData({ name: '', email: '', password: '' });
+      setIsDialogOpen(false);
+      fetchSecretaries();
 
     } catch (error: any) {
-      console.error('Error creating secretary:', error);
+      console.error('Erro ao criar secretária:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao criar secretária.",
@@ -193,67 +176,28 @@ const DashboardSecretaries = () => {
     }
   };
 
-  const createAssignment = async () => {
-    if (!selectedSecretary || !selectedProfessional) {
-      toast({
-        title: "Erro",
-        description: "Selecione a secretária e o profissional.",
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const handleDeleteSecretary = async (secretaryId: string) => {
     try {
-      const { error } = await supabase
+      // Desativar o assignment
+      const { error: assignmentError } = await supabase
         .from('secretary_assignments')
-        .insert({
-          secretary_id: selectedSecretary,
-          professional_id: selectedProfessional,
-          is_active: true
-        });
+        .update({ is_active: false })
+        .eq('secretary_id', secretaryId)
+        .eq('professional_id', user?.id);
 
-      if (error) throw error;
+      if (assignmentError) throw assignmentError;
 
       toast({
         title: "Sucesso",
-        description: "Atribuição criada com sucesso!"
+        description: "Secretária removida com sucesso!"
       });
 
-      setSelectedSecretary('');
-      setSelectedProfessional('');
-      fetchData();
-
+      fetchSecretaries();
     } catch (error: any) {
-      console.error('Error creating assignment:', error);
+      console.error('Erro ao remover secretária:', error);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao criar atribuição.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const toggleAssignment = async (assignmentId: string, isActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('secretary_assignments')
-        .update({ is_active: !isActive })
-        .eq('id', assignmentId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: `Atribuição ${!isActive ? 'ativada' : 'desativada'} com sucesso!`
-      });
-
-      fetchData();
-
-    } catch (error: any) {
-      console.error('Error toggling assignment:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao alterar status da atribuição.",
+        description: "Erro ao remover secretária.",
         variant: "destructive"
       });
     }
@@ -261,178 +205,166 @@ const DashboardSecretaries = () => {
 
   if (loading) {
     return (
-      <DashboardLayout title="Gerenciar Secretárias">
-        <EnhancedLoading variant="dashboard" />
+      <DashboardLayout title="Secretárias">
+        <EnhancedLoading variant="cards" count={3} />
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout title="Gerenciar Secretárias">
+    <DashboardLayout title="Secretárias">
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Shield className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Gerenciamento de Secretárias</h1>
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-muted-foreground">
+              Gerencie as secretárias que têm acesso ao seu sistema de agendamentos.
+            </p>
+          </div>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Secretária
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Nova Secretária</DialogTitle>
+                <DialogDescription>
+                  Preencha os dados para criar uma nova conta de secretária.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <form onSubmit={handleCreateSecretary} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Nome Completo</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Digite o nome completo"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Digite o email"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="password">Senha Temporária</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Digite uma senha temporária"
+                    required
+                    minLength={6}
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    A secretária será obrigada a alterar esta senha no primeiro acesso.
+                  </p>
+                </div>
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    Criar Secretária
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <Tabs defaultValue="secretaries" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="secretaries" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Secretárias ({secretaries.length})
-            </TabsTrigger>
-            <TabsTrigger value="assignments" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Atribuições ({assignments.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="secretaries" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserPlus className="h-5 w-5" />
-                  Adicionar Nova Secretária
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="secretary-name">Nome</Label>
-                    <Input
-                      id="secretary-name"
-                      value={newSecretaryName}
-                      onChange={(e) => setNewSecretaryName(e.target.value)}
-                      placeholder="Nome da secretária"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="secretary-email">Email</Label>
-                    <Input
-                      id="secretary-email"
-                      type="email"
-                      value={newSecretaryEmail}
-                      onChange={(e) => setNewSecretaryEmail(e.target.value)}
-                      placeholder="email@exemplo.com"
-                    />
-                  </div>
-                </div>
-                <Button onClick={createSecretary} className="w-full md:w-auto">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Criar Secretária
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Lista de Secretárias</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {secretaries.length === 0 ? (
-                  <p className="text-center py-4 text-muted-foreground">
-                    Nenhuma secretária cadastrada.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {secretaries.map(secretary => (
-                      <div key={secretary.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{secretary.name}</p>
-                          <p className="text-sm text-muted-foreground">{secretary.email}</p>
-                        </div>
-                        <Badge variant="outline">Secretária</Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="assignments" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Criar Nova Atribuição</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Secretária</Label>
-                    <Select value={selectedSecretary} onValueChange={setSelectedSecretary}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma secretária" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {secretaries.map(secretary => (
-                          <SelectItem key={secretary.id} value={secretary.id}>
-                            {secretary.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Profissional</Label>
-                    <Select value={selectedProfessional} onValueChange={setSelectedProfessional}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um profissional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {professionals.map(professional => (
-                          <SelectItem key={professional.id} value={professional.id}>
-                            {professional.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button onClick={createAssignment} className="w-full md:w-auto">
-                  Criar Atribuição
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Atribuições Existentes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {assignments.length === 0 ? (
-                  <p className="text-center py-4 text-muted-foreground">
-                    Nenhuma atribuição criada.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {assignments.map(assignment => (
-                      <div key={assignment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{assignment.secretary_name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Gerencia: {assignment.professional_name}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={assignment.is_active ? "default" : "secondary"}>
-                            {assignment.is_active ? "Ativo" : "Inativo"}
-                          </Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleAssignment(assignment.id, assignment.is_active)}
+        {secretaries.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nenhuma secretária cadastrada</h3>
+              <p className="text-muted-foreground mb-4">
+                Adicione secretárias para ajudar no gerenciamento dos seus agendamentos.
+              </p>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Primeira Secretária
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {secretaries.map((secretary) => (
+              <Card key={secretary.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center">
+                      <User className="h-5 w-5 mr-2" />
+                      {secretary.name}
+                    </CardTitle>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remover Secretária</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja remover {secretary.name} do seu sistema?
+                            Esta ação pode ser desfeita reativando o acesso posteriormente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteSecretary(secretary.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            {assignment.is_active ? "Desativar" : "Ativar"}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                            Remover
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4 mr-2" />
+                    {secretary.email}
+                  </div>
+                  
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Criado em {new Date(secretary.created_at).toLocaleDateString('pt-BR')}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <Badge variant={secretary.password_changed ? "default" : "secondary"}>
+                      {secretary.password_changed ? "Senha alterada" : "Primeiro acesso"}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
