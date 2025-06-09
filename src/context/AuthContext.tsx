@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext, ReactNode, startTransition } from "react";
 import { AuthContextType } from "@/types/auth";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useAuthMethods } from "@/hooks/useAuthMethods";
@@ -33,7 +33,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // If user needs to change password, show the password change component
   if (user && isPasswordChangeRequired) {
-    return <ForcePasswordChange onPasswordChanged={markPasswordChanged} />;
+    const handlePasswordChanged = () => {
+      startTransition(() => {
+        markPasswordChanged();
+      });
+    };
+    
+    return <ForcePasswordChange onPasswordChanged={handlePasswordChanged} />;
   }
   
   return (
