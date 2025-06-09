@@ -13,35 +13,44 @@ export const usePasswordChangeRequired = (userId?: string) => {
     }
 
     try {
-      // Verifica se é secretária
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .eq('role', 'secretary')
+      // First check if user has password_changed field in profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('password_changed')
+        .eq('id', userId)
         .maybeSingle();
 
-      if (userRole) {
-        // Verifica se já mudou a senha
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('password_changed')
-          .eq('id', userId)
+      if (profileError) {
+        console.error('Error checking profile:', profileError);
+        setIsPasswordChangeRequired(false);
+        setLoading(false);
+        return;
+      }
+
+      // If password_changed is false or null, check if user is a secretary
+      if (!profile?.password_changed) {
+        // Check if user is a secretary by looking at user_roles directly
+        // Using a simple query to avoid RLS policy recursion
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'secretary')
           .maybeSingle();
 
-        if (error) {
-          console.error('Error checking password change requirement:', error);
+        if (roleError) {
+          console.error('Error checking user role:', roleError);
+          // If we can't check the role, assume no password change required
           setIsPasswordChangeRequired(false);
         } else {
-          // Se não tem o campo ou é false, precisa mudar a senha
-          setIsPasswordChangeRequired(!profile?.password_changed);
+          // Only require password change if user is a secretary AND hasn't changed password
+          setIsPasswordChangeRequired(!!roleData);
         }
       } else {
-        // Não é secretária, não precisa mudar senha
         setIsPasswordChangeRequired(false);
       }
     } catch (error) {
-      console.error('Error checking password change requirement:', error);
+      console.error('Error in password change check:', error);
       setIsPasswordChangeRequired(false);
     } finally {
       setLoading(false);
@@ -49,13 +58,22 @@ export const usePasswordChangeRequired = (userId?: string) => {
   }, [userId]);
 
   useEffect(() => {
-    // Use a small delay to avoid synchronous suspension
+    // Always start with loading true and no password change required
+    setLoading(true);
+    setIsPasswordChangeRequired(false);
+
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    // Use a small delay to avoid synchronous issues
     const timeoutId = setTimeout(() => {
       checkPasswordChangeRequired();
-    }, 0);
+    }, 100);
 
     return () => clearTimeout(timeoutId);
-  }, [checkPasswordChangeRequired]);
+  }, [checkPasswordChangeRequired, userId]);
 
   const markPasswordChanged = async () => {
     if (!userId) return;
