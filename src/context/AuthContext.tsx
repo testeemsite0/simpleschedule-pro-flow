@@ -5,6 +5,8 @@ import { useAuthState } from "@/hooks/useAuthState";
 import { useAuthMethods } from "@/hooks/useAuthMethods";
 import { usePasswordChangeRequired } from "@/hooks/usePasswordChangeRequired";
 import ForcePasswordChange from "@/components/auth/ForcePasswordChange";
+import { EnhancedLoading } from "@/components/ui/enhanced-loading";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -17,7 +19,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <EnhancedLoading type="page" message="Verificando autenticação..." />
       </div>
     );
   }
@@ -26,7 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   if (user && passwordCheckLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <EnhancedLoading type="page" message="Verificando configurações de segurança..." />
       </div>
     );
   }
@@ -39,20 +41,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     };
     
-    return <ForcePasswordChange onPasswordChanged={handlePasswordChanged} />;
+    return (
+      <ErrorBoundary>
+        <ForcePasswordChange onPasswordChanged={handlePasswordChanged} />
+      </ErrorBoundary>
+    );
   }
   
   return (
-    <AuthContext.Provider value={{
-      user,
-      login,
-      register,
-      logout,
-      isAuthenticated: !!user,
-      isLoading,
-    }}>
-      {children}
-    </AuthContext.Provider>
+    <ErrorBoundary>
+      <AuthContext.Provider value={{
+        user,
+        login,
+        register,
+        logout,
+        isAuthenticated: !!user,
+        isLoading,
+      }}>
+        {children}
+      </AuthContext.Provider>
+    </ErrorBoundary>
   );
 };
 

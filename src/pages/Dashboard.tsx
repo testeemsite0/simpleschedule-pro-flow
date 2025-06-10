@@ -4,10 +4,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { CalendarIcon, UsersIcon, TrendingUpIcon, CheckIcon, XIcon } from 'lucide-react';
-import { FullPageLoadingState } from '@/components/ui/loading-states';
+import { CalendarIcon, UsersIcon, CheckIcon, XIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { EnhancedLoading } from '@/components/ui/enhanced-loading';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 const Dashboard = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -21,70 +21,96 @@ const Dashboard = () => {
     teamMembers: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Fetch dashboard stats
   useEffect(() => {
     const fetchDashboardStats = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
       
       setIsLoading(true);
+      setError(null);
       
       try {
-        // Fetch appointment stats
-        const { data: appointments, error: appointmentsError } = await supabase
-          .from('appointments')
-          .select('id, status, created_at')
-          .eq('professional_id', user.id);
-          
-        if (appointmentsError) throw appointmentsError;
+        console.log("Fetching dashboard stats for user:", user.id);
         
+        // Use Promise.allSettled to handle individual failures gracefully
+        const results = await Promise.allSettled([
+          supabase
+            .from('appointments')
+            .select('id, status, created_at')
+            .eq('professional_id', user.id),
+          
+          supabase
+            .from('clients')
+            .select('id', { count: 'exact', head: true })
+            .eq('professional_id', user.id),
+          
+          supabase
+            .from('clients')
+            .select('id', { count: 'exact', head: true })
+            .eq('professional_id', user.id)
+            .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+          
+          supabase
+            .from('team_members')
+            .select('id')
+            .eq('professional_id', user.id)
+            .eq('active', true)
+        ]);
+
+        // Process appointments
+        const appointmentsResult = results[0];
+        let appointments: any[] = [];
+        if (appointmentsResult.status === 'fulfilled' && !appointmentsResult.value.error) {
+          appointments = appointmentsResult.value.data || [];
+        } else {
+          console.warn("Failed to fetch appointments:", appointmentsResult);
+        }
+
+        // Process client counts
+        const clientCountResult = results[1];
+        let clientCount = 0;
+        if (clientCountResult.status === 'fulfilled' && !clientCountResult.value.error) {
+          clientCount = clientCountResult.value.count || 0;
+        }
+
+        const newClientsResult = results[2];
+        let newClientsCount = 0;
+        if (newClientsResult.status === 'fulfilled' && !newClientsResult.value.error) {
+          newClientsCount = newClientsResult.value.count || 0;
+        }
+
+        // Process team members
+        const teamMembersResult = results[3];
+        let teamMembers: any[] = [];
+        if (teamMembersResult.status === 'fulfilled' && !teamMembersResult.value.error) {
+          teamMembers = teamMembersResult.value.data || [];
+        }
+
         // Count appointments by status
-        const scheduledCount = appointments?.filter(a => a.status === 'scheduled').length || 0;
-        const completedCount = appointments?.filter(a => a.status === 'completed').length || 0;
-        const canceledCount = appointments?.filter(a => a.status === 'canceled').length || 0;
-        
-        // Fetch client count
-        const { count: clientCount, error: clientError } = await supabase
-          .from('clients')
-          .select('id', { count: 'exact', head: true })
-          .eq('professional_id', user.id);
-          
-        if (clientError) throw clientError;
-        
-        // Count new clients this month
-        const firstDayOfMonth = new Date();
-        firstDayOfMonth.setDate(1);
-        firstDayOfMonth.setHours(0, 0, 0, 0);
-        
-        const { count: newClientsCount, error: newClientsError } = await supabase
-          .from('clients')
-          .select('id', { count: 'exact', head: true })
-          .eq('professional_id', user.id)
-          .gte('created_at', firstDayOfMonth.toISOString());
-          
-        if (newClientsError) throw newClientsError;
-        
-        // Fetch team member count
-        const { data: teamMembers, error: teamMembersError } = await supabase
-          .from('team_members')
-          .select('id')
-          .eq('professional_id', user.id)
-          .eq('active', true);
-          
-        if (teamMembersError) throw teamMembersError;
+        const scheduledCount = appointments.filter(a => a.status === 'scheduled').length;
+        const completedCount = appointments.filter(a => a.status === 'completed').length;
+        const canceledCount = appointments.filter(a => a.status === 'canceled').length;
         
         // Update stats
         setStats({
-          totalAppointments: appointments?.length || 0,
+          totalAppointments: appointments.length,
           scheduledAppointments: scheduledCount,
           completedAppointments: completedCount,
           canceledAppointments: canceledCount,
-          totalClients: clientCount || 0,
-          newClientsThisMonth: newClientsCount || 0,
-          teamMembers: teamMembers?.length || 0
+          totalClients: clientCount,
+          newClientsThisMonth: newClientsCount,
+          teamMembers: teamMembers.length
         });
+
+        console.log("Dashboard stats updated successfully");
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
+        setError("Erro ao carregar dados do painel. Tente novamente.");
       } finally {
         setIsLoading(false);
       }
@@ -98,7 +124,7 @@ const Dashboard = () => {
   }, [user]);
   
   if (authLoading) {
-    return <FullPageLoadingState message="Carregando seu painel..." />;
+    return <EnhancedLoading type="page" message="Carregando seu painel..." />;
   }
   
   if (!user) {
@@ -120,25 +146,48 @@ const Dashboard = () => {
       </div>
     );
   }
-  
-  return (
-    <DashboardLayout title="Visão Geral">
-      <div className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Appointment Stats Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-0.5">
-                <CardTitle className="text-base">Total de Agendamentos</CardTitle>
-                <CardDescription>Estatísticas do período</CardDescription>
-              </div>
-              <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+
+  if (error) {
+    return (
+      <DashboardLayout title="Visão Geral">
+        <div className="flex items-center justify-center h-64">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Erro ao Carregar</CardTitle>
+              <CardDescription>{error}</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
-                <Skeleton className="w-full h-28" />
-              ) : (
-                <>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="w-full bg-primary text-white py-2 px-4 rounded"
+              >
+                Tentar Novamente
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+  
+  return (
+    <ErrorBoundary>
+      <DashboardLayout title="Visão Geral">
+        <div className="space-y-6">
+          {isLoading ? (
+            <EnhancedLoading type="dashboard" />
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {/* Appointment Stats Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-base">Total de Agendamentos</CardTitle>
+                    <CardDescription>Estatísticas do período</CardDescription>
+                  </div>
+                  <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
                   <div className="text-2xl font-bold">{stats.totalAppointments}</div>
                   <div className="grid grid-cols-3 gap-1 mt-4">
                     <div className="flex flex-col items-center p-2 bg-primary/10 rounded">
@@ -162,33 +211,27 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
-                </>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Link 
-                to="/dashboard/unified-booking" 
-                className="text-sm text-primary hover:underline w-full text-center"
-              >
-                Gerenciar Agendamentos
-              </Link>
-            </CardFooter>
-          </Card>
+                </CardContent>
+                <CardFooter>
+                  <Link 
+                    to="/dashboard/unified-booking" 
+                    className="text-sm text-primary hover:underline w-full text-center"
+                  >
+                    Gerenciar Agendamentos
+                  </Link>
+                </CardFooter>
+              </Card>
 
-          {/* Client Stats Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-0.5">
-                <CardTitle className="text-base">Clientes</CardTitle>
-                <CardDescription>Dados de clientes</CardDescription>
-              </div>
-              <UsersIcon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="w-full h-28" />
-              ) : (
-                <>
+              {/* Client Stats Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-base">Clientes</CardTitle>
+                    <CardDescription>Dados de clientes</CardDescription>
+                  </div>
+                  <UsersIcon className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
                   <div className="text-2xl font-bold">{stats.totalClients}</div>
                   <div className="mt-4 space-y-2">
                     <div className="flex justify-between items-center">
@@ -196,33 +239,27 @@ const Dashboard = () => {
                       <div className="font-medium">{stats.newClientsThisMonth}</div>
                     </div>
                   </div>
-                </>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Link 
-                to="/dashboard/clients" 
-                className="text-sm text-primary hover:underline w-full text-center"
-              >
-                Ver Clientes
-              </Link>
-            </CardFooter>
-          </Card>
+                </CardContent>
+                <CardFooter>
+                  <Link 
+                    to="/dashboard/clients" 
+                    className="text-sm text-primary hover:underline w-full text-center"
+                  >
+                    Ver Clientes
+                  </Link>
+                </CardFooter>
+              </Card>
 
-          {/* Team Stats Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-0.5">
-                <CardTitle className="text-base">Equipe</CardTitle>
-                <CardDescription>Membros da equipe</CardDescription>
-              </div>
-              <UsersIcon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="w-full h-28" />
-              ) : (
-                <>
+              {/* Team Stats Card */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-base">Equipe</CardTitle>
+                    <CardDescription>Membros da equipe</CardDescription>
+                  </div>
+                  <UsersIcon className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
                   <div className="text-2xl font-bold">{stats.teamMembers}</div>
                   <div className="mt-4">
                     <div className="flex justify-between items-center">
@@ -230,21 +267,21 @@ const Dashboard = () => {
                       <div className="font-medium">{stats.teamMembers}</div>
                     </div>
                   </div>
-                </>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Link 
-                to="/dashboard/team" 
-                className="text-sm text-primary hover:underline w-full text-center"
-              >
-                Gerenciar Equipe
-              </Link>
-            </CardFooter>
-          </Card>
+                </CardContent>
+                <CardFooter>
+                  <Link 
+                    to="/dashboard/team" 
+                    className="text-sm text-primary hover:underline w-full text-center"
+                  >
+                    Gerenciar Equipe
+                  </Link>
+                </CardFooter>
+              </Card>
+            </div>
+          )}
         </div>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ErrorBoundary>
   );
 };
 

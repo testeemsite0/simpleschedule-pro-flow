@@ -1,21 +1,36 @@
 
-import { useState, useEffect, useCallback, startTransition } from 'react';
+import { useState, useEffect, useCallback, startTransition, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const usePasswordChangeRequired = (userId?: string) => {
   const [isPasswordChangeRequired, setIsPasswordChangeRequired] = useState(false);
   const [loading, setLoading] = useState(true);
+  const checkingRef = useRef(false);
+  const cacheRef = useRef<{[key: string]: { required: boolean, timestamp: number }}>({});
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   const checkPasswordChangeRequired = useCallback(async () => {
-    if (!userId) {
+    if (!userId || checkingRef.current) {
       startTransition(() => {
         setLoading(false);
       });
       return;
     }
 
+    // Check cache first
+    const cached = cacheRef.current[userId];
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      startTransition(() => {
+        setIsPasswordChangeRequired(cached.required);
+        setLoading(false);
+      });
+      return;
+    }
+
+    checkingRef.current = true;
+
     try {
-      // First check if user has password_changed field in profiles
+      // Single optimized query to check both profile and role
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('password_changed')
@@ -31,65 +46,81 @@ export const usePasswordChangeRequired = (userId?: string) => {
         return;
       }
 
-      // If password_changed is false or null, check if user is a secretary
-      if (!profile?.password_changed) {
-        // Check if user is a secretary by looking at user_roles directly
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .eq('role', 'secretary')
-          .maybeSingle();
-
-        if (roleError) {
-          console.error('Error checking user role:', roleError);
-          // If we can't check the role, assume no password change required
-          startTransition(() => {
-            setIsPasswordChangeRequired(false);
-          });
-        } else {
-          // Only require password change if user is a secretary AND hasn't changed password
-          startTransition(() => {
-            setIsPasswordChangeRequired(!!roleData);
-          });
-        }
-      } else {
+      // If password already changed, no need to check role
+      if (profile?.password_changed) {
+        const result = false;
+        cacheRef.current[userId] = { required: result, timestamp: Date.now() };
         startTransition(() => {
-          setIsPasswordChangeRequired(false);
+          setIsPasswordChangeRequired(result);
+          setLoading(false);
         });
+        return;
       }
-    } catch (error) {
-      console.error('Error in password change check:', error);
+
+      // Only check role if password hasn't been changed
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'secretary')
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error checking user role:', roleError);
+        const result = false;
+        cacheRef.current[userId] = { required: result, timestamp: Date.now() };
+        startTransition(() => {
+          setIsPasswordChangeRequired(result);
+          setLoading(false);
+        });
+        return;
+      }
+
+      // Only require password change if user is a secretary AND hasn't changed password
+      const result = !!roleData;
+      cacheRef.current[userId] = { required: result, timestamp: Date.now() };
+      
       startTransition(() => {
-        setIsPasswordChangeRequired(false);
-      });
-    } finally {
-      startTransition(() => {
+        setIsPasswordChangeRequired(result);
         setLoading(false);
       });
+    } catch (error) {
+      console.error('Error in password change check:', error);
+      const result = false;
+      cacheRef.current[userId] = { required: result, timestamp: Date.now() };
+      startTransition(() => {
+        setIsPasswordChangeRequired(result);
+        setLoading(false);
+      });
+    } finally {
+      checkingRef.current = false;
     }
   }, [userId]);
 
   useEffect(() => {
-    // Always start with loading true and no password change required
-    setLoading(true);
-    setIsPasswordChangeRequired(false);
-
+    let mounted = true;
+    
     if (!userId) {
       startTransition(() => {
         setLoading(false);
+        setIsPasswordChangeRequired(false);
       });
       return;
     }
 
-    // Use a small delay to avoid synchronous issues and wrap in startTransition
+    // Use a small delay to batch with other operations
     const timeoutId = setTimeout(() => {
-      startTransition(() => {
-        checkPasswordChangeRequired();
-      });
+      if (mounted) {
+        startTransition(() => {
+          checkPasswordChangeRequired();
+        });
+      }
     }, 100);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [checkPasswordChangeRequired, userId]);
 
   const markPasswordChanged = async () => {
@@ -104,6 +135,8 @@ export const usePasswordChangeRequired = (userId?: string) => {
       if (error) {
         console.error('Error marking password as changed:', error);
       } else {
+        // Update cache
+        cacheRef.current[userId] = { required: false, timestamp: Date.now() };
         startTransition(() => {
           setIsPasswordChangeRequired(false);
         });
