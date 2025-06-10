@@ -2,7 +2,7 @@
 import React from 'react';
 import { DashboardSidebarContent } from './DashboardSidebarContent';
 import { DashboardHeader } from './DashboardHeader';
-import Breadcrumbs from '@/components/ui/breadcrumbs';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -28,7 +28,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
           <div className="container mx-auto px-6 py-6">
-            {showBreadcrumbs && <Breadcrumbs />}
+            {showBreadcrumbs && <Breadcrumbs items={[]} />}
             {title && (
               <div className="mb-6">
                 <h1 className="text-2xl font-bold text-foreground">{title}</h1>
