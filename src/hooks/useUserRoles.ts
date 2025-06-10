@@ -15,6 +15,8 @@ export const useUserRoles = () => {
     if (user) {
       fetchUserRole();
       fetchSecretaryAssignments();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -26,18 +28,31 @@ export const useUserRoles = () => {
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching user role:', error);
+        // Set default role if there's an error
+        setUserRole('professional');
         return;
       }
 
       if (data) {
         setUserRole(data.role);
+      } else {
+        // If no role found, create a default professional role
+        const { error: insertError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: user.id, role: 'professional' });
+        
+        if (insertError) {
+          console.error('Error creating default role:', insertError);
+        }
+        setUserRole('professional');
       }
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
+      setUserRole('professional');
     }
   };
 
@@ -56,6 +71,8 @@ export const useUserRoles = () => {
 
       if (error) {
         console.error('Error fetching secretary assignments:', error);
+        setSecretaryAssignments([]);
+        setManagedProfessionals([]);
         return;
       }
 
@@ -65,6 +82,8 @@ export const useUserRoles = () => {
       }
     } catch (error) {
       console.error('Error in fetchSecretaryAssignments:', error);
+      setSecretaryAssignments([]);
+      setManagedProfessionals([]);
     } finally {
       setLoading(false);
     }

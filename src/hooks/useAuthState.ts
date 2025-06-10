@@ -18,19 +18,17 @@ export const useAuthState = (): AuthState => {
       (event, session) => {
         console.log("Auth state changed:", event, session?.user?.id);
         
-        // Avoid immediate Supabase calls inside the callback to prevent authentication deadlocks
-        if (session?.user?.id) {
-          setIsLoading(true);
-          
-          // Use setTimeout to defer Supabase calls
-          setTimeout(() => {
+        // Use setTimeout to avoid React 18 strict mode issues
+        setTimeout(() => {
+          if (session?.user?.id) {
+            setIsLoading(true);
             handleProfileFetch(session.user.id);
-          }, 0);
-        } else {
-          setUser(null);
-          setIsLoading(false);
-          console.log("No session, user set to null");
-        }
+          } else {
+            setUser(null);
+            setIsLoading(false);
+            console.log("No session, user set to null");
+          }
+        }, 0);
       }
     );
 
@@ -93,7 +91,7 @@ export const useAuthState = (): AuthState => {
               toast({
                 title: "Aviso",
                 description: "Perfil temporário criado. Algumas funcionalidades podem estar limitadas.",
-                variant: "default", // Changed from "warning" to "default"
+                variant: "default",
               });
             }
           } else {

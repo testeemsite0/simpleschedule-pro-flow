@@ -48,7 +48,11 @@ const LoginForm = () => {
           title: 'Login realizado com sucesso',
           description: 'Você será redirecionado para o dashboard.',
         });
-        navigate('/dashboard');
+        
+        // Use setTimeout to avoid React 18 strict mode issues
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 100);
       } else {
         console.log('Login failed, displaying error');
         setLoginError('Email ou senha incorretos. Por favor, tente novamente.');
