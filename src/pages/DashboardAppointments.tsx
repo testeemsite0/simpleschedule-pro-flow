@@ -1,12 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import AppointmentTabs from '@/components/dashboard/AppointmentTabs';
 import { Appointment } from '@/types';
 import { useAppointmentsFetching } from '@/hooks/booking/fetching/useAppointmentsFetching';
 import { useAuth } from '@/context/AuthContext';
+import { logger } from '@/utils/logger';
 
-const DashboardAppointments = () => {
+const DashboardAppointments = React.memo(() => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('upcoming');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -19,28 +20,28 @@ const DashboardAppointments = () => {
   } = useAppointmentsFetching({
     professionalId: user?.id,
     onSuccess: () => {
-      console.log('DashboardAppointments: Appointments fetched successfully');
+      logger.info('Appointments fetched successfully');
     },
     onError: (error) => {
-      console.error('DashboardAppointments: Error fetching appointments:', error);
+      logger.error('Error fetching appointments:', error);
     }
   });
 
   // Force refresh when refreshKey changes
   useEffect(() => {
     if (refreshKey > 0) {
-      console.log('DashboardAppointments: Refreshing due to refreshKey change');
+      logger.debug('Refreshing due to refreshKey change');
       refetchAppointments();
     }
   }, [refreshKey, refetchAppointments]);
 
-  const handleRefreshNeeded = () => {
-    console.log('DashboardAppointments: Refresh requested');
+  const handleRefreshNeeded = useCallback(() => {
+    logger.debug('Refresh requested');
     setRefreshKey(prev => prev + 1);
-  };
+  }, []);
 
-  // Categorize appointments
-  const categorizeAppointments = (appointments: Appointment[]) => {
+  // Categorize appointments with useMemo for performance
+  const categorizedAppointments = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
@@ -74,9 +75,7 @@ const DashboardAppointments = () => {
     canceled.sort((a, b) => sortByDateTime(b, a)); // Reverse order for canceled
     
     return { upcoming, past, canceled };
-  };
-
-  const { upcoming, past, canceled } = categorizeAppointments(appointments);
+  }, [appointments]);
 
   if (error) {
     return (
@@ -96,9 +95,9 @@ const DashboardAppointments = () => {
         </p>
         
         <AppointmentTabs
-          upcomingAppointments={upcoming}
-          pastAppointments={past}
-          canceledAppointments={canceled}
+          upcomingAppointments={categorizedAppointments.upcoming}
+          pastAppointments={categorizedAppointments.past}
+          canceledAppointments={categorizedAppointments.canceled}
           loading={isLoading}
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -107,6 +106,8 @@ const DashboardAppointments = () => {
       </div>
     </DashboardLayout>
   );
-};
+});
+
+DashboardAppointments.displayName = 'DashboardAppointments';
 
 export default DashboardAppointments;
