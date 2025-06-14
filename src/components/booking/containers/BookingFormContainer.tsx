@@ -5,6 +5,7 @@ import { MaintenanceNotice } from '../MaintenanceNotice';
 import { BookingErrorHandler } from '../BookingErrorHandler';
 import { LimitWarning } from '../LimitWarning';
 import { BookingFormContent } from './BookingFormContent';
+import { BookingStep } from '@/hooks/booking/useBookingSteps';
 
 interface BookingFormContainerProps {
   title?: string;
@@ -12,7 +13,7 @@ interface BookingFormContainerProps {
   isAdminView?: boolean;
   allowWalkIn?: boolean;
   onSuccess?: () => void;
-  currentStep: string;
+  currentStep: BookingStep;
   error: string | null;
   maintenanceMode: boolean;
   resolvedProfessionalId?: string;
