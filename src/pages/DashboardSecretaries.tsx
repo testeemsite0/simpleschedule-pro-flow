@@ -212,7 +212,7 @@ const DashboardSecretaries = () => {
   if (loading) {
     return (
       <DashboardLayout title="Secretárias">
-        <EnhancedLoading variant="cards" count={3} />
+        <EnhancedLoading type="dashboard" />
       </DashboardLayout>
     );
   }
