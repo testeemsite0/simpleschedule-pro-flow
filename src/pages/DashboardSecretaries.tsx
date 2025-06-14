@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { EnhancedLoading } from '@/components/ui/enhanced-loading';
 import { Plus, Mail, User, Calendar, Trash2 } from 'lucide-react';
+import { ErrorHandler } from '@/components/ui/error-handler';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ const DashboardSecretaries = () => {
   const { toast } = useToast();
   const [secretaries, setSecretaries] = useState<Secretary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -60,20 +62,12 @@ const DashboardSecretaries = () => {
 
     try {
       setLoading(true);
+      setError(null);
       
-      // Buscar todas as secretárias associadas ao profissional
+      // First get the secretary assignments
       const { data: assignments, error: assignmentsError } = await supabase
         .from('secretary_assignments')
-        .select(`
-          secretary_id,
-          profiles:secretary_id (
-            id,
-            name,
-            email,
-            created_at,
-            password_changed
-          )
-        `)
+        .select('secretary_id')
         .eq('professional_id', user.id)
         .eq('is_active', true);
 
@@ -82,25 +76,37 @@ const DashboardSecretaries = () => {
         throw assignmentsError;
       }
 
-      const secretariesData = assignments?.map(assignment => {
-        const profile = assignment.profiles as any;
-        return {
-          id: profile?.id || '',
-          name: profile?.name || '',
-          email: profile?.email || '',
-          created_at: profile?.created_at || '',
-          password_changed: profile?.password_changed || false
-        };
-      }).filter(secretary => secretary.id) || [];
+      if (!assignments || assignments.length === 0) {
+        setSecretaries([]);
+        return;
+      }
+
+      // Extract secretary IDs
+      const secretaryIds = assignments.map(assignment => assignment.secretary_id);
+
+      // Then get the profiles for these secretaries
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email, created_at, password_changed')
+        .in('id', secretaryIds);
+
+      if (profilesError) {
+        console.error('Error fetching secretary profiles:', profilesError);
+        throw profilesError;
+      }
+
+      const secretariesData = profiles?.map(profile => ({
+        id: profile.id,
+        name: profile.name || '',
+        email: profile.email || '',
+        created_at: profile.created_at || '',
+        password_changed: profile.password_changed || false
+      })) || [];
 
       setSecretaries(secretariesData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao buscar secretárias:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as secretárias.",
-        variant: "destructive"
-      });
+      setError(error.message || 'Não foi possível carregar as secretárias.');
     } finally {
       setLoading(false);
     }
@@ -209,10 +215,24 @@ const DashboardSecretaries = () => {
     }
   };
 
+  const resetError = () => setError(null);
+
   if (loading) {
     return (
       <DashboardLayout title="Secretárias">
         <EnhancedLoading type="dashboard" />
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout title="Secretárias">
+        <ErrorHandler 
+          error={error} 
+          resetError={resetError}
+          retryAction={fetchSecretaries}
+        />
       </DashboardLayout>
     );
   }

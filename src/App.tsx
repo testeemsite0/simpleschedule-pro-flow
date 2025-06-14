@@ -1,3 +1,4 @@
+
 import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -31,6 +32,8 @@ const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const DashboardCompany = lazy(() => import("./pages/DashboardCompany"));
 const DashboardSubscription = lazy(() => import("./pages/DashboardSubscription"));
 const DashboardSecretaries = lazy(() => import("./pages/DashboardSecretaries"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Settings = lazy(() => import("./pages/Settings"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -214,7 +217,6 @@ function App() {
                     </Suspense>
                   }
                 />
-                
                 <Route 
                   path="/dashboard/subscription" 
                   element={
@@ -225,7 +227,27 @@ function App() {
                 />
                 <Route
                   path="/dashboard/secretaries"
-                  element={<DashboardSecretaries />}
+                  element={
+                    <Suspense fallback={<PageLoadingFallback message="Carregando secretárias..." />}>
+                      <DashboardSecretaries />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/dashboard/profile"
+                  element={
+                    <Suspense fallback={<PageLoadingFallback message="Carregando perfil..." />}>
+                      <Profile />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/dashboard/settings"
+                  element={
+                    <Suspense fallback={<PageLoadingFallback message="Carregando configurações..." />}>
+                      <Settings />
+                    </Suspense>
+                  }
                 />
                 <Route
                   path="*"
