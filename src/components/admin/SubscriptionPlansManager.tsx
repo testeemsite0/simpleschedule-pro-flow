@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { SubscriptionPlan } from '@/types/admin';
+import { useSystemFeatures } from "@/hooks/useSystemFeatures";
+import { PlanFeaturesSelector } from "./PlanFeaturesSelector";
 
 const SubscriptionPlansManager = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -55,113 +56,61 @@ const SubscriptionPlansManager = () => {
     }
   };
 
-  const handleSavePlan = async (planData: Partial<SubscriptionPlan>) => {
-    try {
-      // Ensure required fields are present and properly typed
-      const dataToSave = {
-        name: planData.name || '',
-        description: planData.description || null,
-        price: planData.price || 0,
-        currency: planData.currency || 'BRL',
-        stripe_price_id: planData.stripe_price_id || null,
-        interval_type: planData.interval_type || 'month',
-        features: planData.features || [],
-        max_appointments: planData.max_appointments || null,
-        max_team_members: planData.max_team_members || null,
-        is_active: planData.is_active ?? true,
-        display_order: planData.display_order || 0,
-      };
+  const { features: availableFeatures, loading: loadingFeatures } = useSystemFeatures();
 
-      if (editingPlan?.id) {
-        const { error } = await supabase
-          .from('subscription_plans')
-          .update(dataToSave)
-          .eq('id', editingPlan.id);
-        
-        if (error) throw error;
-        toast({ title: 'Sucesso', description: 'Plano atualizado com sucesso' });
-      } else {
-        const { error } = await supabase
-          .from('subscription_plans')
-          .insert(dataToSave);
-        
-        if (error) throw error;
-        toast({ title: 'Sucesso', description: 'Plano criado com sucesso' });
-      }
-      
-      fetchPlans();
-      setIsDialogOpen(false);
-      setEditingPlan(null);
-    } catch (error) {
-      console.error('Error saving plan:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao salvar plano',
-        variant: 'destructive',
-      });
-    }
+  // Função para buscar features atreladas a um plano, retorna array de IDs.
+  const getPlanFeatureIds = async (planId: string) => {
+    const { data, error } = await supabase
+      .from("subscription_plan_features")
+      .select("feature_id")
+      .eq("subscription_plan_id", planId);
+    if (error) return [];
+    return (data || []).map((row) => row.feature_id);
   };
 
-  const handleDeletePlan = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este plano?')) return;
-    
-    try {
-      const { error } = await supabase
-        .from('subscription_plans')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({ title: 'Sucesso', description: 'Plano excluído com sucesso' });
-      fetchPlans();
-    } catch (error) {
-      console.error('Error deleting plan:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao excluir plano',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const PlanForm = ({ plan, onSave, onCancel }: {
+  const PlanForm = ({
+    plan,
+    onSave,
+    onCancel,
+  }: {
     plan?: SubscriptionPlan;
-    onSave: (plan: Partial<SubscriptionPlan>) => void;
+    onSave: (plan: Partial<SubscriptionPlan>, featureIds: string[]) => void;
     onCancel: () => void;
   }) => {
     const [formData, setFormData] = useState({
-      name: plan?.name || '',
-      description: plan?.description || '',
+      name: plan?.name || "",
+      description: plan?.description || "",
       price: plan?.price || 0,
-      currency: plan?.currency || 'BRL',
-      stripe_price_id: plan?.stripe_price_id || '',
-      interval_type: plan?.interval_type || 'month',
-      features: plan?.features || [],
-      max_appointments: plan?.max_appointments || -1,
-      max_team_members: plan?.max_team_members || -1,
+      currency: plan?.currency || "BRL",
+      stripe_price_id: plan?.stripe_price_id || "",
+      interval_type: plan?.interval_type || "month",
+      // features removido
+      max_appointments: plan?.max_appointments ?? -1,
+      max_team_members: plan?.max_team_members ?? -1,
       is_active: plan?.is_active ?? true,
       display_order: plan?.display_order || 0,
     });
 
-    const [newFeature, setNewFeature] = useState('');
+    // Features controlado por IDs de features.
+    const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
+    const [initLoading, setInitLoading] = useState(true);
 
-    const addFeature = () => {
-      if (newFeature.trim()) {
-        setFormData(prev => ({
-          ...prev,
-          features: [...prev.features, newFeature.trim()]
-        }));
-        setNewFeature('');
+    useEffect(() => {
+      async function loadFeaturesForEdit() {
+        if (plan?.id) {
+          setInitLoading(true);
+          const ids = await getPlanFeatureIds(plan.id);
+          setSelectedFeatureIds(ids);
+          setInitLoading(false);
+        } else {
+          setSelectedFeatureIds([]);
+          setInitLoading(false);
+        }
       }
-    };
-
-    const removeFeature = (index: number) => {
-      setFormData(prev => ({
-        ...prev,
-        features: prev.features.filter((_, i) => i !== index)
-      }));
-    };
+      loadFeaturesForEdit();
+      // Apenas se o formulário abrir (plan?.id mudar)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [plan?.id]);
 
     return (
       <div className="space-y-4">
@@ -243,30 +192,15 @@ const SubscriptionPlansManager = () => {
           </div>
         </div>
 
+        {/* Substituir campo antigo de recursos do plano */}
         <div className="space-y-2">
-          <Label>Recursos do Plano</Label>
-          <div className="flex gap-2">
-            <Input
-              value={newFeature}
-              onChange={(e) => setNewFeature(e.target.value)}
-              placeholder="Adicionar recurso..."
-              onKeyPress={(e) => e.key === 'Enter' && addFeature()}
-            />
-            <Button onClick={addFeature} size="sm">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {formData.features.map((feature, index) => (
-              <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                {feature}
-                <X
-                  className="h-3 w-3 cursor-pointer"
-                  onClick={() => removeFeature(index)}
-                />
-              </Badge>
-            ))}
-          </div>
+          <Label>Funcionalidades Liberadas no Plano</Label>
+          <PlanFeaturesSelector
+            features={availableFeatures}
+            selectedFeatureIds={selectedFeatureIds}
+            onChange={setSelectedFeatureIds}
+            loading={loadingFeatures || initLoading}
+          />
         </div>
 
         <div className="flex items-center space-x-2">
@@ -282,13 +216,105 @@ const SubscriptionPlansManager = () => {
           <Button variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button onClick={() => onSave(formData)}>
+          <Button onClick={() => onSave(formData, selectedFeatureIds)}>
             <Save className="h-4 w-4 mr-2" />
             Salvar
           </Button>
         </div>
       </div>
     );
+  };
+
+  // Ajustar handleSavePlan para processar os features marcados
+  const handleSavePlan = async (
+    planData: Partial<SubscriptionPlan>,
+    selectedFeatureIds: string[]
+  ) => {
+    try {
+      const dataToSave = {
+        name: planData.name || "",
+        description: planData.description || null,
+        price: planData.price || 0,
+        currency: planData.currency || "BRL",
+        stripe_price_id: planData.stripe_price_id || null,
+        interval_type: planData.interval_type || "month",
+        // features removido
+        max_appointments: planData.max_appointments ?? null,
+        max_team_members: planData.max_team_members ?? null,
+        is_active: planData.is_active ?? true,
+        display_order: planData.display_order || 0,
+      };
+
+      let planId: string;
+      if (editingPlan?.id) {
+        const { error } = await supabase
+          .from("subscription_plans")
+          .update(dataToSave)
+          .eq("id", editingPlan.id);
+        if (error) throw error;
+        planId = editingPlan.id;
+        toast({ title: "Sucesso", description: "Plano atualizado com sucesso" });
+      } else {
+        const { data, error } = await supabase
+          .from("subscription_plans")
+          .insert(dataToSave)
+          .select("id")
+          .single();
+        if (error || !data?.id) throw error || new Error("Falha ao criar plano");
+        planId = data.id;
+        toast({ title: "Sucesso", description: "Plano criado com sucesso" });
+      }
+
+      // Gerenciar features associadas ao plano
+      // Remove todas as antigas e insere novas
+      await supabase
+        .from("subscription_plan_features")
+        .delete()
+        .eq("subscription_plan_id", planId);
+
+      if (selectedFeatureIds.length > 0) {
+        await supabase.from("subscription_plan_features").insert(
+          selectedFeatureIds.map((featureId) => ({
+            subscription_plan_id: planId,
+            feature_id: featureId,
+          }))
+        );
+      }
+
+      fetchPlans();
+      setIsDialogOpen(false);
+      setEditingPlan(null);
+    } catch (error) {
+      console.error("Error saving plan:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar plano",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Para exibição das features no Card
+  const [featuresMap, setFeaturesMap] = useState<{ [id: string]: string }>({});
+  useEffect(() => {
+    // Carregar features para exibir label rapidamente
+    if (availableFeatures.length > 0) {
+      const map: { [id: string]: string } = {};
+      availableFeatures.forEach((f) => (map[f.id] = f.label));
+      setFeaturesMap(map);
+    }
+  }, [availableFeatures]);
+
+  const [planFeaturesCache, setPlanFeaturesCache] = useState<{
+    [planId: string]: string[];
+  }>({});
+
+  const fetchPlanFeatures = async (planId: string) => {
+    const { data } = await supabase
+      .from("subscription_plan_features")
+      .select("feature_id")
+      .eq("subscription_plan_id", planId);
+    return (data || []).map((row) => row.feature_id);
   };
 
   if (loading) {
@@ -369,13 +395,9 @@ const SubscriptionPlansManager = () => {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  {plan.features.map((feature, index) => (
-                    <div key={index} className="text-sm flex items-center">
-                      <span className="text-green-500 mr-2">✓</span>
-                      {feature}
-                    </div>
-                  ))}
+                <div className="space-y-1 mb-3">
+                  <strong className="block text-sm mb-1">Funcionalidades Liberadas:</strong>
+                  <PlanFeaturesList planId={plan.id} featuresMap={featuresMap} fetchPlanFeatures={fetchPlanFeatures} />
                 </div>
 
                 {plan.stripe_price_id && (
@@ -398,6 +420,47 @@ const SubscriptionPlansManager = () => {
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+// Componente para exibir as features associadas ao plano
+const PlanFeaturesList = ({
+  planId,
+  featuresMap,
+  fetchPlanFeatures,
+}: {
+  planId: string;
+  featuresMap: { [id: string]: string };
+  fetchPlanFeatures: (planId: string) => Promise<string[]>;
+}) => {
+  const [featureIds, setFeatureIds] = React.useState<string[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetchPlanFeatures(planId).then((ids) => {
+      if (isMounted) {
+        setFeatureIds(ids);
+        setLoading(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [planId, fetchPlanFeatures]);
+
+  if (loading) return <span className="text-xs text-muted-foreground">Carregando...</span>;
+
+  if (!featureIds.length) return <span className="text-xs text-muted-foreground">Nenhuma funcionalidade configurada</span>;
+
+  return (
+    <ul className="list-disc pl-5">
+      {featureIds.map((fid) => (
+        <li key={fid} className="text-sm">
+          {featuresMap[fid] || '???'}
+        </li>
+      ))}
+    </ul>
   );
 };
 

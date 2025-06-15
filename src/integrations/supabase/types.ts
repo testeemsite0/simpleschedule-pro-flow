@@ -585,6 +585,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plan_features: {
+        Row: {
+          created_at: string
+          feature_id: string
+          id: string
+          subscription_plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature_id: string
+          id?: string
+          subscription_plan_id: string
+        }
+        Update: {
+          created_at?: string
+          feature_id?: string
+          id?: string
+          subscription_plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plan_features_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "system_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_plan_features_subscription_plan_id_fkey"
+            columns: ["subscription_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -656,6 +692,33 @@ export type Database = {
           id?: string
           premium_price?: number
           stripe_price_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      system_features: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          label?: string
           updated_at?: string
         }
         Relationships: []
