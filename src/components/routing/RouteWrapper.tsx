@@ -11,12 +11,13 @@ export const RouteWrapper: React.FC<RouteWrapperProps> = ({
   component: Component, 
   loadingMessage 
 }) => {
-  // Check if the component is lazy-loaded by checking if it has the _result property
-  // which is a characteristic of lazy components
-  const isLazyComponent = React.isValidElement(<Component />) === false && 
+  // Simple check: if Component has a $$typeof property, it's likely a lazy component
+  // We use a safer approach by checking the component's constructor name and properties
+  const isLazyComponent = Component && 
     typeof Component === 'object' && 
-    Component !== null && 
-    '$$typeof' in Component;
+    Component.constructor && 
+    Component.constructor.name === 'Object' &&
+    '_payload' in Component;
   
   if (isLazyComponent) {
     return (
