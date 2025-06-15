@@ -16,6 +16,7 @@ export const RouteWrapper: React.FC<RouteWrapperProps> = ({
     return null;
   }
   
+  // At this point, Component is guaranteed to be non-null
   // Check if the component is lazy-loaded by checking for React.lazy characteristics
   // Lazy components have a $$typeof symbol and _payload property
   const isLazyComponent = typeof Component === 'object' && 
