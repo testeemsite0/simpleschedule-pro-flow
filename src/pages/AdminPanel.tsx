@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -5,21 +6,226 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { Badge } from '@/components/ui/badge';
+import { Shield, Users, CreditCard, Settings, BarChart3 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-// Admin Panel - System configuration tab
+// System Statistics Component
+const SystemStats = () => {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeSubscriptions: 0,
+    totalAppointments: 0,
+    monthlyRevenue: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSystemStats();
+  }, []);
+
+  const fetchSystemStats = async () => {
+    try {
+      const [usersResponse, subscriptionsResponse, appointmentsResponse] = await Promise.all([
+        supabase.from('profiles').select('id', { count: 'exact' }),
+        supabase.from('subscribers').select('id', { count: 'exact' }).eq('subscribed', true),
+        supabase.from('appointments').select('id', { count: 'exact' })
+      ]);
+
+      setStats({
+        totalUsers: usersResponse.count || 0,
+        activeSubscriptions: subscriptionsResponse.count || 0,
+        totalAppointments: appointmentsResponse.count || 0,
+        monthlyRevenue: 0 // This would need proper calculation based on subscription data
+      });
+    } catch (error) {
+      console.error('Error fetching system stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-8">Carregando estatísticas...</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.totalUsers}</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Assinaturas Ativas</CardTitle>
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total de Agendamentos</CardTitle>
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{stats.totalAppointments}</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Receita Mensal</CardTitle>
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">R$ {stats.monthlyRevenue.toFixed(2)}</div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// User Management Component
+const UserManagement = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          user_roles(role),
+          subscribers(subscription_tier, subscribed)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar usuários',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .upsert({ user_id: userId, role: newRole }, { onConflict: 'user_id' });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Role do usuário atualizada',
+      });
+      
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar role do usuário',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-8">Carregando usuários...</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Gerenciamento de Usuários</CardTitle>
+        <CardDescription>
+          Visualize e gerencie todos os usuários do sistema
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Assinatura</TableHead>
+              <TableHead>Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  <Badge variant={user.user_roles?.role === 'admin' ? 'destructive' : 'secondary'}>
+                    {user.user_roles?.role || 'professional'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={user.subscribers?.subscribed ? 'default' : 'outline'}>
+                    {user.subscribers?.subscription_tier || 'free'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={user.user_roles?.role || 'professional'}
+                    onValueChange={(value) => updateUserRole(user.id, value)}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="secretary">Secretary</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+};
+
+// System Configuration Component
 const SystemConfig = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [premiumPrice, setPremiumPrice] = useState<string>('39.90');
-  const [stripePriceId, setStripePriceId] = useState<string>('');
-  const [stripeKey, setStripeKey] = useState<string>('');
-  const [stripeKeyMasked, setStripeKeyMasked] = useState<boolean>(true);
-  const [configId, setConfigId] = useState<string | null>(null);
+  const [config, setConfig] = useState({
+    premiumPrice: '39.90',
+    stripePriceId: '',
+    maintenanceMode: false
+  });
 
   useEffect(() => {
     fetchSystemConfig();
@@ -32,57 +238,35 @@ const SystemConfig = () => {
         .select('*')
         .single();
 
-      if (error) {
+      if (error && !error.message.includes('PGRST116')) {
         console.error('Error fetching system config:', error);
         return;
       }
 
       if (data) {
-        setPremiumPrice(data.premium_price.toString());
-        setStripePriceId(data.stripe_price_id);
-        setConfigId(data.id);
-        
-        // Fetch Stripe key from Supabase edge function secrets
-        const { data: secretData, error: secretError } = await supabase.functions.invoke('get-stripe-secret', {
-          body: { action: 'get' },
+        setConfig({
+          premiumPrice: data.premium_price?.toString() || '39.90',
+          stripePriceId: data.stripe_price_id || '',
+          maintenanceMode: false // This would come from a maintenance table
         });
-        
-        if (!secretError && secretData?.key) {
-          // Mask the key for security
-          setStripeKey(secretData.key);
-          const maskedKey = secretData.key.substring(0, 8) + '...' + secretData.key.substring(secretData.key.length - 4);
-          setStripeKey(maskedKey);
-        }
       }
     } catch (error) {
       console.error('Error:', error);
     }
   };
 
-  const handleUpdate = async () => {
+  const handleUpdateConfig = async () => {
     setLoading(true);
     try {
-      // Save price configuration to database
       const { error } = await supabase
         .from('system_config')
-        .update({
-          premium_price: parseFloat(premiumPrice),
-          stripe_price_id: stripePriceId,
+        .upsert({
+          premium_price: parseFloat(config.premiumPrice),
+          stripe_price_id: config.stripePriceId,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', configId);
+        }, { onConflict: 'id' });
 
       if (error) throw error;
-
-      // If Stripe key is changed and doesn't show asterisks, update it
-      if (stripeKey && !stripeKey.includes('...')) {
-        // Update stripe key via edge function
-        const { error: keyError } = await supabase.functions.invoke('update-stripe-secret', {
-          body: { key: stripeKey },
-        });
-        
-        if (keyError) throw keyError;
-      }
 
       toast({
         title: 'Sucesso',
@@ -116,8 +300,8 @@ const SystemConfig = () => {
             type="number"
             step="0.01"
             min="0"
-            value={premiumPrice}
-            onChange={(e) => setPremiumPrice(e.target.value)}
+            value={config.premiumPrice}
+            onChange={(e) => setConfig(prev => ({ ...prev, premiumPrice: e.target.value }))}
           />
         </div>
 
@@ -125,8 +309,8 @@ const SystemConfig = () => {
           <Label htmlFor="stripePriceId">ID do Preço no Stripe</Label>
           <Input
             id="stripePriceId"
-            value={stripePriceId}
-            onChange={(e) => setStripePriceId(e.target.value)}
+            value={config.stripePriceId}
+            onChange={(e) => setConfig(prev => ({ ...prev, stripePriceId: e.target.value }))}
             placeholder="price_xxx"
           />
           <p className="text-sm text-muted-foreground">
@@ -134,31 +318,8 @@ const SystemConfig = () => {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="stripeKey">Chave Secreta do Stripe</Label>
-          <div className="flex gap-2">
-            <Input
-              id="stripeKey"
-              type={stripeKeyMasked ? "password" : "text"}
-              value={stripeKey}
-              onChange={(e) => setStripeKey(e.target.value)}
-              placeholder="sk_xxx"
-            />
-            <Button
-              variant="outline"
-              onClick={() => setStripeKeyMasked(!stripeKeyMasked)}
-              type="button"
-            >
-              {stripeKeyMasked ? "Mostrar" : "Esconder"}
-            </Button>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            A chave secreta do Stripe usada para processar pagamentos
-          </p>
-        </div>
-
         <Button 
-          onClick={handleUpdate} 
+          onClick={handleUpdateConfig} 
           disabled={loading} 
           className="mt-4"
         >
@@ -167,210 +328,6 @@ const SystemConfig = () => {
       </CardContent>
     </Card>
   );
-};
-
-// Admin Panel - Dashboard tab with statistics
-const DashboardStats = () => {
-  const [loading, setLoading] = useState(true);
-  const [userStats, setUserStats] = useState({ free: 0, premium: 0 });
-  const [appointmentStats, setAppointmentStats] = useState({ client: 0, manual: 0 });
-  
-  useEffect(() => {
-    fetchStatistics();
-  }, []);
-  
-  const fetchStatistics = async () => {
-    try {
-      // Fetch user subscription stats using RPC function
-      const { data: userData, error: userError } = await supabase.rpc('count_subscribers_by_tier');
-      
-      if (userError) throw userError;
-      
-      if (userData) {
-        // Parse the data returned from the RPC function
-        const free = userData.find((item: { subscription_tier: string, count: number }) => 
-          item.subscription_tier === 'free')?.count || 0;
-        const premium = userData.find((item: { subscription_tier: string, count: number }) => 
-          item.subscription_tier === 'premium')?.count || 0;
-        setUserStats({ free, premium });
-      } else {
-        setUserStats({ free: 0, premium: 0 });
-      }
-      
-      // Fetch appointment source stats using RPC function
-      const { data: appointmentData, error: appointmentError } = await supabase.rpc('count_appointments_by_source');
-      
-      if (appointmentError) throw appointmentError;
-      
-      if (appointmentData) {
-        // Parse the data returned from the RPC function
-        const client = appointmentData.find((item: { source: string, count: number }) => 
-          item.source === 'client')?.count || 0;
-        const manual = appointmentData.find((item: { source: string, count: number }) => 
-          item.source === 'manual')?.count || 0;
-        setAppointmentStats({ client, manual });
-      } else {
-        setAppointmentStats({ client: 0, manual: 0 });
-      }
-      
-    } catch (error) {
-      console.error('Error fetching statistics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const subscriptionData = [
-    { name: 'Plano Gratuito', value: userStats.free },
-    { name: 'Plano Premium', value: userStats.premium },
-  ];
-  
-  const appointmentData = [
-    { name: 'Agendamento Cliente', value: appointmentStats.client },
-    { name: 'Agendamento Manual', value: appointmentStats.manual },
-  ];
-  
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
-  
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Dashboard Administrativo</CardTitle>
-        <CardDescription>
-          Visão geral dos dados do sistema
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <p className="text-center py-8">Carregando estatísticas...</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-medium mb-4 text-center">Distribuição de Usuários</h3>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={subscriptionData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {subscriptionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value} usuários`, 'Quantidade']} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tipo de Plano</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Plano Gratuito</TableCell>
-                      <TableCell className="text-right">{userStats.free}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Plano Premium</TableCell>
-                      <TableCell className="text-right">{userStats.premium}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Total</TableCell>
-                      <TableCell className="text-right font-medium">{userStats.free + userStats.premium}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-medium mb-4 text-center">Agendamentos por Origem</h3>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={appointmentData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="value" name="Quantidade" fill="#8884d8" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Origem</TableHead>
-                      <TableHead className="text-right">Quantidade</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Agendamento Cliente</TableCell>
-                      <TableCell className="text-right">{appointmentStats.client}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Agendamento Manual</TableCell>
-                      <TableCell className="text-right">{appointmentStats.manual}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="font-medium">Total</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {appointmentStats.client + appointmentStats.manual}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Updated function to check admin status - more secure approach
-const checkAdminAccess = async (userId: string) => {
-  try {
-    // First try to check if the user has an admin role in the profiles table
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('id', userId)
-      .single();
-      
-    if (profileError) throw profileError;
-    
-    // For now, we're still checking by email domain, but this function
-    // can be updated to use a proper role-based system in the future
-    return profileData.email.includes('@admin.com') || 
-           profileData.email === 'admin@example.com';
-  } catch (error) {
-    console.error('Error checking admin access:', error);
-    return false;
-  }
 };
 
 // Main Admin Panel Component
@@ -387,9 +344,25 @@ const AdminPanel = () => {
         return;
       }
       
-      const hasAccess = await checkAdminAccess(user.id);
-      setIsAdmin(hasAccess);
-      setLoading(false);
+      try {
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (error && !error.message.includes('PGRST116')) {
+          console.error('Error checking admin access:', error);
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(data?.role === 'admin');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        setIsAdmin(false);
+      } finally {
+        setLoading(false);
+      }
     };
     
     verifyAdminAccess();
@@ -417,14 +390,16 @@ const AdminPanel = () => {
   
   return (
     <DashboardLayout title="Painel Administrativo">
-      <Tabs defaultValue="dashboard">
-        <TabsList className="mb-4">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="config">Configurações do Sistema</TabsTrigger>
+      <SystemStats />
+      
+      <Tabs defaultValue="users" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="config">Configurações</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="dashboard">
-          <DashboardStats />
+        <TabsContent value="users">
+          <UserManagement />
         </TabsContent>
         
         <TabsContent value="config">

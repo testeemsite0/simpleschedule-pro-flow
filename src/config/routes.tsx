@@ -1,4 +1,3 @@
-
 import { lazy } from "react";
 
 // Lazy load components with better loading states
@@ -26,6 +25,7 @@ const DashboardSubscription = lazy(() => import("@/pages/DashboardSubscription")
 const DashboardSecretaries = lazy(() => import("@/pages/DashboardSecretaries"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
 
 export interface RouteConfig {
   path: string;
@@ -148,6 +148,11 @@ export const routeConfigs: RouteConfig[] = [
     path: "/dashboard/settings",
     component: Settings,
     loadingMessage: "Carregando configurações..."
+  },
+  {
+    path: "/admin-panel",
+    component: AdminPanel,
+    loadingMessage: "Carregando painel administrativo..."
   },
   {
     path: "*",
