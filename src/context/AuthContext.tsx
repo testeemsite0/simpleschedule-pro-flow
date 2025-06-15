@@ -4,11 +4,9 @@ import { AuthContextType } from "@/types/auth";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useAuthMethods } from "@/hooks/useAuthMethods";
 import { usePasswordChangeRequired } from "@/hooks/usePasswordChangeRequired";
-import { useUserRoles } from "@/hooks/useUserRoles";
 import ForcePasswordChange from "@/components/auth/ForcePasswordChange";
 import { EnhancedLoading } from "@/components/ui/enhanced-loading";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { RoleErrorHandler } from "@/components/ui/role-error-handler";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -16,7 +14,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { user, isLoading } = useAuthState();
   const { login, register, logout } = useAuthMethods();
   const { isPasswordChangeRequired, loading: passwordCheckLoading, markPasswordChanged } = usePasswordChangeRequired(user?.id);
-  const { error: roleError, refetch: retryRoles, loading: roleLoading } = useUserRoles();
   
   // Show loading while checking auth state
   if (isLoading) {
@@ -61,14 +58,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
         isLoading,
       }}>
-        {/* Show role error handler if there are role-related issues */}
-        {user && roleError && (
-          <RoleErrorHandler 
-            error={roleError} 
-            onRetry={retryRoles}
-            loading={roleLoading}
-          />
-        )}
         {children}
       </AuthContext.Provider>
     </ErrorBoundary>
