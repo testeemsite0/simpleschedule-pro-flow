@@ -464,4 +464,28 @@ const PlanFeaturesList = ({
   );
 };
 
+const handleDeletePlan = async (planId: string) => {
+  try {
+    const { error } = await supabase
+      .from('subscription_plans')
+      .delete()
+      .eq('id', planId);
+
+    if (error) throw error;
+
+    toast({
+      title: "Sucesso",
+      description: "Plano excluído com sucesso",
+    });
+    fetchPlans();
+  } catch (error) {
+    console.error("Error deleting plan:", error);
+    toast({
+      title: "Erro",
+      description: "Erro ao excluir plano",
+      variant: "destructive",
+    });
+  }
+};
+
 export default SubscriptionPlansManager;
