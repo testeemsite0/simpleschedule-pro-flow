@@ -40,7 +40,7 @@ export function DashboardSidebarContent() {
         },
         {
           title: "Agendamentos",
-          url: "/dashboard/appointments",
+          url: "/dashboard/unified-booking",
           icon: Calendar,
           description: "Gerenciar seus agendamentos",
           roles: ['professional', 'secretary', 'admin']
