@@ -6,7 +6,6 @@ import {
   Settings,
   User,
   ListChecks,
-  MessageSquare,
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
@@ -33,12 +32,6 @@ export function DashboardSidebarContent() {
       url: "/dashboard/appointments",
       icon: Calendar,
       description: "Gerenciar seus agendamentos"
-    },
-    {
-      title: "WhatsApp",
-      url: "/dashboard/whatsapp",
-      icon: MessageSquare,
-      description: "Integração com WhatsApp Web"
     },
     {
       title: "Relatórios",

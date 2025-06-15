@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -10,7 +11,6 @@ import { formatDateInTimezone, formatTimeInTimezone } from '@/utils/dynamicTimez
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import PaymentModal from '@/components/appointments/PaymentModal';
-import { WhatsAppMessageButton } from '@/components/whatsapp/WhatsAppMessageButton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -139,14 +139,6 @@ const AppointmentCard: React.FC<AppointmentCardProps> = ({
                 {getSourceBadge(appointment.source)}
               </div>
               <div className="flex items-center gap-2">
-                {/* WhatsApp button */}
-                {appointment.client_phone && canManageAppointment && (
-                  <WhatsAppMessageButton
-                    appointment={appointment}
-                    professionalName={teamMemberName || 'Profissional'}
-                  />
-                )}
-                
                 {canComplete && (
                   <Button
                     variant="outline"
