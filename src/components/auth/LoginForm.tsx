@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/context/AuthContext';
 import { Link } from 'react-router-dom';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Email inválido' }),
@@ -24,6 +24,7 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
