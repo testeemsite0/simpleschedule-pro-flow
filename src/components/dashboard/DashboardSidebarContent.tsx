@@ -6,142 +6,66 @@ import {
   Settings,
   User,
   ListChecks,
-  Clock,
-  Users,
-  FileText,
-  Link2,
-  UserRound,
-  Shield,
-  Building2,
-  CreditCard,
-  UserCog,
 } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import { useAuth } from "@/context/AuthContext"
 import { useUserRoles } from "@/hooks/useUserRoles"
 import { cn } from "@/lib/utils"
+import { Shield } from 'lucide-react';
 
 export function DashboardSidebarContent() {
   const { user } = useAuth();
-  const { userRole, isSecretary, isAdmin, isProfessional } = useUserRoles();
+  const { userRole, isSecretary, isAdmin } = useUserRoles();
   const location = useLocation()
+  const isActive = (path: string) => location.pathname === path
 
   const menuItems = [
     {
-      title: "Dashboard",
+      title: "Início",
       url: "/dashboard",
       icon: Home,
-      description: "Visão geral do seu negócio",
-      allowedRoles: ['professional', 'secretary', 'admin']
+      description: "Visão geral do seu negócio"
     },
     {
       title: "Agendamentos",
-      url: "/dashboard/unified-booking",
+      url: "/dashboard/appointments",
       icon: Calendar,
-      description: "Sistema unificado de agendamentos",
-      allowedRoles: ['professional', 'secretary', 'admin']
-    },
-    {
-      title: "Horários",
-      url: "/dashboard/schedules",
-      icon: Clock,
-      description: "Configurar horários de trabalho",
-      allowedRoles: ['professional', 'admin']
-    },
-    {
-      title: "Equipe",
-      url: "/dashboard/team",
-      icon: Users,
-      description: "Gerenciar equipe",
-      allowedRoles: ['professional', 'admin']
-    },
-    {
-      title: "Serviços",
-      url: "/dashboard/services",
-      icon: ListChecks,
-      description: "Gerenciar serviços",
-      allowedRoles: ['professional', 'admin']
-    },
-    {
-      title: "Convênios",
-      url: "/dashboard/insurance",
-      icon: Shield,
-      description: "Gerenciar convênios",
-      allowedRoles: ['professional', 'admin']
-    },
-    {
-      title: "Clientes",
-      url: "/dashboard/clients",
-      icon: UserRound,
-      description: "Gerenciar clientes",
-      allowedRoles: ['professional', 'secretary', 'admin']
-    },
-    {
-      title: "Link de Agendamento",
-      url: "/dashboard/booking-link",
-      icon: Link2,
-      description: "Configurar link de agendamento",
-      allowedRoles: ['professional', 'admin']
+      description: "Gerenciar seus agendamentos"
     },
     {
       title: "Relatórios",
       url: "/dashboard/reports",
       icon: BarChart,
-      description: "Análise de dados e desempenho",
-      allowedRoles: ['professional', 'admin']
-    },
-    ...(isAdmin || (!isSecretary && userRole === 'professional') ? [
-      {
-        title: "Secretárias",
-        url: "/dashboard/secretaries",
-        icon: UserCog,
-        description: "Gerenciar secretárias e permissões",
-        allowedRoles: ['professional', 'admin']
-      }
-    ] : []),
-    {
-      title: "Empresa",
-      url: "/dashboard/company",
-      icon: Building2,
-      description: "Configurações da empresa",
-      allowedRoles: ['professional', 'admin']
+      description: "Análise de dados e desempenho"
     },
     {
-      title: "Configurações",
-      url: "/dashboard/settings",
-      icon: Settings,
-      description: "Configurações gerais do sistema",
-      allowedRoles: ['professional', 'secretary', 'admin']
-    },
-    {
-      title: "Assinatura",
-      url: "/dashboard/subscription",
-      icon: CreditCard,
-      description: "Gerenciar assinatura",
-      allowedRoles: ['professional', 'admin']
+      title: "Serviços",
+      url: "/dashboard/services",
+      icon: ListChecks,
+      description: "Gerenciar serviços"
     },
     {
       title: "Perfil",
       url: "/dashboard/profile",
       icon: User,
-      description: "Configurações do seu perfil",
-      allowedRoles: ['professional', 'secretary', 'admin']
+      description: "Configurações do seu perfil"
     },
-    ...(isAdmin ? [
+    {
+      title: "Configurações",
+      url: "/dashboard/settings",
+      icon: Settings,
+      description: "Configurações gerais do sistema"
+    },
+    ...(isAdmin || (!isSecretary && userRole === 'professional') ? [
       {
-        title: "Painel Admin",
-        url: "/dashboard/admin",
+        title: "Secretárias",
+        url: "/dashboard/secretaries",
         icon: Shield,
-        description: "Painel administrativo do sistema",
-        allowedRoles: ['admin']
+        description: "Gerenciar secretárias e permissões"
       }
     ] : []),
   ]
-
-  const filteredMenuItems = menuItems.filter(item => 
-    item.allowedRoles.includes(userRole)
-  );
 
   return (
     <div className="flex flex-col h-full text-sm">
@@ -150,7 +74,7 @@ export function DashboardSidebarContent() {
           Menu
         </h2>
         <div className="space-y-1">
-          {filteredMenuItems.map((item) => (
+          {menuItems.map((item) => (
             <NavLink
               key={item.url}
               to={item.url}

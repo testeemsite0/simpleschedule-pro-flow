@@ -10,12 +10,9 @@ export const useUserRoles = () => {
   const [secretaryAssignments, setSecretaryAssignments] = useState<SecretaryAssignment[]>([]);
   const [managedProfessionals, setManagedProfessionals] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const fetchingRef = useRef(false);
-  const retryCountRef = useRef(0);
   const cacheRef = useRef<{[key: string]: { role: string, assignments: SecretaryAssignment[], timestamp: number }}>({});
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  const MAX_RETRIES = 3;
 
   const fetchUserRole = useCallback(async () => {
     if (!user || fetchingRef.current) return;
@@ -27,16 +24,14 @@ export const useUserRoles = () => {
       setSecretaryAssignments(cached.assignments);
       setManagedProfessionals(cached.assignments.map(a => a.professional_id));
       setLoading(false);
-      setError(null);
       return;
     }
 
     fetchingRef.current = true;
-    setError(null);
 
     try {
-      // Use a more resilient approach to fetch roles
-      const [roleResult, assignmentsResult] = await Promise.allSettled([
+      // Fetch role and secretary assignments in parallel
+      const [roleResult, assignmentsResult] = await Promise.all([
         supabase
           .from('user_roles')
           .select('role')
@@ -49,46 +44,19 @@ export const useUserRoles = () => {
           .eq('is_active', true)
       ]);
 
-      let role = 'professional';
-      let assignmentsList: SecretaryAssignment[] = [];
+      const { data: roleData, error: roleError } = roleResult;
+      const { data: assignments, error: assignmentsError } = assignmentsResult;
 
-      // Handle role result with fallback
-      if (roleResult.status === 'fulfilled') {
-        const { data: roleData, error: roleError } = roleResult.value;
-        
-        if (roleError) {
-          console.warn('Role fetch error (using fallback):', roleError);
-          // Check if it's an RLS recursion error
-          if (roleError.message?.includes('infinite recursion') || 
-              roleError.message?.includes('policy')) {
-            console.warn('RLS policy error detected, using safe fallback');
-            // Safe fallback - assume professional role
-            role = 'professional';
-          } else {
-            throw roleError;
-          }
-        } else {
-          role = roleData?.role || 'professional';
-        }
-      } else {
-        console.warn('Role fetch failed, using fallback:', roleResult.reason);
-        role = 'professional';
+      if (roleError && !roleError.message.includes('PGRST116')) {
+        console.error('Error fetching user role:', roleError);
       }
 
-      // Handle assignments result with fallback
-      if (assignmentsResult.status === 'fulfilled') {
-        const { data: assignments, error: assignmentsError } = assignmentsResult.value;
-        
-        if (assignmentsError) {
-          console.warn('Assignments fetch error (using empty list):', assignmentsError);
-          assignmentsList = [];
-        } else {
-          assignmentsList = assignments || [];
-        }
-      } else {
-        console.warn('Assignments fetch failed, using empty list:', assignmentsResult.reason);
-        assignmentsList = [];
+      if (assignmentsError) {
+        console.error('Error fetching secretary assignments:', assignmentsError);
       }
+
+      const role = roleData?.role || 'professional';
+      const assignmentsList = assignments || [];
 
       // Update cache
       cacheRef.current[user.id] = {
@@ -100,45 +68,22 @@ export const useUserRoles = () => {
       setUserRole(role);
       setSecretaryAssignments(assignmentsList);
       setManagedProfessionals(assignmentsList.map(a => a.professional_id));
-      retryCountRef.current = 0; // Reset retry count on success
 
-      // Try to create default role if none exists and no errors occurred
-      if (roleResult.status === 'fulfilled' && !roleResult.value.data && !roleResult.value.error) {
+      // Create default role if none exists
+      if (!roleData && !roleError) {
         try {
           await supabase
             .from('user_roles')
             .insert({ user_id: user.id, role: 'professional' });
         } catch (insertError) {
-          console.warn('Error creating default role (non-critical):', insertError);
+          console.error('Error creating default role:', insertError);
         }
       }
-    } catch (error: any) {
-      console.error('Critical error in fetchUserRole:', error);
-      
-      // Check if it's an RLS recursion error
-      if (error.message?.includes('infinite recursion') || 
-          error.message?.includes('policy')) {
-        console.warn('RLS recursion detected, using emergency fallback');
-        setUserRole('professional');
-        setSecretaryAssignments([]);
-        setManagedProfessionals([]);
-        setError('Sistema temporariamente em modo limitado devido a problemas de configuração');
-      } else if (retryCountRef.current < MAX_RETRIES) {
-        retryCountRef.current++;
-        setError(`Tentativa ${retryCountRef.current}/${MAX_RETRIES} falhou. Tentando novamente...`);
-        
-        // Retry with exponential backoff
-        setTimeout(() => {
-          fetchingRef.current = false;
-          fetchUserRole();
-        }, Math.pow(2, retryCountRef.current) * 1000);
-        return;
-      } else {
-        setError('Erro ao carregar permissões do usuário. Usando configuração padrão.');
-        setUserRole('professional');
-        setSecretaryAssignments([]);
-        setManagedProfessionals([]);
-      }
+    } catch (error) {
+      console.error('Error in fetchUserRole:', error);
+      setUserRole('professional');
+      setSecretaryAssignments([]);
+      setManagedProfessionals([]);
     } finally {
       setLoading(false);
       fetchingRef.current = false;
@@ -152,7 +97,6 @@ export const useUserRoles = () => {
       setUserRole('professional');
       setSecretaryAssignments([]);
       setManagedProfessionals([]);
-      setError(null);
       setLoading(false);
     }
   }, [user, fetchUserRole]);
@@ -169,10 +113,8 @@ export const useUserRoles = () => {
 
   const refetch = useCallback(() => {
     if (user) {
-      // Clear cache and retry count to force fresh fetch
+      // Clear cache to force fresh fetch
       delete cacheRef.current[user.id];
-      retryCountRef.current = 0;
-      setError(null);
       fetchUserRole();
     }
   }, [user, fetchUserRole]);
@@ -186,7 +128,6 @@ export const useUserRoles = () => {
     managedProfessionals,
     canManageProfessional,
     loading,
-    error,
     refetch
   };
 };
