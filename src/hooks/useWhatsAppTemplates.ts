@@ -8,6 +8,7 @@ interface MessageTemplate {
   message: string;
   variables: string[];
   createdAt: string;
+  isDefault?: boolean;
 }
 
 export const useWhatsAppTemplates = () => {
