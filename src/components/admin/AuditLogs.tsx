@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,10 +51,17 @@ const AuditLogs = () => {
         }
       }
 
-      // Combine the data
-      const logsWithUsers = (logsData || []).map(log => ({
-        ...log,
-        ip_address: log.ip_address || null,
+      // Combine the data with proper type casting
+      const logsWithUsers: AuditLog[] = (logsData || []).map(log => ({
+        id: log.id,
+        admin_user_id: log.admin_user_id,
+        action: log.action,
+        target_type: log.target_type,
+        target_id: log.target_id,
+        details: log.details,
+        ip_address: log.ip_address ? String(log.ip_address) : null,
+        user_agent: log.user_agent,
+        created_at: log.created_at,
         admin_user: log.admin_user_id 
           ? profilesData.find(p => p.id === log.admin_user_id) 
           : undefined
