@@ -1,4 +1,3 @@
-
 import {
   BarChart,
   Calendar,
@@ -21,11 +20,17 @@ import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/context/AuthContext"
 import { useUserRoles } from "@/hooks/useUserRoles"
 import { cn } from "@/lib/utils"
+import { AdminSidebarContent } from "./AdminSidebarContent"
 
 export function DashboardSidebarContent() {
   const { user } = useAuth();
   const { userRole, isSecretary, isAdmin } = useUserRoles();
   const location = useLocation()
+
+  // Se for admin, mostrar menu simplificado
+  if (isAdmin) {
+    return <AdminSidebarContent />;
+  }
 
   const menuSections = [
     {
@@ -149,22 +154,6 @@ export function DashboardSidebarContent() {
       icon: Shield,
       description: "Gerenciar secretárias e permissões",
       roles: ['professional', 'admin']
-    });
-  }
-
-  // Add admin panel for admin users
-  if (isAdmin) {
-    menuSections.push({
-      title: "Administração",
-      items: [
-        {
-          title: "Painel Admin",
-          url: "/admin-panel",
-          icon: ShieldCheck,
-          description: "Administração do sistema",
-          roles: ['admin']
-        }
-      ]
     });
   }
 
