@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -35,42 +34,54 @@ export const useUserRoles = () => {
     try {
       console.log('useUserRoles: Fetching fresh data from database');
       
-      // Fetch role and secretary assignments in parallel
-      const [roleResult, assignmentsResult] = await Promise.all([
-        supabase
+      // Use the security definer function to get the role
+      const { data: roleFunction, error: roleFunctionError } = await supabase
+        .rpc('get_current_user_role');
+
+      console.log('useUserRoles: Role function response', {
+        roleFunction,
+        roleFunctionError: roleFunctionError?.message
+      });
+
+      // Fallback to direct query if function fails
+      let role = 'professional';
+      if (roleFunctionError) {
+        console.log('useUserRoles: Function failed, trying direct query');
+        const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .maybeSingle(),
-        supabase
-          .from('secretary_assignments')
-          .select('*')
-          .eq('secretary_id', user.id)
-          .eq('is_active', true)
-      ]);
+          .maybeSingle();
 
-      const { data: roleData, error: roleError } = roleResult;
-      const { data: assignments, error: assignmentsError } = assignmentsResult;
+        console.log('useUserRoles: Direct query response', {
+          roleData,
+          roleError: roleError?.message
+        });
 
-      console.log('useUserRoles: Database response', {
-        roleData,
-        roleError: roleError?.message,
+        role = roleData?.role || 'professional';
+      } else {
+        role = roleFunction || 'professional';
+      }
+
+      // Fetch secretary assignments in parallel
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('secretary_assignments')
+        .select('*')
+        .eq('secretary_id', user.id)
+        .eq('is_active', true);
+
+      console.log('useUserRoles: Secretary assignments response', {
         assignments: assignments?.length || 0,
         assignmentsError: assignmentsError?.message
       });
-
-      if (roleError && !roleError.message.includes('PGRST116')) {
-        console.error('Error fetching user role:', roleError);
-      }
 
       if (assignmentsError) {
         console.error('Error fetching secretary assignments:', assignmentsError);
       }
 
-      const role = roleData?.role || 'professional';
       const assignmentsList = assignments || [];
 
-      console.log('useUserRoles: Setting role to', role);
+      console.log('useUserRoles: Final role determined:', role);
 
       // Update cache
       cacheRef.current[user.id] = {
@@ -83,27 +94,20 @@ export const useUserRoles = () => {
       setSecretaryAssignments(assignmentsList);
       setManagedProfessionals(assignmentsList.map(a => a.professional_id));
 
-      // Create default role if none exists
-      if (!roleData && !roleError) {
-        console.log('useUserRoles: Creating default role for user');
-        try {
-          await supabase
-            .from('user_roles')
-            .insert({ user_id: user.id, role: 'professional' });
-        } catch (insertError) {
-          console.error('Error creating default role:', insertError);
-        }
-      }
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
-      setUserRole('professional');
+      // Keep the current role instead of falling back to professional
+      // This prevents losing admin access due to temporary errors
+      if (userRole === 'professional') {
+        setUserRole('professional');
+      }
       setSecretaryAssignments([]);
       setManagedProfessionals([]);
     } finally {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, [user]);
+  }, [user, userRole]);
 
   useEffect(() => {
     if (user) {
@@ -125,7 +129,8 @@ export const useUserRoles = () => {
     isAdmin,
     isSecretary,
     isProfessional,
-    loading
+    loading,
+    userId: user?.id
   });
 
   const canManageProfessional = useCallback((professionalId: string) => {

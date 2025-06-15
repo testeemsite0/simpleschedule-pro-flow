@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -358,7 +359,7 @@ const AdminPanel = () => {
   }, [user, userRole, isAdmin, rolesLoading]);
 
   const handleRefreshPermissions = async () => {
-    console.log('Refreshing permissions...');
+    console.log('AdminPanel: Refreshing permissions...');
     await refetch();
     toast({
       title: 'Permissões atualizadas',
@@ -370,7 +371,7 @@ const AdminPanel = () => {
     return (
       <DashboardLayout title="Painel Administrativo">
         <div className="flex items-center justify-center py-8">
-          <div className="text-center">
+          <div className="text-center space-y-4">
             <p>Verificando permissões...</p>
             <Button 
               variant="outline" 
@@ -405,10 +406,11 @@ const AdminPanel = () => {
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
               <p>Você não tem permissão para acessar esta área.</p>
-              <div className="text-sm text-muted-foreground">
-                <p>Usuário: {user.email}</p>
-                <p>Role atual: {userRole}</p>
-                <p>É admin: {isAdmin ? 'Sim' : 'Não'}</p>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p><strong>Usuário:</strong> {user.email}</p>
+                <p><strong>Role atual:</strong> {userRole}</p>
+                <p><strong>É admin:</strong> {isAdmin ? 'Sim' : 'Não'}</p>
+                <p><strong>User ID:</strong> {user.id}</p>
               </div>
               <Button 
                 variant="outline" 
@@ -428,8 +430,14 @@ const AdminPanel = () => {
     <DashboardLayout title="Painel Administrativo">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Painel Administrativo</h1>
-          <p className="text-sm text-muted-foreground">Logado como: {user.email} (Admin)</p>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Shield className="h-6 w-6 text-green-600" />
+            Painel Administrativo
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Logado como: {user.email} 
+            <Badge variant="destructive" className="ml-2">Admin</Badge>
+          </p>
         </div>
         <Button 
           variant="outline" 
