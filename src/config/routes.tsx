@@ -1,4 +1,3 @@
-
 import { lazy } from "react";
 
 // Lazy load components with better loading states
@@ -19,6 +18,7 @@ const DashboardBookingLink = lazy(() => import("@/pages/DashboardBookingLink"));
 const DashboardReports = lazy(() => import("@/pages/DashboardReports"));
 const DashboardPreferences = lazy(() => import("@/pages/DashboardPreferences"));
 const DashboardUnifiedBooking = lazy(() => import("@/pages/DashboardUnifiedBooking"));
+const DashboardWhatsApp = lazy(() => import("@/pages/DashboardWhatsApp"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const PublicBooking = lazy(() => import("@/pages/PublicBooking"));
 const DashboardCompany = lazy(() => import("@/pages/DashboardCompany"));
@@ -123,6 +123,11 @@ export const routeConfigs: RouteConfig[] = [
     path: "/dashboard/unified-booking",
     component: DashboardUnifiedBooking,
     loadingMessage: "Carregando agendamento..."
+  },
+  {
+    path: "/dashboard/whatsapp",
+    component: DashboardWhatsApp,
+    loadingMessage: "Carregando WhatsApp..."
   },
   {
     path: "/dashboard/company",
