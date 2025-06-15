@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          admin_user_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          target_id: string | null
+          target_type: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          admin_user_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          target_id?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          target_id?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       appointment_payments: {
         Row: {
           amount: number
@@ -447,6 +483,33 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_config: {
+        Row: {
+          created_at: string
+          id: string
+          test_mode: boolean | null
+          updated_at: string
+          webhook_endpoint_secret: string | null
+          webhook_events: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          test_mode?: boolean | null
+          updated_at?: string
+          webhook_endpoint_secret?: string | null
+          webhook_events?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          test_mode?: boolean | null
+          updated_at?: string
+          webhook_endpoint_secret?: string | null
+          webhook_events?: string[] | null
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           created_at: string
@@ -519,6 +582,57 @@ export type Database = {
           stripe_subscription_id?: string | null
           subscription_tier?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          currency: string | null
+          description: string | null
+          display_order: number | null
+          features: Json | null
+          id: string
+          interval_type: string | null
+          is_active: boolean | null
+          max_appointments: number | null
+          max_team_members: number | null
+          name: string
+          price: number
+          stripe_price_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number | null
+          features?: Json | null
+          id?: string
+          interval_type?: string | null
+          is_active?: boolean | null
+          max_appointments?: number | null
+          max_team_members?: number | null
+          name: string
+          price: number
+          stripe_price_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number | null
+          features?: Json | null
+          id?: string
+          interval_type?: string | null
+          is_active?: boolean | null
+          max_appointments?: number | null
+          max_team_members?: number | null
+          name?: string
+          price?: number
+          stripe_price_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -783,6 +897,42 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          attempts: number | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json | null
+          processed: boolean | null
+          processed_at: string | null
+          stripe_event_id: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload?: Json | null
+          processed?: boolean | null
+          processed_at?: string | null
+          stripe_event_id?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed?: boolean | null
+          processed_at?: string | null
+          stripe_event_id?: string | null
         }
         Relationships: []
       }

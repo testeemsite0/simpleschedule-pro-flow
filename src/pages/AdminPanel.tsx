@@ -1,17 +1,25 @@
-
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Users, CreditCard, Settings, BarChart3 } from 'lucide-react';
+import { Shield, Users, CreditCard, Settings, BarChart3, Webhook, FileText, Database } from 'lucide-react';
+
+// Import all admin components
+import SubscriptionPlansManager from '@/components/admin/SubscriptionPlansManager';
+import StripeIntegrationPanel from '@/components/admin/StripeIntegrationPanel';
+import AdminDashboard from '@/components/admin/AdminDashboard';
+import WebhookManager from '@/components/admin/WebhookManager';
+import AuditLogs from '@/components/admin/AuditLogs';
+
+// Keep existing components from the original file
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 // System Statistics Component
@@ -133,7 +141,6 @@ const UserManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      // Cast the newRole to the proper enum type
       const roleValue = newRole as 'professional' | 'secretary' | 'admin';
       
       const { error } = await supabase
@@ -147,7 +154,7 @@ const UserManagement = () => {
         description: 'Role do usuário atualizada',
       });
       
-      fetchUsers(); // Refresh the list
+      fetchUsers();
     } catch (error) {
       console.error('Error updating user role:', error);
       toast({
@@ -250,7 +257,7 @@ const SystemConfig = () => {
         setConfig({
           premiumPrice: data.premium_price?.toString() || '39.90',
           stripePriceId: data.stripe_price_id || '',
-          maintenanceMode: false // This would come from a maintenance table
+          maintenanceMode: false
         });
       }
     } catch (error) {
@@ -395,14 +402,60 @@ const AdminPanel = () => {
     <DashboardLayout title="Painel Administrativo">
       <SystemStats />
       
-      <Tabs defaultValue="users" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="users">Usuários</TabsTrigger>
-          <TabsTrigger value="config">Configurações</TabsTrigger>
+      <Tabs defaultValue="dashboard" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="dashboard" className="flex items-center gap-1">
+            <BarChart3 className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="plans" className="flex items-center gap-1">
+            <Database className="h-4 w-4" />
+            Planos
+          </TabsTrigger>
+          <TabsTrigger value="stripe" className="flex items-center gap-1">
+            <CreditCard className="h-4 w-4" />
+            Stripe
+          </TabsTrigger>
+          <TabsTrigger value="webhooks" className="flex items-center gap-1">
+            <Webhook className="h-4 w-4" />
+            Webhooks
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-1">
+            <Users className="h-4 w-4" />
+            Usuários
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="flex items-center gap-1">
+            <FileText className="h-4 w-4" />
+            Auditoria
+          </TabsTrigger>
+          <TabsTrigger value="config" className="flex items-center gap-1">
+            <Settings className="h-4 w-4" />
+            Config
+          </TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="dashboard">
+          <AdminDashboard />
+        </TabsContent>
+        
+        <TabsContent value="plans">
+          <SubscriptionPlansManager />
+        </TabsContent>
+        
+        <TabsContent value="stripe">
+          <StripeIntegrationPanel />
+        </TabsContent>
+        
+        <TabsContent value="webhooks">
+          <WebhookManager />
+        </TabsContent>
         
         <TabsContent value="users">
           <UserManagement />
+        </TabsContent>
+        
+        <TabsContent value="audit">
+          <AuditLogs />
         </TabsContent>
         
         <TabsContent value="config">

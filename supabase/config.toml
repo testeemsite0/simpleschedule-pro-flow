@@ -4,45 +4,53 @@ project_id = "iabhmwqracdcdnevtpzt"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "storage", "graphql_public"]
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://lovable.dev"]
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+security_update_password_require_reauthentication = true
+
+[functions.test-stripe-connection]
+verify_jwt = true
+
+[functions.stripe-webhook-handler]
+verify_jwt = false
+
+[functions.check-subscription]
+verify_jwt = true
+
+[functions.create-checkout]
+verify_jwt = true
+
+[functions.customer-portal]
+verify_jwt = true
 
 [db]
 port = 54322
 
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+port = 54323
+tenant_id = "realtime-dev"
+
 [studio]
+enabled = true
 port = 54323
 
 [inbucket]
+enabled = true
 port = 54324
-
-[auth]
-enabled = true
-port = 9999
-
-[storage]
-enabled = true
-
-[functions]
-[functions.verify-subscription]
-verify_jwt = true
-search_path = ["public", "extensions"]
-
-[functions.create-checkout]
-verify_jwt = true
-search_path = ["public", "extensions"]
-
-[functions.customer-portal]
-verify_jwt = true
-search_path = ["public", "extensions"]
-
-[functions.check-subscription]
-verify_jwt = true
-search_path = ["public", "extensions"]
-
-[functions.get-stripe-secret]
-verify_jwt = true
-search_path = ["public", "extensions"]
-
-[functions.update-stripe-secret]
-verify_jwt = true
-search_path = ["public", "extensions"]
