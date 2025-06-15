@@ -7,37 +7,63 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-interface SystemConfig {
+interface SubscriptionPlan {
   id: string;
-  premium_price: number;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
   stripe_price_id: string;
+  interval_type: string;
+  features: string[];
+  max_appointments: number;
+  max_team_members: number;
+  is_active: boolean;
+  display_order: number;
 }
 
 const Pricing = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const fetchSystemConfig = async () => {
+    const fetchPlans = async () => {
       try {
-        const { data, error } = await (supabase
-          .from('system_config' as any)
+        const { data, error } = await supabase
+          .from('subscription_plans')
           .select('*')
-          .single() as any);
+          .eq('is_active', true)
+          .order('display_order');
           
         if (error) throw error;
-        setConfig(data as SystemConfig);
+        
+        const transformedPlans = (data || []).map(plan => ({
+          ...plan,
+          features: Array.isArray(plan.features) ? plan.features : 
+                   typeof plan.features === 'string' ? JSON.parse(plan.features) : 
+                   []
+        }));
+        
+        setPlans(transformedPlans);
       } catch (error) {
-        console.error('Error fetching system config:', error);
+        console.error('Error fetching plans:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar planos",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
     };
     
-    fetchSystemConfig();
-  }, []);
+    fetchPlans();
+  }, [toast]);
   
-  const handleCheckout = async (plan: string) => {
+  const handleCheckout = async (planId: string) => {
     if (!user) {
       toast({
         title: "Login necessário",
@@ -55,7 +81,7 @@ const Pricing = () => {
       });
       
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { plan }
+        body: { planId }
       });
       
       if (error) throw error;
@@ -85,6 +111,41 @@ const Pricing = () => {
     }).format(price);
   };
 
+  const formatFeatures = (plan: SubscriptionPlan) => {
+    const baseFeatures = plan.features || [];
+    const dynamicFeatures = [];
+    
+    if (plan.max_appointments === -1) {
+      dynamicFeatures.push('Agendamentos ilimitados');
+    } else if (plan.max_appointments > 0) {
+      dynamicFeatures.push(`Até ${plan.max_appointments} agendamentos/mês`);
+    }
+    
+    if (plan.max_team_members === -1) {
+      dynamicFeatures.push('Profissionais ilimitados');
+    } else if (plan.max_team_members > 0) {
+      dynamicFeatures.push(`Até ${plan.max_team_members} profissionais`);
+    }
+    
+    return [...dynamicFeatures, ...baseFeatures];
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <main className="py-12 px-4">
+          <div className="container max-w-7xl mx-auto">
+            <div className="text-center">
+              <p>Carregando planos...</p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   return (
     <>
       <Header />
@@ -98,156 +159,55 @@ const Pricing = () => {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Plano Gratuito */}
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="p-6 border-b">
-                <h3 className="text-xl font-semibold">Plano Gratuito</h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold">R$0</span>
-                  <span className="ml-1 text-gray-500">/mês</span>
+            {plans.map((plan, index) => (
+              <div 
+                key={plan.id}
+                className={`bg-white rounded-lg shadow-lg overflow-hidden ${
+                  index === 1 ? 'border-2 border-primary relative' : ''
+                }`}
+              >
+                {index === 1 && (
+                  <div className="absolute top-0 right-0 bg-primary text-white px-3 py-1 text-sm font-semibold">
+                    Popular
+                  </div>
+                )}
+                <div className="p-6 border-b">
+                  <h3 className="text-xl font-semibold">{plan.name}</h3>
+                  <div className="mt-4 flex items-baseline">
+                    <span className="text-4xl font-extrabold">
+                      {plan.price > 0 ? formatPrice(plan.price) : 'Gratuito'}
+                    </span>
+                    {plan.price > 0 && (
+                      <span className="ml-1 text-gray-500">
+                        /{plan.interval_type === 'month' ? 'mês' : 'ano'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="p-6">
+                  {plan.description && (
+                    <p className="text-gray-600 mb-4">{plan.description}</p>
+                  )}
+                  <ul className="space-y-3 mb-6">
+                    {formatFeatures(plan).map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-start">
+                        <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleCheckout(plan.id)}
+                    disabled={isLoading || plan.price === 0}
+                  >
+                    {isLoading ? 'Processando...' : plan.price === 0 ? 'Gratuito' : 'Começar agora'}
+                  </Button>
                 </div>
               </div>
-              <div className="p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Até 5 agendamentos/mês</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>1 profissional</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Notificações por email</span>
-                  </li>
-                  <li className="flex items-start text-gray-400">
-                    <svg className="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    <span>Pagamentos online</span>
-                  </li>
-                  <li className="flex items-start text-gray-400">
-                    <svg className="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    <span>Suporte prioritário</span>
-                  </li>
-                </ul>
-                <Button className="w-full mt-6" disabled>Atual</Button>
-              </div>
-            </div>
-            
-            {/* Plano Profissional */}
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden border-2 border-primary relative">
-              <div className="absolute top-0 right-0 bg-primary text-white px-3 py-1 text-sm font-semibold">Popular</div>
-              <div className="p-6 border-b">
-                <h3 className="text-xl font-semibold">Plano Profissional</h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold">{config ? formatPrice(config.premium_price) : 'R$99'}</span>
-                  <span className="ml-1 text-gray-500">/mês</span>
-                </div>
-              </div>
-              <div className="p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Agendamentos ilimitados</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Até 5 profissionais</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Notificações por email e SMS</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Pagamentos online</span>
-                  </li>
-                  <li className="flex items-start text-gray-400">
-                    <svg className="h-5 w-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    <span>Suporte prioritário</span>
-                  </li>
-                </ul>
-                <Button 
-                  className="w-full mt-6" 
-                  onClick={() => handleCheckout('professional')}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Processando...' : 'Começar agora'}
-                </Button>
-              </div>
-            </div>
-            
-            {/* Plano Empresarial */}
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              <div className="p-6 border-b">
-                <h3 className="text-xl font-semibold">Plano Empresarial</h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold">R$199</span>
-                  <span className="ml-1 text-gray-500">/mês</span>
-                </div>
-              </div>
-              <div className="p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Agendamentos ilimitados</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Profissionais ilimitados</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Notificações por email, SMS e WhatsApp</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Pagamentos online</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Suporte prioritário</span>
-                  </li>
-                </ul>
-                <Button 
-                  className="w-full mt-6" 
-                  onClick={() => handleCheckout('enterprise')}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Processando...' : 'Começar agora'}
-                </Button>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </main>
