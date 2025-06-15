@@ -27,7 +27,7 @@ const AuditLogs = () => {
 
   const fetchAuditLogs = async () => {
     try {
-      // First fetch the audit logs
+      // Primeiro buscar os logs de auditoria
       const { data: logsData, error: logsError } = await supabase
         .from('admin_audit_logs')
         .select('*')
@@ -36,7 +36,7 @@ const AuditLogs = () => {
 
       if (logsError) throw logsError;
 
-      // Then fetch user profiles for the admin users
+      // Buscar perfis dos usuários admin (CORRIGIDO: usar profiles ao invés de auth.users)
       const adminUserIds = [...new Set(logsData?.map(log => log.admin_user_id).filter(Boolean) || [])];
       
       let profilesData: any[] = [];
@@ -51,7 +51,7 @@ const AuditLogs = () => {
         }
       }
 
-      // Combine the data with proper type casting
+      // Combinar os dados com a tipagem correta
       const logsWithUsers: AuditLog[] = (logsData || []).map(log => ({
         id: log.id,
         admin_user_id: log.admin_user_id,

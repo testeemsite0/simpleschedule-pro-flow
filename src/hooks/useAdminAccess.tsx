@@ -1,54 +1,17 @@
 
 import React from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { useUserRoles } from './useUserRoles';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useUserRoles } from '@/hooks/useUserRoles';
-import { useToast } from '@/hooks/use-toast';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
-export const useAdminAccess = () => {
-  const { user } = useAuth();
-  const { userRole, isAdmin, loading, refetch } = useUserRoles();
-  const { toast } = useToast();
-
-  const handleRefreshPermissions = async () => {
-    console.log('useAdminAccess: Refreshing permissions...');
-    await refetch();
-    toast({
-      title: 'Permissões atualizadas',
-      description: 'As permissões foram recarregadas do banco de dados.',
-    });
-  };
+export function useAdminAccess() {
+  const { isAdmin, loading } = useUserRoles();
 
   const AccessDeniedComponent = () => (
     <DashboardLayout title="Acesso Negado">
       <Card>
         <CardContent className="pt-6">
-          <div className="text-center space-y-4">
-            <p>Você não tem permissão para acessar esta área.</p>
-            <div className="text-sm text-muted-foreground space-y-2">
-              <p><strong>Usuário:</strong> {user?.email}</p>
-              <p><strong>Role atual:</strong> {userRole}</p>
-              <p><strong>É admin:</strong> {isAdmin ? 'Sim' : 'Não'}</p>
-              <p><strong>User ID:</strong> {user?.id}</p>
-            </div>
-            <div className="text-xs text-gray-400 mt-4">
-              <p>Debug info:</p>
-              <p>Loading: {loading ? 'true' : 'false'}</p>
-              <p>Has user: {user ? 'true' : 'false'}</p>
-              <p>User role: {userRole}</p>
-              <p>Is admin: {isAdmin ? 'true' : 'false'}</p>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={handleRefreshPermissions}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar Permissões
-            </Button>
-          </div>
+          <p className="text-center">Você não tem permissão para acessar esta área.</p>
         </CardContent>
       </Card>
     </DashboardLayout>
@@ -56,7 +19,7 @@ export const useAdminAccess = () => {
 
   return {
     loading,
-    hasAccess: user && isAdmin,
+    hasAccess: isAdmin,
     AccessDeniedComponent
   };
-};
+}
