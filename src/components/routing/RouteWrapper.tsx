@@ -14,8 +14,10 @@ export const RouteWrapper: React.FC<RouteWrapperProps> = ({
 }) => {
   // TS now knows component is always valid so we don't need to check for null
 
-  const isLazyComponent = typeof component === 'object' && component !== null &&
-    ('$$typeof' in component || '_payload' in component);
+  // Simplified lazy component detection that TypeScript can understand
+  const isLazyComponent = React.isValidElement(React.createElement(component)) === false && 
+                         typeof component === 'object' && 
+                         component !== null;
 
   if (isLazyComponent) {
     const LazyComponent = component as React.LazyExoticComponent<React.ComponentType<any>>;
