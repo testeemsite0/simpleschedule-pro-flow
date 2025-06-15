@@ -1,13 +1,11 @@
 
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PreferencesForm } from '@/components/preferences/PreferencesForm';
-import { CompanyProfileTab } from '@/components/preferences/CompanyProfileTab';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Settings, Building2 } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 const DashboardPreferences = () => {
   const { user } = useAuth();
@@ -48,38 +46,19 @@ const DashboardPreferences = () => {
   };
 
   return (
-    <DashboardLayout title="Preferências">
+    <DashboardLayout title="Preferências do Sistema">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Settings className="h-6 w-6 text-blue-600" />
           <p className="text-muted-foreground">
-            Configure suas preferências pessoais e da empresa para personalizar a experiência do sistema.
+            Configure suas preferências pessoais de trabalho, horários, notificações e outras configurações do sistema.
           </p>
         </div>
 
-        <Tabs defaultValue="company" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="company" className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Perfil da Empresa
-            </TabsTrigger>
-            <TabsTrigger value="system" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Preferências do Sistema
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="company">
-            <CompanyProfileTab />
-          </TabsContent>
-
-          <TabsContent value="system">
-            <PreferencesForm
-              onSubmit={handlePreferencesSubmit}
-              isSubmitting={isSubmitting}
-            />
-          </TabsContent>
-        </Tabs>
+        <PreferencesForm
+          onSubmit={handlePreferencesSubmit}
+          isSubmitting={isSubmitting}
+        />
       </div>
     </DashboardLayout>
   );

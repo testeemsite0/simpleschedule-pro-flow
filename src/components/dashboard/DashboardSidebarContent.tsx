@@ -131,13 +131,6 @@ export function DashboardSidebarContent() {
           roles: ['professional', 'secretary', 'admin']
         },
         {
-          title: "Configurações",
-          url: "/dashboard/settings",
-          icon: Settings,
-          description: "Configurações gerais do sistema",
-          roles: ['professional', 'secretary', 'admin']
-        },
-        {
           title: "Assinatura",
           url: "/dashboard/subscription",
           icon: CreditCard,
