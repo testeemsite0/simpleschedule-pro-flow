@@ -9,15 +9,19 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 
+interface SystemSettings {
+  id: string;
+  maintenance_mode: boolean;
+  system_notifications: boolean;
+  debug_mode: boolean;
+}
+
 const AdminConfig = () => {
   const { loading: accessLoading, hasAccess, AccessDeniedComponent } = useAdminAccess();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState({
-    maintenanceMode: false,
-    systemNotifications: true,
-    debugMode: false
-  });
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
 
   useEffect(() => {
     if (hasAccess) {
@@ -27,46 +31,85 @@ const AdminConfig = () => {
 
   const fetchSystemConfig = async () => {
     try {
-      console.log('AdminConfig: Fetching system configuration...');
+      console.log('AdminConfig: Fetching system configuration from database...');
       
-      // Por enquanto, usar valores padrão já que não temos essas configurações no banco
-      // No futuro, buscar de uma tabela system_settings
-      setConfig({
-        maintenanceMode: false,
-        systemNotifications: true,
-        debugMode: false
-      });
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .maybeSingle();
+
+      if (error) {
+        console.error('AdminConfig: Error fetching system config:', error);
+        throw error;
+      }
       
-      console.log('AdminConfig: Configuration loaded');
+      if (data) {
+        console.log('AdminConfig: Configuration loaded successfully:', data);
+        setSettings(data);
+      } else {
+        console.log('AdminConfig: No configuration found, using defaults');
+        // Se não encontrar configuração, criar uma
+        const { data: newConfig, error: createError } = await supabase
+          .from('system_settings')
+          .insert({
+            maintenance_mode: false,
+            system_notifications: true,
+            debug_mode: false
+          })
+          .select()
+          .single();
+          
+        if (createError) {
+          throw createError;
+        }
+        
+        setSettings(newConfig);
+      }
+      
     } catch (error) {
-      console.error('AdminConfig: Error fetching system config:', error);
+      console.error('AdminConfig: Error in fetchSystemConfig:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao carregar configurações do sistema',
+        description: 'Erro ao carregar configurações do sistema: ' + error.message,
         variant: 'destructive',
       });
+    } finally {
+      setFetchLoading(false);
     }
   };
 
   const handleUpdateConfig = async () => {
+    if (!settings) return;
+    
     setLoading(true);
     try {
-      console.log('AdminConfig: Updating system configuration...');
+      console.log('AdminConfig: Updating system configuration...', settings);
       
-      // Por enquanto, apenas simular a atualização
-      // No futuro, salvar em uma tabela system_settings
+      const { error } = await supabase
+        .from('system_settings')
+        .update({
+          maintenance_mode: settings.maintenance_mode,
+          system_notifications: settings.system_notifications,
+          debug_mode: settings.debug_mode
+        })
+        .eq('id', settings.id);
+
+      if (error) {
+        console.error('AdminConfig: Error updating system config:', error);
+        throw error;
+      }
       
       toast({
         title: 'Sucesso',
-        description: 'Configurações do sistema atualizadas',
+        description: 'Configurações do sistema atualizadas com sucesso',
       });
       
       console.log('AdminConfig: Configuration updated successfully');
     } catch (error) {
-      console.error('AdminConfig: Error updating system config:', error);
+      console.error('AdminConfig: Error in handleUpdateConfig:', error);
       toast({
         title: 'Erro',
-        description: 'Ocorreu um erro ao atualizar as configurações',
+        description: 'Erro ao atualizar configurações: ' + error.message,
         variant: 'destructive',
       });
     } finally {
@@ -74,11 +117,16 @@ const AdminConfig = () => {
     }
   };
 
-  if (accessLoading) {
+  const updateSetting = (key: keyof Omit<SystemSettings, 'id'>, value: boolean) => {
+    if (!settings) return;
+    setSettings(prev => prev ? { ...prev, [key]: value } : null);
+  };
+
+  if (accessLoading || fetchLoading) {
     return (
       <DashboardLayout title="Configurações do Sistema">
         <div className="flex items-center justify-center py-8">
-          <p>Verificando permissões...</p>
+          <p>Carregando configurações...</p>
         </div>
       </DashboardLayout>
     );
@@ -86,6 +134,16 @@ const AdminConfig = () => {
 
   if (!hasAccess) {
     return <AccessDeniedComponent />;
+  }
+
+  if (!settings) {
+    return (
+      <DashboardLayout title="Configurações do Sistema">
+        <div className="flex items-center justify-center py-8">
+          <p>Erro ao carregar configurações do sistema.</p>
+        </div>
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -108,8 +166,8 @@ const AdminConfig = () => {
               </div>
               <Switch
                 id="maintenance"
-                checked={config.maintenanceMode}
-                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, maintenanceMode: checked }))}
+                checked={settings.maintenance_mode}
+                onCheckedChange={(checked) => updateSetting('maintenance_mode', checked)}
               />
             </div>
 
@@ -122,8 +180,8 @@ const AdminConfig = () => {
               </div>
               <Switch
                 id="notifications"
-                checked={config.systemNotifications}
-                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, systemNotifications: checked }))}
+                checked={settings.system_notifications}
+                onCheckedChange={(checked) => updateSetting('system_notifications', checked)}
               />
             </div>
 
@@ -136,8 +194,8 @@ const AdminConfig = () => {
               </div>
               <Switch
                 id="debug"
-                checked={config.debugMode}
-                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, debugMode: checked }))}
+                checked={settings.debug_mode}
+                onCheckedChange={(checked) => updateSetting('debug_mode', checked)}
               />
             </div>
 

@@ -705,6 +705,33 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          created_at: string
+          debug_mode: boolean
+          id: string
+          maintenance_mode: boolean
+          system_notifications: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          debug_mode?: boolean
+          id?: string
+          maintenance_mode?: boolean
+          system_notifications?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          debug_mode?: boolean
+          id?: string
+          maintenance_mode?: boolean
+          system_notifications?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_member_insurance_plans: {
         Row: {
           created_at: string
@@ -970,7 +997,7 @@ export type Database = {
         }[]
       }
       has_role: {
-        Args: { _role: string }
+        Args: { _role: string } | { _user_id: string; _role: string }
         Returns: boolean
       }
       is_secretary_for_professional: {

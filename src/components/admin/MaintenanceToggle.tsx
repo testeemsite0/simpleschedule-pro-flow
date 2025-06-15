@@ -4,9 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
 
 interface MaintenanceToggleProps {
   initialState?: boolean;
@@ -14,26 +13,62 @@ interface MaintenanceToggleProps {
 
 export function MaintenanceToggle({ initialState = false }: MaintenanceToggleProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
   const [isEnabled, setIsEnabled] = useState(initialState);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMaintenanceMode();
+  }, []);
+
+  const fetchMaintenanceMode = async () => {
+    try {
+      console.log('MaintenanceToggle: Fetching maintenance mode status...');
+      
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('id, maintenance_mode')
+        .maybeSingle();
+
+      if (error) {
+        console.error('MaintenanceToggle: Error fetching maintenance mode:', error);
+        return;
+      }
+
+      if (data) {
+        console.log('MaintenanceToggle: Current maintenance mode:', data.maintenance_mode);
+        setIsEnabled(data.maintenance_mode);
+        setSettingsId(data.id);
+      }
+    } catch (error) {
+      console.error('MaintenanceToggle: Error in fetchMaintenanceMode:', error);
+    }
+  };
 
   const toggleMaintenance = async (enabled: boolean) => {
-    if (!user) return;
+    if (!settingsId) {
+      console.error('MaintenanceToggle: No settings ID available');
+      return;
+    }
     
     setIsUpdating(true);
     
     try {
-      // Vamos usar um campo existente na tabela system_preferences (notifications_enabled)
-      // mas no mundo real, você deveria adicionar um campo maintenance_mode à tabela
+      console.log('MaintenanceToggle: Updating maintenance mode to:', enabled);
+      
       const { error } = await supabase
-        .from('system_preferences')
-        .update({ notifications_enabled: !enabled }) // Invertemos a lógica aqui - desabilitar notificações ativa o modo de manutenção
-        .eq('professional_id', user.id);
+        .from('system_settings')
+        .update({ maintenance_mode: enabled })
+        .eq('id', settingsId);
         
-      if (error) throw error;
+      if (error) {
+        console.error('MaintenanceToggle: Error updating maintenance mode:', error);
+        throw error;
+      }
       
       setIsEnabled(enabled);
+      console.log('MaintenanceToggle: Maintenance mode updated successfully');
+      
       toast({
         title: enabled ? "Modo de manutenção ativado" : "Modo de manutenção desativado",
         description: enabled 
@@ -41,10 +76,10 @@ export function MaintenanceToggle({ initialState = false }: MaintenanceTogglePro
           : "O agendamento online foi reativado com sucesso.",
       });
     } catch (error) {
-      console.error("Erro ao alterar modo de manutenção:", error);
+      console.error("MaintenanceToggle: Error in toggleMaintenance:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível alterar o modo de manutenção.",
+        description: "Não foi possível alterar o modo de manutenção: " + error.message,
         variant: "destructive",
       });
     } finally {
@@ -70,7 +105,7 @@ export function MaintenanceToggle({ initialState = false }: MaintenanceTogglePro
             id="maintenance-mode" 
             checked={isEnabled} 
             onCheckedChange={toggleMaintenance}
-            disabled={isUpdating}
+            disabled={isUpdating || !settingsId}
           />
           <Label htmlFor="maintenance-mode">
             {isEnabled ? "Manutenção ativada" : "Manutenção desativada"}
