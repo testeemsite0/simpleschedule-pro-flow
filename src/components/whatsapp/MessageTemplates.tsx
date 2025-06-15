@@ -11,19 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, MessageSquare } from 'lucide-react';
 import { useWhatsAppTemplates } from '@/hooks/useWhatsAppTemplates';
 
-interface DefaultTemplate {
+interface MessageTemplate {
   id: string;
   name: string;
   category: string;
   message: string;
   variables: string[];
+  createdAt: string;
   isDefault?: boolean;
 }
 
 export const MessageTemplates: React.FC = () => {
   const { templates, addTemplate, updateTemplate, deleteTemplate } = useWhatsAppTemplates();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -41,13 +42,14 @@ export const MessageTemplates: React.FC = () => {
     { value: 'general', label: 'Geral' }
   ];
 
-  const defaultTemplates: DefaultTemplate[] = [
+  const defaultTemplates: MessageTemplate[] = [
     {
       id: 'default_confirmation',
       name: 'Confirmação de Agendamento',
       category: 'appointment_confirmation',
       message: 'Olá {{clientName}}! Seu agendamento foi confirmado para {{date}} às {{time}} com {{professionalName}}. Aguardamos você! 😊',
       variables: ['clientName', 'date', 'time', 'professionalName'],
+      createdAt: new Date().toISOString(),
       isDefault: true
     },
     {
@@ -56,6 +58,7 @@ export const MessageTemplates: React.FC = () => {
       category: 'appointment_reminder',
       message: 'Oi {{clientName}}! Lembrando que você tem um agendamento amanhã ({{date}}) às {{time}} com {{professionalName}}. Confirme sua presença! 📅',
       variables: ['clientName', 'date', 'time', 'professionalName'],
+      createdAt: new Date().toISOString(),
       isDefault: true
     }
   ];
@@ -80,7 +83,7 @@ export const MessageTemplates: React.FC = () => {
     setIsDialogOpen(false);
   };
 
-  const handleEdit = (template: any) => {
+  const handleEdit = (template: MessageTemplate) => {
     setEditingTemplate(template);
     setFormData({
       name: template.name,
@@ -104,7 +107,7 @@ export const MessageTemplates: React.FC = () => {
     });
   };
 
-  const allTemplates = [...defaultTemplates, ...templates];
+  const allTemplates: MessageTemplate[] = [...defaultTemplates, ...templates];
 
   return (
     <div className="space-y-4">
