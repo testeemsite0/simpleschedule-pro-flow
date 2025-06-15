@@ -27,10 +27,21 @@ export function DashboardSidebarContent() {
   const { userRole, isSecretary, isAdmin } = useUserRoles();
   const location = useLocation()
 
-  // Se for admin, mostrar menu simplificado
+  console.log('DashboardSidebarContent: Debug info', {
+    userRole,
+    isAdmin,
+    isSecretary,
+    userId: user?.id,
+    currentPath: location.pathname
+  });
+
+  // Se for admin, mostrar APENAS o menu simplificado
   if (isAdmin) {
+    console.log('DashboardSidebarContent: Usuário é admin, mostrando AdminSidebarContent');
     return <AdminSidebarContent />;
   }
+
+  console.log('DashboardSidebarContent: Usuário não é admin, mostrando menu normal');
 
   const menuSections = [
     {
