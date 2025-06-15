@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { AppointmentProvider } from "@/context/AppointmentContext";
 import { RouteWrapper } from "@/components/routing/RouteWrapper";
-import { routeConfigs } from "@/config/routes";
+import { routes } from "@/config/routes";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,16 +30,11 @@ function App() {
             <Sonner />
             <BrowserRouter>
               <Routes>
-                {routeConfigs.map((route) => (
+                {routes.map((route) => (
                   <Route
                     key={route.path}
                     path={route.path}
-                    element={
-                      <RouteWrapper
-                        component={route.component}
-                        loadingMessage={route.loadingMessage}
-                      />
-                    }
+                    element={route.element}
                   />
                 ))}
               </Routes>

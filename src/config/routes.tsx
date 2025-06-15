@@ -1,22 +1,18 @@
-import { Home, Calendar, Users, Settings, FileText, Webhook, CreditCard, LayoutDashboard } from 'lucide-react';
-import HomeView from '@/pages/Home';
-import Schedules from '@/pages/Schedules';
-import AdminPanel from '@/pages/admin/AdminPanel';
+
+import React from 'react';
+import Index from '@/pages/Index';
+import Pricing from '@/pages/Pricing';
+import AdminPanel from '@/pages/AdminPanel';
 import AdminUsers from '@/pages/admin/AdminUsers';
 import AdminStripe from '@/pages/admin/AdminStripe';
 import AdminWebhooks from '@/pages/admin/AdminWebhooks';
 import AdminAudit from '@/pages/admin/AdminAudit';
-import Pricing from '@/pages/Pricing';
 import AdminPlans from '@/pages/admin/AdminPlans';
 
 export const routes = [
   {
     path: "/",
-    element: <HomeView />,
-  },
-  {
-    path: "/schedules",
-    element: <Schedules />,
+    element: <Index />,
   },
   {
     path: "/pricing",
@@ -47,3 +43,10 @@ export const routes = [
     element: <AdminPlans />,
   },
 ];
+
+// Export for App.tsx compatibility
+export const routeConfigs = routes.map(route => ({
+  path: route.path,
+  component: () => route.element,
+  loadingMessage: "Carregando..."
+}));
