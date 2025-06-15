@@ -27,6 +27,14 @@ const DashboardSecretaries = lazy(() => import("@/pages/DashboardSecretaries"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
 
+// Admin pages
+const AdminPlans = lazy(() => import("@/pages/admin/AdminPlans"));
+const AdminStripe = lazy(() => import("@/pages/admin/AdminStripe"));
+const AdminWebhooks = lazy(() => import("@/pages/admin/AdminWebhooks"));
+const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
+const AdminAudit = lazy(() => import("@/pages/admin/AdminAudit"));
+const AdminConfig = lazy(() => import("@/pages/admin/AdminConfig"));
+
 export interface RouteConfig {
   path: string;
   component: React.LazyExoticComponent<React.ComponentType<any>>;
@@ -148,6 +156,36 @@ export const routeConfigs: RouteConfig[] = [
     path: "/admin-panel",
     component: AdminPanel,
     loadingMessage: "Carregando painel administrativo..."
+  },
+  {
+    path: "/admin-panel/plans",
+    component: AdminPlans,
+    loadingMessage: "Carregando planos de assinatura..."
+  },
+  {
+    path: "/admin-panel/stripe",
+    component: AdminStripe,
+    loadingMessage: "Carregando integração Stripe..."
+  },
+  {
+    path: "/admin-panel/webhooks",
+    component: AdminWebhooks,
+    loadingMessage: "Carregando webhooks..."
+  },
+  {
+    path: "/admin-panel/users",
+    component: AdminUsers,
+    loadingMessage: "Carregando gerenciamento de usuários..."
+  },
+  {
+    path: "/admin-panel/audit",
+    component: AdminAudit,
+    loadingMessage: "Carregando logs de auditoria..."
+  },
+  {
+    path: "/admin-panel/config",
+    component: AdminConfig,
+    loadingMessage: "Carregando configurações..."
   },
   {
     path: "*",
