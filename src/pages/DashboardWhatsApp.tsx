@@ -5,24 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Globe, Settings, Plus } from 'lucide-react';
+import { MessageSquare, Globe, Settings, Plus, BookOpen } from 'lucide-react';
 import { WhatsAppWebFrame } from '@/components/whatsapp/WhatsAppWebFrame';
 import { MessageTemplates } from '@/components/whatsapp/MessageTemplates';
 import { WhatsAppSettings } from '@/components/whatsapp/WhatsAppSettings';
+import { WhatsAppTutorial } from '@/components/whatsapp/WhatsAppTutorial';
 
 const DashboardWhatsApp = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [activeTab, setActiveTab] = useState('whatsapp');
 
   useEffect(() => {
-    // Verificar se há conexão ativa (simulado)
+    // Verificar se há conexão ativa
     const checkConnection = () => {
       const connected = localStorage.getItem('whatsapp_connected') === 'true';
       setIsConnected(connected);
     };
 
     checkConnection();
-    const interval = setInterval(checkConnection, 5000);
+    const interval = setInterval(checkConnection, 10000); // A cada 10 segundos
     return () => clearInterval(interval);
   }, []);
 
@@ -52,6 +53,10 @@ const DashboardWhatsApp = () => {
               <MessageSquare className="h-4 w-4" />
               Templates
             </TabsTrigger>
+            <TabsTrigger value="tutorial" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Tutorial
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Configurações
@@ -74,6 +79,10 @@ const DashboardWhatsApp = () => {
 
           <TabsContent value="templates">
             <MessageTemplates />
+          </TabsContent>
+
+          <TabsContent value="tutorial">
+            <WhatsAppTutorial />
           </TabsContent>
 
           <TabsContent value="settings">
