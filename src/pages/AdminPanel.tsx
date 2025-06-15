@@ -5,8 +5,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Users, CreditCard, Settings, BarChart3, Webhook, FileText, Database } from 'lucide-react';
+import { Shield, Users, CreditCard, Settings, BarChart3, Webhook, FileText, Database, RefreshCw } from 'lucide-react';
 
 // Import all admin components
 import SubscriptionPlansManager from '@/components/admin/SubscriptionPlansManager';
@@ -343,45 +344,56 @@ const SystemConfig = () => {
 // Main Admin Panel Component
 const AdminPanel = () => {
   const { user } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { userRole, isAdmin, loading: rolesLoading, refetch } = useUserRoles();
+  const { toast } = useToast();
   
+  // Debug logs to help identify the issue
   useEffect(() => {
-    const verifyAdminAccess = async () => {
-      if (!user) {
-        setIsAdmin(false);
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (error && !error.message.includes('PGRST116')) {
-          console.error('Error checking admin access:', error);
-          setIsAdmin(false);
-        } else {
-          setIsAdmin(data?.role === 'admin');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        setIsAdmin(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    verifyAdminAccess();
-  }, [user]);
+    console.log('AdminPanel Debug Info:', {
+      user: user?.id,
+      userRole,
+      isAdmin,
+      rolesLoading
+    });
+  }, [user, userRole, isAdmin, rolesLoading]);
+
+  const handleRefreshPermissions = async () => {
+    console.log('Refreshing permissions...');
+    await refetch();
+    toast({
+      title: 'Permissões atualizadas',
+      description: 'As permissões foram recarregadas do banco de dados.',
+    });
+  };
   
-  if (loading) {
+  if (rolesLoading) {
     return (
       <DashboardLayout title="Painel Administrativo">
-        <p className="text-center py-8">Verificando permissões...</p>
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <p>Verificando permissões...</p>
+            <Button 
+              variant="outline" 
+              onClick={handleRefreshPermissions}
+              className="mt-4"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar Permissões
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+  
+  if (!user) {
+    return (
+      <DashboardLayout title="Acesso Negado">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center">Você precisa estar logado para acessar esta área.</p>
+          </CardContent>
+        </Card>
       </DashboardLayout>
     );
   }
@@ -391,7 +403,21 @@ const AdminPanel = () => {
       <DashboardLayout title="Acesso Negado">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-center">Você não tem permissão para acessar esta área.</p>
+            <div className="text-center space-y-4">
+              <p>Você não tem permissão para acessar esta área.</p>
+              <div className="text-sm text-muted-foreground">
+                <p>Usuário: {user.email}</p>
+                <p>Role atual: {userRole}</p>
+                <p>É admin: {isAdmin ? 'Sim' : 'Não'}</p>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshPermissions}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Atualizar Permissões
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </DashboardLayout>
@@ -400,6 +426,21 @@ const AdminPanel = () => {
   
   return (
     <DashboardLayout title="Painel Administrativo">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Painel Administrativo</h1>
+          <p className="text-sm text-muted-foreground">Logado como: {user.email} (Admin)</p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleRefreshPermissions}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Atualizar
+        </Button>
+      </div>
+
       <SystemStats />
       
       <Tabs defaultValue="dashboard" className="space-y-6">

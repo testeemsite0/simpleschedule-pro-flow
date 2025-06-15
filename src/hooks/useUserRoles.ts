@@ -14,12 +14,15 @@ export const useUserRoles = () => {
   const cacheRef = useRef<{[key: string]: { role: string, assignments: SecretaryAssignment[], timestamp: number }}>({});
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  const fetchUserRole = useCallback(async () => {
+  const fetchUserRole = useCallback(async (forceRefresh = false) => {
     if (!user || fetchingRef.current) return;
 
-    // Check cache first
+    console.log('useUserRoles: Fetching role for user', user.id, { forceRefresh });
+
+    // Check cache first (unless forced refresh)
     const cached = cacheRef.current[user.id];
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log('useUserRoles: Using cached role', cached.role);
       setUserRole(cached.role);
       setSecretaryAssignments(cached.assignments);
       setManagedProfessionals(cached.assignments.map(a => a.professional_id));
@@ -30,6 +33,8 @@ export const useUserRoles = () => {
     fetchingRef.current = true;
 
     try {
+      console.log('useUserRoles: Fetching fresh data from database');
+      
       // Fetch role and secretary assignments in parallel
       const [roleResult, assignmentsResult] = await Promise.all([
         supabase
@@ -47,6 +52,13 @@ export const useUserRoles = () => {
       const { data: roleData, error: roleError } = roleResult;
       const { data: assignments, error: assignmentsError } = assignmentsResult;
 
+      console.log('useUserRoles: Database response', {
+        roleData,
+        roleError: roleError?.message,
+        assignments: assignments?.length || 0,
+        assignmentsError: assignmentsError?.message
+      });
+
       if (roleError && !roleError.message.includes('PGRST116')) {
         console.error('Error fetching user role:', roleError);
       }
@@ -57,6 +69,8 @@ export const useUserRoles = () => {
 
       const role = roleData?.role || 'professional';
       const assignmentsList = assignments || [];
+
+      console.log('useUserRoles: Setting role to', role);
 
       // Update cache
       cacheRef.current[user.id] = {
@@ -71,6 +85,7 @@ export const useUserRoles = () => {
 
       // Create default role if none exists
       if (!roleData && !roleError) {
+        console.log('useUserRoles: Creating default role for user');
         try {
           await supabase
             .from('user_roles')
@@ -105,6 +120,14 @@ export const useUserRoles = () => {
   const isProfessional = userRole === 'professional';
   const isAdmin = userRole === 'admin';
 
+  console.log('useUserRoles: Current state', {
+    userRole,
+    isAdmin,
+    isSecretary,
+    isProfessional,
+    loading
+  });
+
   const canManageProfessional = useCallback((professionalId: string) => {
     return isProfessional && user?.id === professionalId ||
            isSecretary && managedProfessionals.includes(professionalId) ||
@@ -113,9 +136,10 @@ export const useUserRoles = () => {
 
   const refetch = useCallback(() => {
     if (user) {
+      console.log('useUserRoles: Manual refetch requested');
       // Clear cache to force fresh fetch
       delete cacheRef.current[user.id];
-      fetchUserRole();
+      fetchUserRole(true);
     }
   }, [user, fetchUserRole]);
 
