@@ -3,27 +3,22 @@ import React, { Suspense } from 'react';
 import { ImprovedLoading } from "@/components/ui/improved-loading";
 
 interface RouteWrapperProps {
+  // Remove null | undefined from the component prop type
   component: React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>;
   loadingMessage: string;
 }
 
 export const RouteWrapper: React.FC<RouteWrapperProps> = ({ 
-  component, 
+  component,
   loadingMessage 
 }) => {
-  // Type guard: Bail if null or undefined, covers all runtime and TS checks
-  if (!component) {
-    return null;
-  }
+  // TS now knows component is always valid so we don't need to check for null
 
-  // At this point, TS should infer component is not null or undefined
-  const Component = component as React.ComponentType<any>;
-
-  // Check lazy-loaded (React.lazy) using its branded symbol and runtime shape
   const isLazyComponent = typeof component === 'object' && component !== null &&
     ('$$typeof' in component || '_payload' in component);
 
   if (isLazyComponent) {
+    const LazyComponent = component as React.LazyExoticComponent<React.ComponentType<any>>;
     return (
       <Suspense fallback={
         <ImprovedLoading 
@@ -32,11 +27,12 @@ export const RouteWrapper: React.FC<RouteWrapperProps> = ({
           showProgress={true}
         />
       }>
-        <Component />
+        <LazyComponent />
       </Suspense>
     );
   }
   
   // Regular component (direct usage, e.g., Navigate redirects)
-  return <Component />;
+  const RegularComponent = component as React.ComponentType<any>;
+  return <RegularComponent />;
 };
