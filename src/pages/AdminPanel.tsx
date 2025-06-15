@@ -133,9 +133,12 @@ const UserManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
+      // Cast the newRole to the proper enum type
+      const roleValue = newRole as 'professional' | 'secretary' | 'admin';
+      
       const { error } = await supabase
         .from('user_roles')
-        .upsert({ user_id: userId, role: newRole }, { onConflict: 'user_id' });
+        .upsert({ user_id: userId, role: roleValue }, { onConflict: 'user_id' });
 
       if (error) throw error;
 
