@@ -317,6 +317,30 @@ const SubscriptionPlansManager = () => {
     return (data || []).map((row) => row.feature_id);
   };
 
+  const handleDeletePlan = async (planId: string) => {
+    try {
+      const { error } = await supabase
+        .from('subscription_plans')
+        .delete()
+        .eq('id', planId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Plano excluído com sucesso",
+      });
+      fetchPlans();
+    } catch (error) {
+      console.error("Error deleting plan:", error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir plano",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8">Carregando planos...</div>;
   }
@@ -462,30 +486,6 @@ const PlanFeaturesList = ({
       ))}
     </ul>
   );
-};
-
-const handleDeletePlan = async (planId: string) => {
-  try {
-    const { error } = await supabase
-      .from('subscription_plans')
-      .delete()
-      .eq('id', planId);
-
-    if (error) throw error;
-
-    toast({
-      title: "Sucesso",
-      description: "Plano excluído com sucesso",
-    });
-    fetchPlans();
-  } catch (error) {
-    console.error("Error deleting plan:", error);
-    toast({
-      title: "Erro",
-      description: "Erro ao excluir plano",
-      variant: "destructive",
-    });
-  }
 };
 
 export default SubscriptionPlansManager;
