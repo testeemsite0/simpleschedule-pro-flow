@@ -12,21 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-
-interface SubscriptionPlan {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  stripe_price_id: string;
-  interval_type: string;
-  features: string[];
-  max_appointments: number;
-  max_team_members: number;
-  is_active: boolean;
-  display_order: number;
-}
+import { SubscriptionPlan } from '@/types/admin';
 
 const SubscriptionPlansManager = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -47,7 +33,16 @@ const SubscriptionPlansManager = () => {
         .order('display_order');
 
       if (error) throw error;
-      setPlans(data || []);
+      
+      // Transform the data to match our interface
+      const transformedPlans = (data || []).map(plan => ({
+        ...plan,
+        features: Array.isArray(plan.features) ? plan.features : 
+                 typeof plan.features === 'string' ? JSON.parse(plan.features) : 
+                 []
+      }));
+      
+      setPlans(transformedPlans);
     } catch (error) {
       console.error('Error fetching plans:', error);
       toast({
@@ -60,12 +55,27 @@ const SubscriptionPlansManager = () => {
     }
   };
 
-  const handleSavePlan = async (plan: Partial<SubscriptionPlan>) => {
+  const handleSavePlan = async (planData: Partial<SubscriptionPlan>) => {
     try {
+      // Ensure required fields are present and properly typed
+      const dataToSave = {
+        name: planData.name || '',
+        description: planData.description || null,
+        price: planData.price || 0,
+        currency: planData.currency || 'BRL',
+        stripe_price_id: planData.stripe_price_id || null,
+        interval_type: planData.interval_type || 'month',
+        features: planData.features || [],
+        max_appointments: planData.max_appointments || null,
+        max_team_members: planData.max_team_members || null,
+        is_active: planData.is_active ?? true,
+        display_order: planData.display_order || 0,
+      };
+
       if (editingPlan?.id) {
         const { error } = await supabase
           .from('subscription_plans')
-          .update(plan)
+          .update(dataToSave)
           .eq('id', editingPlan.id);
         
         if (error) throw error;
@@ -73,7 +83,7 @@ const SubscriptionPlansManager = () => {
       } else {
         const { error } = await supabase
           .from('subscription_plans')
-          .insert(plan);
+          .insert(dataToSave);
         
         if (error) throw error;
         toast({ title: 'Sucesso', description: 'Plano criado com sucesso' });

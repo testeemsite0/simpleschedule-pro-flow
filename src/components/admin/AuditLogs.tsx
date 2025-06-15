@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,22 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Search, Filter, Download, Eye } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-
-interface AuditLog {
-  id: string;
-  admin_user_id: string;
-  action: string;
-  target_type: string | null;
-  target_id: string | null;
-  details: any;
-  ip_address: string | null;
-  user_agent: string | null;
-  created_at: string;
-  admin_user?: {
-    name: string;
-    email: string;
-  };
-}
+import { AuditLog } from '@/types/admin';
 
 const AuditLogs = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -42,17 +26,40 @@ const AuditLogs = () => {
 
   const fetchAuditLogs = async () => {
     try {
-      const { data, error } = await supabase
+      // First fetch the audit logs
+      const { data: logsData, error: logsError } = await supabase
         .from('admin_audit_logs')
-        .select(`
-          *,
-          admin_user:profiles!admin_audit_logs_admin_user_id_fkey(name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(1000);
 
-      if (error) throw error;
-      setLogs(data || []);
+      if (logsError) throw logsError;
+
+      // Then fetch user profiles for the admin users
+      const adminUserIds = [...new Set(logsData?.map(log => log.admin_user_id).filter(Boolean) || [])];
+      
+      let profilesData: any[] = [];
+      if (adminUserIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', adminUserIds);
+
+        if (!profilesError) {
+          profilesData = profiles || [];
+        }
+      }
+
+      // Combine the data
+      const logsWithUsers = (logsData || []).map(log => ({
+        ...log,
+        ip_address: log.ip_address || null,
+        admin_user: log.admin_user_id 
+          ? profilesData.find(p => p.id === log.admin_user_id) 
+          : undefined
+      }));
+
+      setLogs(logsWithUsers);
     } catch (error) {
       console.error('Error fetching audit logs:', error);
       toast({
