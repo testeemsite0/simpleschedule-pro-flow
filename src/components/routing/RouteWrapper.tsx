@@ -8,20 +8,21 @@ interface RouteWrapperProps {
 }
 
 export const RouteWrapper: React.FC<RouteWrapperProps> = ({ 
-  component: Component, 
+  component, 
   loadingMessage 
 }) => {
-  // Early return if Component is null or undefined
-  if (!Component) {
+  // Type guard: Bail if null or undefined, covers all runtime and TS checks
+  if (!component) {
     return null;
   }
-  
-  // At this point, Component is guaranteed to be non-null
-  // Check if the component is lazy-loaded by checking for React.lazy characteristics
-  // Lazy components have a $$typeof symbol and _payload property
-  const isLazyComponent = typeof Component === 'object' && 
-    ('$$typeof' in Component || '_payload' in Component);
-  
+
+  // At this point, TS should infer component is not null or undefined
+  const Component = component as React.ComponentType<any>;
+
+  // Check lazy-loaded (React.lazy) using its branded symbol and runtime shape
+  const isLazyComponent = typeof component === 'object' && component !== null &&
+    ('$$typeof' in component || '_payload' in component);
+
   if (isLazyComponent) {
     return (
       <Suspense fallback={
@@ -36,6 +37,6 @@ export const RouteWrapper: React.FC<RouteWrapperProps> = ({
     );
   }
   
-  // For regular components (like redirects), render directly
+  // Regular component (direct usage, e.g., Navigate redirects)
   return <Component />;
 };
