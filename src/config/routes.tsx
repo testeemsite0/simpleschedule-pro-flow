@@ -1,5 +1,6 @@
 
 import { lazy } from "react";
+import { Navigate } from "react-router-dom";
 
 // Lazy load components with better loading states
 const Home = lazy(() => import("@/pages/Index"));
@@ -9,7 +10,6 @@ const Login = lazy(() => import("@/pages/Login"));
 const Register = lazy(() => import("@/pages/Register"));
 const Booking = lazy(() => import("@/pages/Booking"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const DashboardAppointments = lazy(() => import("@/pages/DashboardAppointments"));
 const DashboardSchedules = lazy(() => import("@/pages/DashboardSchedules"));
 const DashboardTeam = lazy(() => import("@/pages/DashboardTeam"));
 const DashboardServices = lazy(() => import("@/pages/DashboardServices"));
@@ -17,7 +17,6 @@ const DashboardInsurance = lazy(() => import("@/pages/DashboardInsurance"));
 const DashboardClients = lazy(() => import("@/pages/DashboardClients"));
 const DashboardBookingLink = lazy(() => import("@/pages/DashboardBookingLink"));
 const DashboardReports = lazy(() => import("@/pages/DashboardReports"));
-const DashboardPreferences = lazy(() => import("@/pages/DashboardPreferences"));
 const DashboardUnifiedBooking = lazy(() => import("@/pages/DashboardUnifiedBooking"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const PublicBooking = lazy(() => import("@/pages/PublicBooking"));
@@ -30,9 +29,13 @@ const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
 
 export interface RouteConfig {
   path: string;
-  component: React.LazyExoticComponent<React.ComponentType<any>>;
+  component: React.LazyExoticComponent<React.ComponentType<any>> | React.ComponentType<any>;
   loadingMessage: string;
 }
+
+// Redirect component for old routes
+const RedirectToUnifiedBooking = () => <Navigate to="/dashboard/unified-booking" replace />;
+const RedirectToSettings = () => <Navigate to="/dashboard/settings" replace />;
 
 export const routeConfigs: RouteConfig[] = [
   {
@@ -75,9 +78,15 @@ export const routeConfigs: RouteConfig[] = [
     component: Dashboard,
     loadingMessage: "Carregando dashboard..."
   },
+  // Redirect old appointments route to unified booking
   {
     path: "/dashboard/appointments",
-    component: DashboardAppointments,
+    component: RedirectToUnifiedBooking,
+    loadingMessage: "Redirecionando..."
+  },
+  {
+    path: "/dashboard/unified-booking",
+    component: DashboardUnifiedBooking,
     loadingMessage: "Carregando agendamentos..."
   },
   {
@@ -115,15 +124,11 @@ export const routeConfigs: RouteConfig[] = [
     component: DashboardReports,
     loadingMessage: "Carregando relatórios..."
   },
+  // Redirect old preferences route to settings
   {
     path: "/dashboard/preferences",
-    component: DashboardPreferences,
-    loadingMessage: "Carregando preferências..."
-  },
-  {
-    path: "/dashboard/unified-booking",
-    component: DashboardUnifiedBooking,
-    loadingMessage: "Carregando agendamento..."
+    component: RedirectToSettings,
+    loadingMessage: "Redirecionando..."
   },
   {
     path: "/dashboard/company",

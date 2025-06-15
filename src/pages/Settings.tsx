@@ -11,11 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import SubscriptionManagement from '@/components/dashboard/SubscriptionManagement';
+import { PreferencesForm } from '@/components/preferences/PreferencesForm';
+import { CompanyProfileTab } from '@/components/preferences/CompanyProfileTab';
 import { useAuth } from '@/context/AuthContext';
 import { useCompanySettings } from '@/hooks/useCompanySettings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Save, User, Bell, Globe, Shield } from 'lucide-react';
+import { Loader2, Save, User, Bell, Globe, Shield, Building2 } from 'lucide-react';
 
 interface UserPreferences {
   theme: string;
@@ -173,251 +175,227 @@ const Settings = () => {
     }
   };
 
+  const handlePreferencesSubmit = async (data: any) => {
+    if (!user) return;
+    
+    setLoading(true);
+    
+    try {
+      console.log('Settings: Saving system preferences:', data);
+      
+      const { error } = await supabase
+        .from('system_preferences')
+        .upsert({
+          professional_id: user.id,
+          ...data
+        });
+        
+      if (error) {
+        console.error('Settings: Error saving preferences:', error);
+        throw error;
+      }
+      
+      console.log('Settings: Preferences saved successfully');
+      toast.success('Preferências salvas com sucesso!', {
+        description: 'Suas configurações foram atualizadas.',
+      });
+    } catch (error) {
+      console.error('Settings: Error:', error);
+      toast.error('Erro ao salvar preferências', {
+        description: 'Tente novamente em alguns instantes.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <DashboardLayout title="Configurações">
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="general" className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            Geral
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notificações
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Segurança
-          </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Assinatura
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="general">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações Gerais</CardTitle>
-              <CardDescription>
-                Gerencie suas preferências gerais de conta e sistema.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Globe className="h-6 w-6 text-blue-600" />
+          <p className="text-muted-foreground">
+            Configure suas preferências pessoais, da empresa e do sistema para personalizar a experiência.
+          </p>
+        </div>
+
+        <Tabs defaultValue="company" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="company" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Empresa
+            </TabsTrigger>
+            <TabsTrigger value="system" className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Sistema
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notificações
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Segurança
+            </TabsTrigger>
+            <TabsTrigger value="subscription" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Assinatura
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="company">
+            <CompanyProfileTab />
+          </TabsContent>
+
+          <TabsContent value="system">
+            <Card>
+              <CardHeader>
+                <CardTitle>Preferências do Sistema</CardTitle>
+                <CardDescription>
+                  Configure suas preferências pessoais de uso do sistema.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PreferencesForm
+                  onSubmit={handlePreferencesSubmit}
+                  isSubmitting={loading}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Notificações</CardTitle>
+                <CardDescription>
+                  Controle como e quando você é notificado sobre agendamentos e atividades.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Notificações por Email</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receber notificações sobre agendamentos por email
+                      </p>
+                    </div>
+                    <Switch
+                      checked={preferences.emailNotifications}
+                      onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, emailNotifications: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Notificações por SMS</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receber notificações sobre agendamentos por SMS
+                      </p>
+                    </div>
+                    <Switch
+                      checked={preferences.smsNotifications}
+                      onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, smsNotifications: checked }))}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
                 <div className="space-y-2">
-                  <Label htmlFor="theme">Tema da Interface</Label>
-                  <Select value={preferences.theme} onValueChange={(value) => setPreferences(prev => ({ ...prev, theme: value }))}>
+                  <Label htmlFor="reminderHours">Lembrete (horas antes)</Label>
+                  <Select 
+                    value={preferences.reminderHours.toString()} 
+                    onValueChange={(value) => setPreferences(prev => ({ ...prev, reminderHours: parseInt(value) }))}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="light">Claro</SelectItem>
-                      <SelectItem value="dark">Escuro</SelectItem>
-                      <SelectItem value="system">Automático</SelectItem>
+                      <SelectItem value="1">1 hora antes</SelectItem>
+                      <SelectItem value="2">2 horas antes</SelectItem>
+                      <SelectItem value="6">6 horas antes</SelectItem>
+                      <SelectItem value="12">12 horas antes</SelectItem>
+                      <SelectItem value="24">24 horas antes</SelectItem>
+                      <SelectItem value="48">48 horas antes</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="language">Idioma</Label>
-                  <Select value={preferences.language} onValueChange={(value) => setPreferences(prev => ({ ...prev, language: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                      <SelectItem value="en-US">English (US)</SelectItem>
-                      <SelectItem value="es-ES">Español</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">Fuso Horário</Label>
-                  <Select value={preferences.timezone} onValueChange={(value) => setPreferences(prev => ({ ...prev, timezone: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America/Sao_Paulo">São Paulo (UTC-3)</SelectItem>
-                      <SelectItem value="America/New_York">Nova York (UTC-5)</SelectItem>
-                      <SelectItem value="Europe/London">Londres (UTC+0)</SelectItem>
-                      <SelectItem value="Asia/Tokyo">Tóquio (UTC+9)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sessionTimeout">Tempo de Sessão (minutos)</Label>
-                  <Input
-                    type="number"
-                    value={securitySettings.sessionTimeout}
-                    onChange={(e) => setSecuritySettings(prev => ({ ...prev, sessionTimeout: parseInt(e.target.value) }))}
-                    min="15"
-                    max="480"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Confirmação Automática</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Confirmar automaticamente novos agendamentos
-                    </p>
-                  </div>
-                  <Switch
-                    checked={preferences.autoConfirm}
-                    onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, autoConfirm: checked }))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={saveGeneralSettings} disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Salvar Configurações
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de Notificações</CardTitle>
-              <CardDescription>
-                Controle como e quando você é notificado sobre agendamentos e atividades.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Notificações por Email</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receber notificações sobre agendamentos por email
-                    </p>
-                  </div>
-                  <Switch
-                    checked={preferences.emailNotifications}
-                    onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, emailNotifications: checked }))}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Notificações por SMS</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receber notificações sobre agendamentos por SMS
-                    </p>
-                  </div>
-                  <Switch
-                    checked={preferences.smsNotifications}
-                    onCheckedChange={(checked) => setPreferences(prev => ({ ...prev, smsNotifications: checked }))}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label htmlFor="reminderHours">Lembrete (horas antes)</Label>
-                <Select 
-                  value={preferences.reminderHours.toString()} 
-                  onValueChange={(value) => setPreferences(prev => ({ ...prev, reminderHours: parseInt(value) }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 hora antes</SelectItem>
-                    <SelectItem value="2">2 horas antes</SelectItem>
-                    <SelectItem value="6">6 horas antes</SelectItem>
-                    <SelectItem value="12">12 horas antes</SelectItem>
-                    <SelectItem value="24">24 horas antes</SelectItem>
-                    <SelectItem value="48">48 horas antes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={saveNotificationSettings} disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Salvar Notificações
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="security">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de Segurança</CardTitle>
-              <CardDescription>
-                Gerencie a segurança da sua conta e dados pessoais.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Autenticação de Dois Fatores</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Adicionar uma camada extra de segurança à sua conta
-                    </p>
-                  </div>
-                  <Switch
-                    checked={securitySettings.twoFactorEnabled}
-                    onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: checked }))}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <div>
-                  <Label>Status da Senha</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Última alteração: {securitySettings.passwordLastChanged}
-                  </p>
-                  <Button variant="outline" className="mt-2">
-                    Alterar Senha
+                <div className="flex justify-end">
+                  <Button onClick={saveNotificationSettings} disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                    Salvar Notificações
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <div>
-                  <Label>Sessões Ativas</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Visualize e gerencie dispositivos conectados à sua conta
-                  </p>
-                  <Button variant="outline" className="mt-2">
-                    Gerenciar Sessões
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configurações de Segurança</CardTitle>
+                <CardDescription>
+                  Gerencie a segurança da sua conta e dados pessoais.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>Autenticação de Dois Fatores</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Adicionar uma camada extra de segurança à sua conta
+                      </p>
+                    </div>
+                    <Switch
+                      checked={securitySettings.twoFactorEnabled}
+                      onCheckedChange={(checked) => setSecuritySettings(prev => ({ ...prev, twoFactorEnabled: checked }))}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <div>
+                    <Label>Status da Senha</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Última alteração: {securitySettings.passwordLastChanged}
+                    </p>
+                    <Button variant="outline" className="mt-2">
+                      Alterar Senha
+                    </Button>
+                  </div>
+
+                  <div>
+                    <Label>Sessões Ativas</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Visualize e gerencie dispositivos conectados à sua conta
+                    </p>
+                    <Button variant="outline" className="mt-2">
+                      Gerenciar Sessões
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button onClick={saveSecuritySettings} disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                    Salvar Segurança
                   </Button>
                 </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={saveSecuritySettings} disabled={loading}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Salvar Segurança
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="subscription">
-          <SubscriptionManagement />
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="subscription">
+            <SubscriptionManagement />
+          </TabsContent>
+        </Tabs>
+      </div>
     </DashboardLayout>
   );
 };

@@ -11,9 +11,7 @@ import {
   FileText,
   Link2,
   UserRound,
-  CalendarDays,
   Shield,
-  MessageSquare,
   Building2,
   CreditCard,
   UserCog,
@@ -39,15 +37,8 @@ export function DashboardSidebarContent() {
     },
     {
       title: "Agendamentos",
-      url: "/dashboard/appointments",
-      icon: Calendar,
-      description: "Gerenciar seus agendamentos",
-      allowedRoles: ['professional', 'secretary', 'admin']
-    },
-    {
-      title: "Agendamento Unificado",
       url: "/dashboard/unified-booking",
-      icon: CalendarDays,
+      icon: Calendar,
       description: "Sistema unificado de agendamentos",
       allowedRoles: ['professional', 'secretary', 'admin']
     },
@@ -100,6 +91,15 @@ export function DashboardSidebarContent() {
       description: "Análise de dados e desempenho",
       allowedRoles: ['professional', 'admin']
     },
+    ...(isAdmin || (!isSecretary && userRole === 'professional') ? [
+      {
+        title: "Secretárias",
+        url: "/dashboard/secretaries",
+        icon: UserCog,
+        description: "Gerenciar secretárias e permissões",
+        allowedRoles: ['professional', 'admin']
+      }
+    ] : []),
     {
       title: "Empresa",
       url: "/dashboard/company",
@@ -108,11 +108,11 @@ export function DashboardSidebarContent() {
       allowedRoles: ['professional', 'admin']
     },
     {
-      title: "Preferências",
-      url: "/dashboard/preferences",
+      title: "Configurações",
+      url: "/dashboard/settings",
       icon: Settings,
-      description: "Preferências do sistema",
-      allowedRoles: ['professional', 'admin']
+      description: "Configurações gerais do sistema",
+      allowedRoles: ['professional', 'secretary', 'admin']
     },
     {
       title: "Assinatura",
@@ -128,22 +128,6 @@ export function DashboardSidebarContent() {
       description: "Configurações do seu perfil",
       allowedRoles: ['professional', 'secretary', 'admin']
     },
-    {
-      title: "Configurações",
-      url: "/dashboard/settings",
-      icon: Settings,
-      description: "Configurações gerais do sistema",
-      allowedRoles: ['professional', 'secretary', 'admin']
-    },
-    ...(isAdmin || (!isSecretary && userRole === 'professional') ? [
-      {
-        title: "Secretárias",
-        url: "/dashboard/secretaries",
-        icon: UserCog,
-        description: "Gerenciar secretárias e permissões",
-        allowedRoles: ['professional', 'admin']
-      }
-    ] : []),
     ...(isAdmin ? [
       {
         title: "Painel Admin",
