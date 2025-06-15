@@ -11,6 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, MessageSquare } from 'lucide-react';
 import { useWhatsAppTemplates } from '@/hooks/useWhatsAppTemplates';
 
+interface DefaultTemplate {
+  id: string;
+  name: string;
+  category: string;
+  message: string;
+  variables: string[];
+  isDefault?: boolean;
+}
+
 export const MessageTemplates: React.FC = () => {
   const { templates, addTemplate, updateTemplate, deleteTemplate } = useWhatsAppTemplates();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -32,18 +41,22 @@ export const MessageTemplates: React.FC = () => {
     { value: 'general', label: 'Geral' }
   ];
 
-  const defaultTemplates = [
+  const defaultTemplates: DefaultTemplate[] = [
     {
+      id: 'default_confirmation',
       name: 'Confirmação de Agendamento',
       category: 'appointment_confirmation',
       message: 'Olá {{clientName}}! Seu agendamento foi confirmado para {{date}} às {{time}} com {{professionalName}}. Aguardamos você! 😊',
-      variables: ['clientName', 'date', 'time', 'professionalName']
+      variables: ['clientName', 'date', 'time', 'professionalName'],
+      isDefault: true
     },
     {
+      id: 'default_reminder',
       name: 'Lembrete de Agendamento',
       category: 'appointment_reminder',
       message: 'Oi {{clientName}}! Lembrando que você tem um agendamento amanhã ({{date}}) às {{time}} com {{professionalName}}. Confirme sua presença! 📅',
-      variables: ['clientName', 'date', 'time', 'professionalName']
+      variables: ['clientName', 'date', 'time', 'professionalName'],
+      isDefault: true
     }
   ];
 
@@ -176,7 +189,7 @@ export const MessageTemplates: React.FC = () => {
 
       <div className="grid gap-4">
         {allTemplates.map((template) => (
-          <Card key={template.id || template.name}>
+          <Card key={template.id}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">{template.name}</CardTitle>
@@ -184,7 +197,7 @@ export const MessageTemplates: React.FC = () => {
                   <Badge variant="outline">
                     {categories.find(c => c.value === template.category)?.label}
                   </Badge>
-                  {!defaultTemplates.includes(template) && (
+                  {!template.isDefault && (
                     <div className="flex gap-1">
                       <Button
                         size="sm"
