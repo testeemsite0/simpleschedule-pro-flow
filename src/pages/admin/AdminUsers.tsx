@@ -24,6 +24,9 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
+      console.log('AdminUsers: Fetching users from profiles table...');
+      
+      // Buscar dados da tabela profiles com joins para roles e subscribers
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -34,13 +37,18 @@ const AdminUsers = () => {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('AdminUsers: Error fetching users:', error);
+        throw error;
+      }
+      
+      console.log('AdminUsers: Successfully fetched users:', data?.length || 0);
       setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('AdminUsers: Error in fetchUsers:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao carregar usuários',
+        description: 'Erro ao carregar usuários: ' + error.message,
         variant: 'destructive',
       });
     } finally {
@@ -50,14 +58,20 @@ const AdminUsers = () => {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
+      console.log('AdminUsers: Updating role for user:', userId, 'to:', newRole);
+      
       const roleValue = newRole as 'professional' | 'secretary' | 'admin';
       
       const { error } = await supabase
         .from('user_roles')
         .upsert({ user_id: userId, role: roleValue }, { onConflict: 'user_id' });
 
-      if (error) throw error;
+      if (error) {
+        console.error('AdminUsers: Error updating user role:', error);
+        throw error;
+      }
 
+      console.log('AdminUsers: Successfully updated user role');
       toast({
         title: 'Sucesso',
         description: 'Role do usuário atualizada',
@@ -65,10 +79,10 @@ const AdminUsers = () => {
       
       fetchUsers();
     } catch (error) {
-      console.error('Error updating user role:', error);
+      console.error('AdminUsers: Error in updateUserRole:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao atualizar role do usuário',
+        description: 'Erro ao atualizar role do usuário: ' + error.message,
         variant: 'destructive',
       });
     }

@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { TestTube, Save, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import { TestTube, Save, RefreshCw, AlertCircle, CheckCircle, Eye, EyeOff, Copy } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface StripeConfig {
@@ -27,50 +27,96 @@ const StripeIntegrationPanel = () => {
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
+  const [stripeKeys, setStripeKeys] = useState({
+    secretKey: '',
+    publishableKey: ''
+  });
+  const [showKeys, setShowKeys] = useState({
+    secret: false,
+    publishable: false
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchConfig();
+    fetchStripeKeys();
   }, []);
 
   const fetchConfig = async () => {
     try {
+      console.log('StripeIntegrationPanel: Fetching Stripe config...');
+      
       const { data, error } = await supabase
         .from('stripe_config')
         .select('*')
         .single();
 
       if (error && error.code !== 'PGRST116') {
+        console.error('StripeIntegrationPanel: Error fetching config:', error);
         throw error;
       }
 
       if (data) {
+        console.log('StripeIntegrationPanel: Config loaded successfully');
         setConfig(data);
       }
     } catch (error) {
-      console.error('Error fetching config:', error);
+      console.error('StripeIntegrationPanel: Error in fetchConfig:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchStripeKeys = async () => {
+    try {
+      console.log('StripeIntegrationPanel: Fetching Stripe keys...');
+      
+      // Buscar a chave secreta mascarada
+      const { data: secretData, error: secretError } = await supabase.functions.invoke('get-stripe-secret', {
+        body: { action: 'get' }
+      });
+
+      if (secretError) {
+        console.error('StripeIntegrationPanel: Error fetching secret key:', secretError);
+      } else if (secretData?.key) {
+        setStripeKeys(prev => ({ ...prev, secretKey: secretData.key }));
+      }
+
+      // A chave pública pode ser armazenada no frontend (não é secreta)
+      setStripeKeys(prev => ({ 
+        ...prev, 
+        publishableKey: 'pk_test_...' // Placeholder - deve ser configurada
+      }));
+      
+      console.log('StripeIntegrationPanel: Keys fetched');
+    } catch (error) {
+      console.error('StripeIntegrationPanel: Error fetching keys:', error);
+    }
+  };
+
   const saveConfig = async () => {
     try {
+      console.log('StripeIntegrationPanel: Saving config...');
+      
       const { error } = await supabase
         .from('stripe_config')
         .upsert(config, { onConflict: 'id' });
 
-      if (error) throw error;
+      if (error) {
+        console.error('StripeIntegrationPanel: Error saving config:', error);
+        throw error;
+      }
 
+      console.log('StripeIntegrationPanel: Config saved successfully');
       toast({
         title: 'Sucesso',
         description: 'Configuração do Stripe salva com sucesso',
       });
     } catch (error) {
-      console.error('Error saving config:', error);
+      console.error('StripeIntegrationPanel: Error in saveConfig:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao salvar configuração',
+        description: 'Erro ao salvar configuração: ' + error.message,
         variant: 'destructive',
       });
     }
@@ -79,9 +125,14 @@ const StripeIntegrationPanel = () => {
   const testStripeConnection = async () => {
     setTesting(true);
     try {
+      console.log('StripeIntegrationPanel: Testing Stripe connection...');
+      
       const { data, error } = await supabase.functions.invoke('test-stripe-connection');
       
-      if (error) throw error;
+      if (error) {
+        console.error('StripeIntegrationPanel: Connection test error:', error);
+        throw error;
+      }
       
       if (data?.success) {
         setConnectionStatus('connected');
@@ -89,6 +140,7 @@ const StripeIntegrationPanel = () => {
           title: 'Sucesso',
           description: 'Conexão com Stripe estabelecida com sucesso',
         });
+        console.log('StripeIntegrationPanel: Connection test successful');
       } else {
         setConnectionStatus('error');
         toast({
@@ -96,18 +148,27 @@ const StripeIntegrationPanel = () => {
           description: data?.error || 'Erro ao conectar com Stripe',
           variant: 'destructive',
         });
+        console.log('StripeIntegrationPanel: Connection test failed:', data?.error);
       }
     } catch (error) {
-      console.error('Error testing connection:', error);
+      console.error('StripeIntegrationPanel: Error in testStripeConnection:', error);
       setConnectionStatus('error');
       toast({
         title: 'Erro',
-        description: 'Erro ao testar conexão',
+        description: 'Erro ao testar conexão: ' + error.message,
         variant: 'destructive',
       });
     } finally {
       setTesting(false);
     }
+  };
+
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: 'Copiado!',
+      description: `${type} copiada para a área de transferência`,
+    });
   };
 
   const availableEvents = [
@@ -164,12 +225,98 @@ const StripeIntegrationPanel = () => {
         </CardHeader>
       </Card>
 
-      <Tabs defaultValue="general" className="space-y-6">
+      <Tabs defaultValue="keys" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="keys">Chaves de API</TabsTrigger>
           <TabsTrigger value="general">Configurações Gerais</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
-          <TabsTrigger value="keys">Chaves de API</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="keys">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaves de API do Stripe</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="secret_key">Chave Secreta (Secret Key)</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Input
+                        id="secret_key"
+                        type={showKeys.secret ? "text" : "password"}
+                        value={stripeKeys.secretKey}
+                        readOnly
+                        className="font-mono text-sm"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowKeys(prev => ({ ...prev, secret: !prev.secret }))}
+                      >
+                        {showKeys.secret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(stripeKeys.secretKey, 'Chave secreta')}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Configurada nas variáveis de ambiente do servidor
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="publishable_key">Chave Pública (Publishable Key)</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Input
+                        id="publishable_key"
+                        type={showKeys.publishable ? "text" : "password"}
+                        value={stripeKeys.publishableKey}
+                        onChange={(e) => setStripeKeys(prev => ({ ...prev, publishableKey: e.target.value }))}
+                        className="font-mono text-sm"
+                        placeholder="pk_test_..."
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowKeys(prev => ({ ...prev, publishable: !prev.publishable }))}
+                      >
+                        {showKeys.publishable ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(stripeKeys.publishableKey, 'Chave pública')}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Usada no frontend para processar pagamentos
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-yellow-50 rounded-lg">
+                  <h4 className="font-medium mb-2">⚠️ Configuração de Chaves</h4>
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p>
+                      <strong>Chave Secreta:</strong> Deve ser configurada nas variáveis de ambiente do servidor por segurança.
+                    </p>
+                    <p>
+                      <strong>Chave Pública:</strong> Pode ser armazenada no frontend e é segura para exposição pública.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="general">
           <Card>
@@ -237,45 +384,21 @@ const StripeIntegrationPanel = () => {
 
               <div className="p-4 bg-blue-50 rounded-lg">
                 <h4 className="font-medium mb-2">URL do Webhook</h4>
-                <code className="text-sm bg-white p-2 rounded border block">
-                  {window.location.origin}/api/stripe-webhook
-                </code>
+                <div className="flex items-center space-x-2">
+                  <code className="text-sm bg-white p-2 rounded border flex-1">
+                    {window.location.origin}/api/stripe-webhook
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(`${window.location.origin}/api/stripe-webhook`, 'URL do webhook')}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
                 <p className="text-sm text-muted-foreground mt-2">
                   Configure esta URL no painel do Stripe para receber webhooks
                 </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="keys">
-          <Card>
-            <CardHeader>
-              <CardTitle>Chaves de API</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-yellow-50 rounded-lg">
-                  <h4 className="font-medium mb-2">⚠️ Configuração de Chaves</h4>
-                  <p className="text-sm text-muted-foreground">
-                    As chaves do Stripe devem ser configuradas nas variáveis de ambiente do servidor.
-                    Entre em contato com o administrador do sistema para configurar:
-                  </p>
-                  <ul className="text-sm text-muted-foreground mt-2 space-y-1">
-                    <li>• <code>STRIPE_SECRET_KEY</code> - Chave secreta do Stripe</li>
-                    <li>• <code>STRIPE_PUBLISHABLE_KEY</code> - Chave pública do Stripe</li>
-                  </ul>
-                </div>
-
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <h4 className="font-medium mb-2">✅ Status das Chaves</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">STRIPE_SECRET_KEY:</span>
-                      <Badge variant="default">Configurada</Badge>
-                    </div>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>

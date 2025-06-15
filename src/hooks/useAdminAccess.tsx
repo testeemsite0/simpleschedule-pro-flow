@@ -3,7 +3,6 @@ import React from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -15,7 +14,7 @@ export const useAdminAccess = () => {
   const { toast } = useToast();
 
   const handleRefreshPermissions = async () => {
-    console.log('AdminAccess: Refreshing permissions...');
+    console.log('useAdminAccess: Refreshing permissions...');
     await refetch();
     toast({
       title: 'Permissões atualizadas',
@@ -34,6 +33,13 @@ export const useAdminAccess = () => {
               <p><strong>Role atual:</strong> {userRole}</p>
               <p><strong>É admin:</strong> {isAdmin ? 'Sim' : 'Não'}</p>
               <p><strong>User ID:</strong> {user?.id}</p>
+            </div>
+            <div className="text-xs text-gray-400 mt-4">
+              <p>Debug info:</p>
+              <p>Loading: {loading ? 'true' : 'false'}</p>
+              <p>Has user: {user ? 'true' : 'false'}</p>
+              <p>User role: {userRole}</p>
+              <p>Is admin: {isAdmin ? 'true' : 'false'}</p>
             </div>
             <Button 
               variant="outline" 
